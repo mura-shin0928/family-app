@@ -4,11 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import type { TaskDTO } from "./types";
 
 /**
- * 今日画面用に、familyの「今見るべきタスク」を1クエリで取得する。
- * open タスク全件 + 「今日JSTで完了した」done タスクのみ（前日以前の完了は除外）。
- * バケット分けはサーバ側の純関数（buckets.ts）で行う。
+ * familyの未完了タスク全件 + 「今日JSTで完了した」done タスクのみ（前日以前の完了は除外）を
+ * 1クエリで取得する。期限による絞り込みは行わない — 「今日画面」に限らず、この家族が
+ * 今アクセス可能な全タスクの一覧がこの関数の責務。緊急度によるバケット分けは
+ * 呼び出し側（サーバ側の純関数、buckets.ts）で行う。
  */
-export async function getTodayTasks(familyId: string): Promise<TaskDTO[]> {
+export async function getTasks(familyId: string): Promise<TaskDTO[]> {
   const supabase = await createClient();
   const cutoff = startOfTodayJstUtc().toISOString();
 
@@ -22,7 +23,7 @@ export async function getTodayTasks(familyId: string): Promise<TaskDTO[]> {
     .order("sort_order", { ascending: true });
 
   if (error) {
-    throw new Error(`failed to load today's tasks: ${error.message}`);
+    throw new Error(`failed to load tasks: ${error.message}`);
   }
 
   return (data ?? []).map(

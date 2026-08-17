@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import { requireFamilyMember } from "@/features/auth/guard";
-import { TodayScreen } from "@/features/tasks/components/TodayScreen";
-import { getTodayTasks } from "@/features/tasks/queries";
+import { TaskListScreen } from "@/features/tasks/components/TaskListScreen";
+import { getTasks } from "@/features/tasks/queries";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function HomePage() {
   const { member } = await requireFamilyMember();
-  const tasks = await getTodayTasks(member.familyId);
+  const tasks = await getTasks(member.familyId);
 
   async function signOut() {
     "use server";
@@ -18,14 +18,14 @@ export default async function HomePage() {
   return (
     <main className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-        <h1 className="text-lg font-semibold">今日</h1>
+        <h1 className="text-lg font-semibold">一覧</h1>
         <form action={signOut}>
           <button type="submit" className="text-xs text-zinc-500 underline">
             {member.displayName} / ログアウト
           </button>
         </form>
       </header>
-      <TodayScreen initialTasks={tasks} />
+      <TaskListScreen initialTasks={tasks} />
     </main>
   );
 }

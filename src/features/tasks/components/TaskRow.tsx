@@ -9,6 +9,7 @@ type Props = {
   today: string;
   onToggle: (task: TaskDTO) => void;
   onDueDateChange: (task: TaskDTO, dueOn: string | null) => void;
+  onPurchaseToggle: (task: TaskDTO) => void;
   onDelete: (task: TaskDTO) => void;
 };
 
@@ -17,6 +18,7 @@ export function TaskRow({
   today,
   onToggle,
   onDueDateChange,
+  onPurchaseToggle,
   onDelete,
 }: Props) {
   const [editingDue, setEditingDue] = useState(false);
@@ -43,11 +45,6 @@ export function TaskRow({
           className={`truncate text-sm ${done ? "text-zinc-400 line-through" : ""}`}
         >
           {task.title}
-          {task.isPurchase && (
-            <span className="ml-1.5 align-middle text-xs" aria-hidden>
-              🛒
-            </span>
-          )}
         </p>
 
         {editingDue ? (
@@ -85,6 +82,20 @@ export function TaskRow({
           </button>
         )}
       </div>
+
+      <button
+        type="button"
+        onClick={() => onPurchaseToggle(task)}
+        aria-pressed={task.isPurchase}
+        aria-label={task.isPurchase ? "買うものから外す" : "買うものにする"}
+        className={`shrink-0 rounded-full border px-2 py-1 text-xs ${
+          task.isPurchase
+            ? "border-amber-500 bg-amber-500 text-white"
+            : "border-zinc-300 text-zinc-300 dark:border-zinc-600 dark:text-zinc-600"
+        }`}
+      >
+        🛒
+      </button>
 
       <button
         type="button"

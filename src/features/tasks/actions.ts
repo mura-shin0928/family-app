@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { requireFamilyMember } from "@/features/auth/guard";
-import { todayInJst, tomorrowInJst } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
 import {
   createTaskSchema,
   taskIdSchema,
   toggleDoneSchema,
+  togglePurchaseSchema,
   updateDueDateSchema,
 } from "./schema";
 
@@ -16,7 +16,7 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 export async function createTask(input: {
   id: string;
   title: string;
-  due: "none" | "today" | "tomorrow";
+  dueOn: string;
   isPurchase: boolean;
 }): Promise<ActionResult> {
   const parsed = createTaskSchema.safeParse(input);
@@ -30,12 +30,7 @@ export async function createTask(input: {
   const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
-  const dueOn =
-    parsed.data.due === "today"
-      ? todayInJst()
-      : parsed.data.due === "tomorrow"
-        ? tomorrowInJst()
-        : null;
+  const dueOn = parsed.data.dueOn === "" ? null : parsed.data.dueOn;
 
   const { data: lastTask } = await supabase
     .from("tasks")
@@ -89,6 +84,32 @@ export async function setTaskDone(input: {
           }
         : { status: "open", completed_at: null, completed_by: null },
     )
+    .eq("id", parsed.data.taskId)
+    .eq("family_id", member.familyId);
+
+  if (error) {
+    return { ok: false, error: "更新に失敗しました" };
+  }
+
+  revalidatePath("/");
+  return { ok: true };
+}
+
+export async function setTaskPurchase(input: {
+  taskId: string;
+  isPurchase: boolean;
+}): Promise<ActionResult> {
+  const parsed = togglePurchaseSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "不正な操作です" };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({ is_purchase: parsed.data.isPurchase })
     .eq("id", parsed.data.taskId)
     .eq("family_id", member.familyId);
 

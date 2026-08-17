@@ -1,11 +1,8 @@
 import { z } from "zod";
 
-export const quickCaptureDueChoiceSchema = z.enum([
-  "none",
-  "today",
-  "tomorrow",
-]);
-export type QuickCaptureDueChoice = z.infer<typeof quickCaptureDueChoiceSchema>;
+const dateStringSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "日付の形式が正しくありません");
 
 export const createTaskSchema = z.object({
   id: z.string().uuid(),
@@ -14,13 +11,10 @@ export const createTaskSchema = z.object({
     .trim()
     .min(1, "タイトルを入力してください")
     .max(200, "タイトルは200文字以内で入力してください"),
-  due: quickCaptureDueChoiceSchema,
+  // 空文字列 = 期限なし（updateDueDateSchema と同じ規約）。
+  dueOn: z.union([dateStringSchema, z.literal("")]),
   isPurchase: z.boolean(),
 });
-
-const dateStringSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "日付の形式が正しくありません");
 
 export const taskIdSchema = z.object({
   taskId: z.string().uuid(),
@@ -29,6 +23,11 @@ export const taskIdSchema = z.object({
 export const toggleDoneSchema = z.object({
   taskId: z.string().uuid(),
   done: z.boolean(),
+});
+
+export const togglePurchaseSchema = z.object({
+  taskId: z.string().uuid(),
+  isPurchase: z.boolean(),
 });
 
 export const updateDueDateSchema = z.object({

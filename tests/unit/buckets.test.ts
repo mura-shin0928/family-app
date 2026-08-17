@@ -21,8 +21,8 @@ function makeTask(overrides: Partial<TaskDTO> & { id: string }): TaskDTO {
 }
 
 describe("bucketKeyForDueOn", () => {
-  it("has no due date -> later", () => {
-    expect(bucketKeyForDueOn(null, TODAY)).toBe("later");
+  it("has no due date -> none", () => {
+    expect(bucketKeyForDueOn(null, TODAY)).toBe("none");
   });
 
   it("is overdue for any past date", () => {
@@ -37,19 +37,19 @@ describe("bucketKeyForDueOn", () => {
     expect(bucketKeyForDueOn("2026-08-24", TODAY, 7)).toBe("soon");
   });
 
-  it("falls into later just past the SOON_DAYS boundary (8th day)", () => {
-    expect(bucketKeyForDueOn("2026-08-25", TODAY, 7)).toBe("later");
+  it("falls into upcoming (not none) just past the SOON_DAYS boundary (8th day) -- has a due date, just far out", () => {
+    expect(bucketKeyForDueOn("2026-08-25", TODAY, 7)).toBe("upcoming");
   });
 });
 
 describe("bucketOpenTasks", () => {
-  it("groups tasks into the 4 buckets in due-date order (input assumed pre-sorted)", () => {
+  it("groups tasks into the 5 buckets in due-date order (input assumed pre-sorted), keeping a far-future due date out of the no-due-date bucket", () => {
     const tasks = [
       makeTask({ id: "overdue-1", dueOn: "2026-08-16" }),
       makeTask({ id: "today-1", dueOn: "2026-08-17" }),
       makeTask({ id: "soon-1", dueOn: "2026-08-20" }),
-      makeTask({ id: "later-1", dueOn: "2026-09-01" }),
-      makeTask({ id: "later-2", dueOn: null }),
+      makeTask({ id: "upcoming-1", dueOn: "2026-09-01" }),
+      makeTask({ id: "none-1", dueOn: null }),
     ];
 
     const buckets = bucketOpenTasks(tasks, TODAY);
@@ -57,7 +57,8 @@ describe("bucketOpenTasks", () => {
     expect(buckets.overdue.map((t) => t.id)).toEqual(["overdue-1"]);
     expect(buckets.today.map((t) => t.id)).toEqual(["today-1"]);
     expect(buckets.soon.map((t) => t.id)).toEqual(["soon-1"]);
-    expect(buckets.later.map((t) => t.id)).toEqual(["later-1", "later-2"]);
+    expect(buckets.upcoming.map((t) => t.id)).toEqual(["upcoming-1"]);
+    expect(buckets.none.map((t) => t.id)).toEqual(["none-1"]);
   });
 });
 
