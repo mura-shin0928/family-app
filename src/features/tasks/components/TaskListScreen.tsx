@@ -4,12 +4,10 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
-import Accordion from "@mui/material/Accordion";
-import AccordionDetails from "@mui/material/AccordionDetails";
-import AccordionSummary from "@mui/material/AccordionSummary";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import Collapse from "@mui/material/Collapse";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -120,6 +118,49 @@ function BucketSection({
   );
 }
 
+/**
+ * BucketSection と同じ見た目（Paper/カード枠なし）の折りたたみ見出し。
+ * MUIのAccordionはPaper+角丸+線を持つため、通常の見出しと並べると
+ * それだけ「かさばって」見える — Collapseで組み直し、視覚的な重さを揃える。
+ */
+function CollapsibleHeader({
+  title,
+  expanded,
+  onToggle,
+  extra,
+}: {
+  title: ReactNode;
+  expanded: boolean;
+  onToggle: () => void;
+  extra?: ReactNode;
+}) {
+  return (
+    <Box
+      onClick={onToggle}
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 0.5,
+        cursor: "pointer",
+        mb: 1,
+      }}
+    >
+      <Typography variant="subtitle2" color="text.secondary">
+        {title}
+      </Typography>
+      {extra}
+      <ExpandMoreIcon
+        fontSize="small"
+        sx={{
+          color: "text.secondary",
+          transform: expanded ? "rotate(180deg)" : "none",
+          transition: "transform 0.15s",
+        }}
+      />
+    </Box>
+  );
+}
+
 function CollapsibleSection({
   label,
   count,
@@ -131,22 +172,18 @@ function CollapsibleSection({
   defaultExpanded: boolean;
   children: ReactNode;
 }) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
   return (
-    <Accordion
-      disableGutters
-      elevation={0}
-      defaultExpanded={defaultExpanded}
-      sx={{ "&::before": { display: "none" } }}
-    >
-      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-        <Typography variant="subtitle2" color="text.secondary">
-          {label}（{count}）
-        </Typography>
-      </AccordionSummary>
-      <AccordionDetails sx={{ pb: 0 }}>
+    <Box component="section">
+      <CollapsibleHeader
+        title={`${label}（${count}）`}
+        expanded={expanded}
+        onToggle={() => setExpanded((current) => !current)}
+      />
+      <Collapse in={expanded}>
         <Stack spacing={1}>{children}</Stack>
-      </AccordionDetails>
-    </Accordion>
+      </Collapse>
+    </Box>
   );
 }
 
@@ -157,18 +194,14 @@ function CompletedSection({
   count: number;
   children: ReactNode;
 }) {
+  const [expanded, setExpanded] = useState(false);
   return (
-    <Accordion
-      disableGutters
-      elevation={0}
-      defaultExpanded={false}
-      sx={{ "&::before": { display: "none" } }}
-    >
-      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <Typography variant="subtitle2" color="text.secondary">
-            完了（今日 {count}）
-          </Typography>
+    <Box component="section">
+      <CollapsibleHeader
+        title={`完了（今日 ${count}）`}
+        expanded={expanded}
+        onToggle={() => setExpanded((current) => !current)}
+        extra={
           <Tooltip title={COMPLETED_TASK_HINT}>
             <InfoOutlinedIcon
               fontSize="inherit"
@@ -178,12 +211,12 @@ function CompletedSection({
               sx={{ color: "text.disabled", cursor: "help" }}
             />
           </Tooltip>
-        </Box>
-      </AccordionSummary>
-      <AccordionDetails sx={{ pb: 0 }}>
+        }
+      />
+      <Collapse in={expanded}>
         <Stack spacing={1}>{children}</Stack>
-      </AccordionDetails>
-    </Accordion>
+      </Collapse>
+    </Box>
   );
 }
 
@@ -335,7 +368,7 @@ export function TaskListScreen({ initialTasks }: { initialTasks: TaskDTO[] }) {
 
   return (
     <Box sx={{ flex: 1, display: "flex", flexDirection: "column", pb: 20 }}>
-      <Stack spacing={3} sx={{ flex: 1, px: 2, py: 2 }}>
+      <Stack spacing={2} sx={{ flex: 1, px: 2, py: 2 }}>
         <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
           <Chip
             icon={
