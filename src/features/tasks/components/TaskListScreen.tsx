@@ -16,17 +16,12 @@ import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import {
-  type ReactNode,
-  useEffect,
-  useOptimistic,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useRef, useState } from "react";
 import { SOON_DAYS } from "@/lib/constants";
 import { todayInJst } from "@/lib/date";
 import {
+  type ActionResult,
   createTask,
   deleteTask,
   setTaskDone,
@@ -39,9 +34,11 @@ import {
   TASK_BUCKET_ORDER,
   type TaskBucketKey,
 } from "../buckets";
-import type { TaskDTO } from "../types";
+import { fetchTasks } from "../query-actions";
+import { TASKS_QUERY_KEY, type TaskDTO } from "../types";
 import { QuickCaptureBar } from "./QuickCaptureBar";
 import { TaskRow } from "./TaskRow";
+import { useTasksRealtime } from "./useTasksRealtime";
 
 const BUCKET_LABEL: Record<TaskBucketKey, string> = {
   overdue: "期限超過",
@@ -66,12 +63,7 @@ type Action =
 function applyAction(tasks: TaskDTO[], action: Action): TaskDTO[] {
   switch (action.type) {
     case "add":
-      // useOptimistic re-runs this reducer against the latest committed `tasks`
-      // whenever it changes mid-transition, so this must stay idempotent or the
-      // task added via setTasks below gets appended a second time.
-      return tasks.some((task) => task.id === action.task.id)
-        ? tasks
-        : [...tasks, action.task];
+      return [...tasks, action.task];
     case "toggle":
       return tasks.map((task) =>
         task.id === action.id
@@ -98,6 +90,60 @@ function applyAction(tasks: TaskDTO[], action: Action): TaskDTO[] {
 }
 
 type Toast = { message: string; actionLabel?: string; onAction?: () => void };
+
+type OptimisticMutationContext = { previous: TaskDTO[] | undefined };
+
+/**
+ * 5つのタスク操作に共通する「楽観更新→サーバー呼び出し→失敗時ロールバック→
+ * 完了後invalidate」の骨格。サーバーをsource of truthとして扱うため、
+ * 成功時もローカルの楽観値を確定値として使い続けず、必ず再取得させる。
+ */
+function useOptimisticTasksMutation<TInput>(
+  mutationFn: (input: TInput) => Promise<ActionResult>,
+  toAction: (input: TInput) => Action,
+  handlers?: {
+    onOk?: (input: TInput) => void;
+    onFail?: (error: string) => void;
+  },
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    ActionResult,
+    Error,
+    TInput,
+    OptimisticMutationContext | undefined
+  >({
+    mutationFn,
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
+      const previous = queryClient.getQueryData<TaskDTO[]>(TASKS_QUERY_KEY);
+      queryClient.setQueryData<TaskDTO[]>(TASKS_QUERY_KEY, (current) =>
+        applyAction(current ?? [], toAction(input)),
+      );
+      return { previous };
+    },
+    onSuccess: (result, input, context) => {
+      if (result.ok) {
+        handlers?.onOk?.(input);
+        return;
+      }
+      if (context?.previous) {
+        queryClient.setQueryData(TASKS_QUERY_KEY, context.previous);
+      }
+      handlers?.onFail?.(result.error);
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(TASKS_QUERY_KEY, context.previous);
+      }
+      handlers?.onFail?.("通信に失敗しました");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
+    },
+  });
+}
 
 function BucketSection({
   label,
@@ -247,12 +293,21 @@ function CompletedSection({
   );
 }
 
-export function TaskListScreen({ initialTasks }: { initialTasks: TaskDTO[] }) {
-  const [tasks, setTasks] = useState(initialTasks);
-  useEffect(() => setTasks(initialTasks), [initialTasks]);
+export function TaskListScreen({
+  initialTasks,
+  familyId,
+}: {
+  initialTasks: TaskDTO[];
+  familyId: string;
+}) {
+  const { data: tasks = [] } = useQuery({
+    queryKey: TASKS_QUERY_KEY,
+    queryFn: fetchTasks,
+    initialData: initialTasks,
+  });
 
-  const [optimisticTasks, applyOptimistic] = useOptimistic(tasks, applyAction);
-  const [, startTransition] = useTransition();
+  useTasksRealtime(familyId);
+
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [taskPendingDelete, setTaskPendingDelete] = useState<TaskDTO | null>(
@@ -266,8 +321,81 @@ export function TaskListScreen({ initialTasks }: { initialTasks: TaskDTO[] }) {
     toastTimer.current = setTimeout(() => setToast(null), 5000);
   }
 
+  const createMutation = useOptimisticTasksMutation(
+    createTask,
+    (input: {
+      id: string;
+      title: string;
+      dueOn: string;
+      isPurchase: boolean;
+    }): Action => ({
+      type: "add",
+      task: {
+        id: input.id,
+        title: input.title,
+        dueOn: input.dueOn === "" ? null : input.dueOn,
+        isPurchase: input.isPurchase,
+        status: "open",
+        completedAt: null,
+        sortOrder: Number.MAX_SAFE_INTEGER,
+      },
+    }),
+    { onFail: (error) => showToast({ message: error }) },
+  );
+
+  const toggleMutation = useOptimisticTasksMutation(
+    setTaskDone,
+    (input: { taskId: string; done: boolean }): Action => ({
+      type: "toggle",
+      id: input.taskId,
+      done: input.done,
+    }),
+    {
+      onOk: (input) => {
+        if (input.done) {
+          showToast({
+            message: "完了しました",
+            actionLabel: "元に戻す",
+            onAction: () =>
+              toggleMutation.mutate({ taskId: input.taskId, done: false }),
+          });
+        }
+      },
+      onFail: (error) => showToast({ message: error }),
+    },
+  );
+
+  const dueDateMutation = useOptimisticTasksMutation(
+    updateTaskDueDate,
+    (input: { taskId: string; dueOn: string }): Action => ({
+      type: "dueDate",
+      id: input.taskId,
+      dueOn: input.dueOn === "" ? null : input.dueOn,
+    }),
+    { onFail: (error) => showToast({ message: error }) },
+  );
+
+  const purchaseMutation = useOptimisticTasksMutation(
+    setTaskPurchase,
+    (input: { taskId: string; isPurchase: boolean }): Action => ({
+      type: "purchase",
+      id: input.taskId,
+      isPurchase: input.isPurchase,
+    }),
+    { onFail: (error) => showToast({ message: error }) },
+  );
+
+  const deleteMutation = useOptimisticTasksMutation(
+    deleteTask,
+    (input: { taskId: string }): Action => ({
+      type: "remove",
+      id: input.taskId,
+    }),
+    { onFail: (error) => showToast({ message: error }) },
+  );
+
   const today = todayInJst();
-  const { open, completedToday } = splitOpenAndCompletedToday(optimisticTasks);
+  const { open, completedToday } = splitOpenAndCompletedToday(tasks);
   const buckets = bucketOpenTasks(open, today);
   const isEmpty = open.length === 0 && completedToday.length === 0;
 
@@ -284,102 +412,31 @@ export function TaskListScreen({ initialTasks }: { initialTasks: TaskDTO[] }) {
     dueOn: string | null;
     isPurchase: boolean;
   }) {
-    const id = crypto.randomUUID();
-    const optimisticTask: TaskDTO = {
-      id,
+    createMutation.mutate({
+      id: crypto.randomUUID(),
       title: input.title,
-      dueOn: input.dueOn,
+      dueOn: input.dueOn ?? "",
       isPurchase: input.isPurchase,
-      status: "open",
-      completedAt: null,
-      sortOrder: Number.MAX_SAFE_INTEGER,
-    };
-
-    startTransition(async () => {
-      applyOptimistic({ type: "add", task: optimisticTask });
-      const result = await createTask({
-        id,
-        title: input.title,
-        dueOn: input.dueOn ?? "",
-        isPurchase: input.isPurchase,
-      });
-      if (result.ok) {
-        setTasks((prev) =>
-          applyAction(prev, { type: "add", task: optimisticTask }),
-        );
-      } else {
-        showToast({ message: result.error });
-      }
-    });
-  }
-
-  function applyToggle(taskId: string, done: boolean) {
-    startTransition(async () => {
-      applyOptimistic({ type: "toggle", id: taskId, done });
-      const result = await setTaskDone({ taskId, done });
-      if (result.ok) {
-        setTasks((prev) =>
-          applyAction(prev, { type: "toggle", id: taskId, done }),
-        );
-        if (done) {
-          showToast({
-            message: "完了しました",
-            actionLabel: "元に戻す",
-            onAction: () => applyToggle(taskId, false),
-          });
-        }
-      } else {
-        showToast({ message: result.error });
-      }
     });
   }
 
   function handleToggle(task: TaskDTO) {
-    applyToggle(task.id, task.status !== "done");
+    toggleMutation.mutate({ taskId: task.id, done: task.status !== "done" });
   }
 
   function handleDueDateChange(task: TaskDTO, dueOn: string | null) {
-    startTransition(async () => {
-      applyOptimistic({ type: "dueDate", id: task.id, dueOn });
-      const result = await updateTaskDueDate({
-        taskId: task.id,
-        dueOn: dueOn ?? "",
-      });
-      if (result.ok) {
-        setTasks((prev) =>
-          applyAction(prev, { type: "dueDate", id: task.id, dueOn }),
-        );
-      } else {
-        showToast({ message: result.error });
-      }
-    });
+    dueDateMutation.mutate({ taskId: task.id, dueOn: dueOn ?? "" });
   }
 
   function handlePurchaseToggle(task: TaskDTO) {
-    const isPurchase = !task.isPurchase;
-    startTransition(async () => {
-      applyOptimistic({ type: "purchase", id: task.id, isPurchase });
-      const result = await setTaskPurchase({ taskId: task.id, isPurchase });
-      if (result.ok) {
-        setTasks((prev) =>
-          applyAction(prev, { type: "purchase", id: task.id, isPurchase }),
-        );
-      } else {
-        showToast({ message: result.error });
-      }
+    purchaseMutation.mutate({
+      taskId: task.id,
+      isPurchase: !task.isPurchase,
     });
   }
 
   function performDelete(task: TaskDTO) {
-    startTransition(async () => {
-      applyOptimistic({ type: "remove", id: task.id });
-      const result = await deleteTask({ taskId: task.id });
-      if (result.ok) {
-        setTasks((prev) => applyAction(prev, { type: "remove", id: task.id }));
-      } else {
-        showToast({ message: result.error });
-      }
-    });
+    deleteMutation.mutate({ taskId: task.id });
   }
 
   const visibleBuckets = TASK_BUCKET_ORDER.filter(

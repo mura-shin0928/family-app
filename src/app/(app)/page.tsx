@@ -38,7 +38,7 @@ export default async function HomePage() {
         </Toolbar>
       </AppBar>
       <Toolbar />
-      <TaskListScreen initialTasks={tasks} />
+      <TaskListScreen initialTasks={tasks} familyId={member.familyId} />
     </Box>
   );
 }
