@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -57,7 +56,6 @@ export async function createTask(input: {
     return { ok: false, error: "登録に失敗しました" };
   }
 
-  revalidatePath("/");
   return { ok: true };
 }
 
@@ -91,7 +89,6 @@ export async function setTaskDone(input: {
     return { ok: false, error: "更新に失敗しました" };
   }
 
-  revalidatePath("/");
   return { ok: true };
 }
 
@@ -117,7 +114,6 @@ export async function setTaskPurchase(input: {
     return { ok: false, error: "更新に失敗しました" };
   }
 
-  revalidatePath("/");
   return { ok: true };
 }
 
@@ -143,7 +139,6 @@ export async function updateTaskDueDate(input: {
     return { ok: false, error: "期限の更新に失敗しました" };
   }
 
-  revalidatePath("/");
   return { ok: true };
 }
 
@@ -168,6 +163,5 @@ export async function deleteTask(input: {
     return { ok: false, error: "削除に失敗しました" };
   }
 
-  revalidatePath("/");
   return { ok: true };
 }
