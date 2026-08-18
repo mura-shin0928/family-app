@@ -1,8 +1,15 @@
 "use client";
 
+import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
+import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
 import { type FormEvent, useId, useState } from "react";
 import { addDaysToDateString, todayInJst } from "@/lib/date";
-import { Chip } from "./Chip";
 
 type Props = {
   onSubmit: (input: {
@@ -46,79 +53,124 @@ export function QuickCaptureBar({ onSubmit }: Props) {
   }
 
   return (
-    <form
+    <Paper
+      component="form"
       onSubmit={handleSubmit}
-      className="fixed inset-x-0 bottom-0 border-t border-zinc-200 bg-white px-4 pt-2 dark:border-zinc-800 dark:bg-black"
-      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
+      elevation={3}
+      square
+      sx={{
+        position: "fixed",
+        insetInline: 0,
+        bottom: 0,
+        borderTop: 1,
+        borderColor: "divider",
+        px: 2,
+        pt: 1,
+        pb: "calc(env(safe-area-inset-bottom) + 8px)",
+      }}
     >
-      <div className="mx-auto flex max-w-xl items-center gap-2 pb-2">
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ mx: "auto", maxWidth: "36rem", pb: 1 }}
+      >
         <Chip
-          active={!!dueOn || showDuePanel}
+          icon={<CalendarTodayOutlinedIcon />}
+          label={dueLabel}
+          clickable
+          color={dueOn || showDuePanel ? "primary" : "default"}
+          variant={dueOn || showDuePanel ? "filled" : "outlined"}
           onClick={() => setShowDuePanel((current) => !current)}
-        >
-          📅 {dueLabel}
-        </Chip>
+        />
         <Chip
-          active={isPurchase}
+          icon={<ShoppingCartOutlinedIcon />}
+          label="買うもの"
+          clickable
+          color={isPurchase ? "warning" : "default"}
+          variant={isPurchase ? "filled" : "outlined"}
           onClick={() => setIsPurchase((current) => !current)}
-        >
-          🛒 買うもの
-        </Chip>
-      </div>
+        />
+      </Stack>
 
       {showDuePanel && (
-        <div className="mx-auto flex max-w-xl flex-wrap items-center gap-2 pb-2">
-          <button
-            type="button"
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            mx: "auto",
+            maxWidth: "36rem",
+            pb: 1,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
+          <Button
+            size="small"
+            variant="outlined"
             onClick={() => selectDue(today)}
-            className="rounded-full border border-zinc-300 px-3 py-1 text-xs dark:border-zinc-700 dark:text-zinc-400"
           >
             今日
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
             onClick={() => selectDue(tomorrow)}
-            className="rounded-full border border-zinc-300 px-3 py-1 text-xs dark:border-zinc-700 dark:text-zinc-400"
           >
             明日
-          </button>
-          <input
+          </Button>
+          <TextField
             type="date"
+            size="small"
             value={dueOn ?? ""}
             onChange={(event) => setDueOn(event.target.value || null)}
-            className="rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900"
           />
           {dueOn && (
-            <button
-              type="button"
+            <Button
+              size="small"
+              sx={{ textTransform: "none" }}
               onClick={() => selectDue(null)}
-              className="text-xs text-zinc-400 underline"
             >
               期限なしにする
-            </button>
+            </Button>
           )}
-        </div>
+        </Stack>
       )}
 
-      <div className="mx-auto flex max-w-xl items-center gap-2 pb-2">
-        <label htmlFor={inputId} className="sr-only">
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ mx: "auto", maxWidth: "36rem", pb: 1, alignItems: "center" }}
+      >
+        <Box
+          component="label"
+          htmlFor={inputId}
+          sx={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            overflow: "hidden",
+            clip: "rect(0 0 0 0)",
+          }}
+        >
           やること・買うものを入力
-        </label>
-        <input
+        </Box>
+        <TextField
           id={inputId}
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="やること・買うものを入力"
-          className="min-w-0 flex-1 rounded-full border border-zinc-300 px-4 py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          size="small"
+          fullWidth
         />
-        <button
+        <Button
           type="submit"
+          variant="contained"
           disabled={!title.trim()}
-          className="shrink-0 rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-zinc-900"
+          sx={{ flexShrink: 0 }}
         >
           追加
-        </button>
-      </div>
-    </form>
+        </Button>
+      </Stack>
+    </Paper>
   );
 }

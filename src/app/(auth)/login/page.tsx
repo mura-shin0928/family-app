@@ -1,5 +1,10 @@
 "use client";
 
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import { type FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -37,49 +42,78 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-8">
-      <h1 className="text-xl font-semibold">Family App</h1>
+    <Box
+      component="main"
+      sx={{
+        minHeight: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 3,
+        p: 4,
+      }}
+    >
+      <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+        Family App
+      </Typography>
 
-      <button
-        type="button"
+      <Button
+        variant="contained"
+        color="inherit"
         onClick={handleGoogleLogin}
-        className="w-full max-w-xs rounded-md bg-black px-4 py-3 text-white dark:bg-white dark:text-black"
+        sx={{
+          width: 1,
+          maxWidth: 320,
+          bgcolor: "text.primary",
+          color: "background.paper",
+        }}
       >
         Googleでログイン
-      </button>
+      </Button>
 
-      <div className="w-full max-w-xs text-center text-sm text-zinc-500">
+      <Typography
+        variant="body2"
+        color="text.secondary"
+        sx={{ width: 1, maxWidth: 320, textAlign: "center" }}
+      >
         または
-      </div>
+      </Typography>
 
       {sent ? (
-        <p className="max-w-xs text-center text-sm text-zinc-600 dark:text-zinc-400">
-          {email} 宛にログインリンクを送りました。メールを確認してください。
-        </p>
-      ) : (
-        <form
-          onSubmit={handleMagicLink}
-          className="flex w-full max-w-xs flex-col gap-2"
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ maxWidth: 320, textAlign: "center" }}
         >
-          <input
+          {email} 宛にログインリンクを送りました。メールを確認してください。
+        </Typography>
+      ) : (
+        <Stack
+          component="form"
+          onSubmit={handleMagicLink}
+          spacing={1}
+          sx={{ width: 1, maxWidth: 320 }}
+        >
+          <TextField
             type="email"
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="メールアドレス"
-            className="rounded-md border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-black"
+            size="small"
           />
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-md border border-zinc-300 px-4 py-2 disabled:opacity-50 dark:border-zinc-700"
-          >
+          <Button type="submit" variant="outlined" disabled={loading}>
             ログインリンクを送る
-          </button>
-        </form>
+          </Button>
+        </Stack>
       )}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-    </main>
+      {error && (
+        <Typography variant="body2" color="error">
+          {error}
+        </Typography>
+      )}
+    </Box>
   );
 }

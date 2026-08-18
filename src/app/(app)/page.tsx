@@ -1,3 +1,8 @@
+import AppBar from "@mui/material/AppBar";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Toolbar from "@mui/material/Toolbar";
+import Typography from "@mui/material/Typography";
 import { redirect } from "next/navigation";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { TaskListScreen } from "@/features/tasks/components/TaskListScreen";
@@ -16,16 +21,24 @@ export default async function HomePage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col">
-      <header className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-        <h1 className="text-lg font-semibold">一覧</h1>
-        <form action={signOut}>
-          <button type="submit" className="text-xs text-zinc-500 underline">
-            {member.displayName} / ログアウト
-          </button>
-        </form>
-      </header>
+    <Box
+      component="main"
+      sx={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}
+    >
+      <AppBar position="fixed" color="default" elevation={1}>
+        <Toolbar sx={{ justifyContent: "space-between" }}>
+          <Typography variant="h6" component="h1">
+            一覧
+          </Typography>
+          <Box component="form" action={signOut}>
+            <Button type="submit" color="inherit" size="small">
+              {member.displayName} / ログアウト
+            </Button>
+          </Box>
+        </Toolbar>
+      </AppBar>
+      <Toolbar />
       <TaskListScreen initialTasks={tasks} />
-    </main>
+    </Box>
   );
 }

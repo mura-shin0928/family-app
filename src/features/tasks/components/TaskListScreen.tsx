@@ -1,6 +1,25 @@
 "use client";
 
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
+import Accordion from "@mui/material/Accordion";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import AccordionSummary from "@mui/material/AccordionSummary";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import Snackbar from "@mui/material/Snackbar";
+import Stack from "@mui/material/Stack";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
 import {
+  type ReactNode,
   useEffect,
   useOptimistic,
   useRef,
@@ -23,7 +42,6 @@ import {
   type TaskBucketKey,
 } from "../buckets";
 import type { TaskDTO } from "../types";
-import { Chip } from "./Chip";
 import { QuickCaptureBar } from "./QuickCaptureBar";
 import { TaskRow } from "./TaskRow";
 
@@ -36,6 +54,9 @@ const BUCKET_LABEL: Record<TaskBucketKey, string> = {
 };
 
 const COLLAPSIBLE_BUCKETS: readonly TaskBucketKey[] = ["upcoming", "none"];
+
+const COMPLETED_TASK_HINT =
+  "完了したタスクは翌日になると一覧から自動的に非表示になります（削除はされません）";
 
 type Action =
   | { type: "add"; task: TaskDTO }
@@ -79,6 +100,92 @@ function applyAction(tasks: TaskDTO[], action: Action): TaskDTO[] {
 }
 
 type Toast = { message: string; actionLabel?: string; onAction?: () => void };
+
+function BucketSection({
+  label,
+  count,
+  children,
+}: {
+  label: string;
+  count: number;
+  children: ReactNode;
+}) {
+  return (
+    <Box component="section">
+      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+        {label}（{count}）
+      </Typography>
+      <Stack spacing={1}>{children}</Stack>
+    </Box>
+  );
+}
+
+function CollapsibleSection({
+  label,
+  count,
+  defaultExpanded,
+  children,
+}: {
+  label: string;
+  count: number;
+  defaultExpanded: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Accordion
+      disableGutters
+      elevation={0}
+      defaultExpanded={defaultExpanded}
+      sx={{ "&::before": { display: "none" } }}
+    >
+      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+        <Typography variant="subtitle2" color="text.secondary">
+          {label}（{count}）
+        </Typography>
+      </AccordionSummary>
+      <AccordionDetails>
+        <Stack spacing={1}>{children}</Stack>
+      </AccordionDetails>
+    </Accordion>
+  );
+}
+
+function CompletedSection({
+  count,
+  children,
+}: {
+  count: number;
+  children: ReactNode;
+}) {
+  return (
+    <Accordion
+      disableGutters
+      elevation={0}
+      defaultExpanded={false}
+      sx={{ "&::before": { display: "none" } }}
+    >
+      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+          <Typography variant="subtitle2" color="text.secondary">
+            完了（今日 {count}）
+          </Typography>
+          <Tooltip title={COMPLETED_TASK_HINT}>
+            <InfoOutlinedIcon
+              fontSize="inherit"
+              tabIndex={0}
+              titleAccess={COMPLETED_TASK_HINT}
+              onClick={(event) => event.stopPropagation()}
+              sx={{ color: "text.disabled", cursor: "help" }}
+            />
+          </Tooltip>
+        </Box>
+      </AccordionSummary>
+      <AccordionDetails>
+        <Stack spacing={1}>{children}</Stack>
+      </AccordionDetails>
+    </Accordion>
+  );
+}
 
 export function TaskListScreen({ initialTasks }: { initialTasks: TaskDTO[] }) {
   const [tasks, setTasks] = useState(initialTasks);
@@ -227,111 +334,75 @@ export function TaskListScreen({ initialTasks }: { initialTasks: TaskDTO[] }) {
   };
 
   return (
-    <div className="flex flex-1 flex-col pb-40">
-      <div className="flex-1 space-y-6 px-4 py-4">
-        <div className="flex justify-end">
+    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", pb: 20 }}>
+      <Stack spacing={3} sx={{ flex: 1, px: 2, py: 2 }}>
+        <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
           <Chip
-            active={showPurchaseOnly}
+            icon={
+              showPurchaseOnly ? (
+                <ShoppingCartIcon />
+              ) : (
+                <ShoppingCartOutlinedIcon />
+              )
+            }
+            label="買うものだけ表示"
+            clickable
+            color={showPurchaseOnly ? "primary" : "default"}
+            variant={showPurchaseOnly ? "filled" : "outlined"}
             onClick={() => setShowPurchaseOnly((current) => !current)}
-          >
-            🛒 買うものだけ表示
-          </Chip>
-        </div>
+          />
+        </Box>
 
         {showPurchaseOnly ? (
           <>
             {purchaseOpen.length > 0 && (
-              <section>
-                <h2 className="mb-2 text-sm font-semibold text-zinc-500">
-                  買うもの（{purchaseOpen.length}）
-                </h2>
-                <div className="space-y-2">
-                  {purchaseOpen.map((task) => (
-                    <TaskRow
-                      key={task.id}
-                      task={task}
-                      today={today}
-                      {...rowHandlers}
-                    />
-                  ))}
-                </div>
-              </section>
+              <BucketSection label="買うもの" count={purchaseOpen.length}>
+                {purchaseOpen.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    today={today}
+                    {...rowHandlers}
+                  />
+                ))}
+              </BucketSection>
             )}
 
             {purchaseCompletedToday.length > 0 && (
-              <details className="group" open>
-                <summary className="cursor-pointer text-sm font-semibold text-zinc-500">
-                  完了（今日 {purchaseCompletedToday.length}）
-                </summary>
-                <div className="mt-2 space-y-2">
-                  {purchaseCompletedToday.map((task) => (
-                    <TaskRow
-                      key={task.id}
-                      task={task}
-                      today={today}
-                      {...rowHandlers}
-                    />
-                  ))}
-                </div>
-              </details>
+              <CompletedSection count={purchaseCompletedToday.length}>
+                {purchaseCompletedToday.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    today={today}
+                    {...rowHandlers}
+                  />
+                ))}
+              </CompletedSection>
             )}
 
             {purchaseOpen.length === 0 &&
               purchaseCompletedToday.length === 0 && (
-                <p className="py-16 text-center text-sm text-zinc-400">
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  align="center"
+                  sx={{ py: 8 }}
+                >
                   買うものはありません。
-                </p>
+                </Typography>
               )}
           </>
         ) : (
           <>
             {visibleBuckets.map((key) =>
               buckets[key].length > 0 ? (
-                <section key={key}>
-                  <h2 className="mb-2 text-sm font-semibold text-zinc-500">
-                    {BUCKET_LABEL[key]}（{buckets[key].length}）
-                  </h2>
-                  <div className="space-y-2">
-                    {buckets[key].map((task) => (
-                      <TaskRow
-                        key={task.id}
-                        task={task}
-                        today={today}
-                        {...rowHandlers}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ) : null,
-            )}
-
-            {COLLAPSIBLE_BUCKETS.map((key) =>
-              buckets[key].length > 0 ? (
-                <details key={key} className="group" open>
-                  <summary className="cursor-pointer text-sm font-semibold text-zinc-500">
-                    {BUCKET_LABEL[key]}（{buckets[key].length}）
-                  </summary>
-                  <div className="mt-2 space-y-2">
-                    {buckets[key].map((task) => (
-                      <TaskRow
-                        key={task.id}
-                        task={task}
-                        today={today}
-                        {...rowHandlers}
-                      />
-                    ))}
-                  </div>
-                </details>
-              ) : null,
-            )}
-
-            {completedToday.length > 0 && (
-              <details className="group" open>
-                <summary className="cursor-pointer text-sm font-semibold text-zinc-500">
-                  完了（今日 {completedToday.length}）
-                </summary>
-                <div className="mt-2 space-y-2">
-                  {completedToday.map((task) => (
+                <BucketSection
+                  key={key}
+                  label={BUCKET_LABEL[key]}
+                  count={buckets[key].length}
+                >
+                  {buckets[key].map((task) => (
                     <TaskRow
                       key={task.id}
                       task={task}
@@ -339,75 +410,104 @@ export function TaskListScreen({ initialTasks }: { initialTasks: TaskDTO[] }) {
                       {...rowHandlers}
                     />
                   ))}
-                </div>
-              </details>
+                </BucketSection>
+              ) : null,
+            )}
+
+            {COLLAPSIBLE_BUCKETS.map((key) =>
+              buckets[key].length > 0 ? (
+                <CollapsibleSection
+                  key={key}
+                  label={BUCKET_LABEL[key]}
+                  count={buckets[key].length}
+                  defaultExpanded
+                >
+                  {buckets[key].map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      today={today}
+                      {...rowHandlers}
+                    />
+                  ))}
+                </CollapsibleSection>
+              ) : null,
+            )}
+
+            {completedToday.length > 0 && (
+              <CompletedSection count={completedToday.length}>
+                {completedToday.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    today={today}
+                    {...rowHandlers}
+                  />
+                ))}
+              </CompletedSection>
             )}
 
             {isEmpty && (
-              <p className="py-16 text-center text-sm text-zinc-400">
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                align="center"
+                sx={{ py: 8 }}
+              >
                 今やることはありません。ゆっくりどうぞ。
-              </p>
+              </Typography>
             )}
           </>
         )}
-      </div>
+      </Stack>
 
       <QuickCaptureBar onSubmit={handleCreate} />
 
-      {toast && (
-        <div className="fixed inset-x-0 bottom-24 z-10 flex justify-center px-4">
-          <div className="flex items-center gap-3 rounded-full bg-zinc-900 px-4 py-2 text-sm text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900">
-            <span>{toast.message}</span>
-            {toast.actionLabel && (
-              <button
-                type="button"
-                onClick={() => {
-                  toast.onAction?.();
-                  setToast(null);
-                }}
-                className="font-semibold underline underline-offset-2"
-              >
-                {toast.actionLabel}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      <Snackbar
+        open={!!toast}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        sx={{ bottom: 96 }}
+        message={toast?.message}
+        action={
+          toast?.actionLabel ? (
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => {
+                toast.onAction?.();
+                setToast(null);
+              }}
+            >
+              {toast.actionLabel}
+            </Button>
+          ) : undefined
+        }
+      />
 
-      {taskPendingDelete && (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 px-6">
-          <button
-            type="button"
-            aria-label="閉じる"
-            onClick={() => setTaskPendingDelete(null)}
-            className="absolute inset-0 h-full w-full cursor-default"
-          />
-          <div className="relative w-full max-w-xs rounded-xl bg-white p-4 shadow-lg dark:bg-zinc-900">
-            <p className="text-sm">
-              「{taskPendingDelete.title}」を削除しますか？
-            </p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setTaskPendingDelete(null)}
-                className="rounded-md px-3 py-1.5 text-sm text-zinc-500"
-              >
-                キャンセル
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  performDelete(taskPendingDelete);
-                  setTaskPendingDelete(null);
-                }}
-                className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white"
-              >
-                削除
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <Dialog
+        open={!!taskPendingDelete}
+        onClose={() => setTaskPendingDelete(null)}
+      >
+        <DialogTitle>削除しますか？</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            「{taskPendingDelete?.title}」を削除しますか？
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTaskPendingDelete(null)}>キャンセル</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => {
+              if (taskPendingDelete) performDelete(taskPendingDelete);
+              setTaskPendingDelete(null);
+            }}
+          >
+            削除
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 }

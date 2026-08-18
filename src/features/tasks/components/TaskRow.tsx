@@ -1,5 +1,15 @@
 "use client";
 
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
+import IconButton from "@mui/material/IconButton";
+import Paper from "@mui/material/Paper";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import { useState } from "react";
 import { formatRelativeDue } from "@/lib/date";
 import type { TaskDTO } from "../types";
@@ -25,86 +35,108 @@ export function TaskRow({
   const done = task.status === "done";
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-zinc-200 px-3 py-2.5 dark:border-zinc-800">
-      <button
-        type="button"
-        onClick={() => onToggle(task)}
-        aria-pressed={done}
+    <Paper
+      variant="outlined"
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 1.5,
+        px: 1,
+        py: 0.5,
+      }}
+    >
+      <Checkbox
+        checked={done}
+        onChange={() => onToggle(task)}
+        color="success"
         aria-label={done ? "未完了に戻す" : "完了にする"}
-        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs ${
-          done
-            ? "border-emerald-500 bg-emerald-500 text-white"
-            : "border-zinc-300 dark:border-zinc-600"
-        }`}
-      >
-        {done && "✓"}
-      </button>
+      />
 
-      <div className="min-w-0 flex-1">
-        <p
-          className={`truncate text-sm ${done ? "text-zinc-400 line-through" : ""}`}
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Typography
+          variant="body2"
+          noWrap
+          sx={{
+            textDecoration: done ? "line-through" : "none",
+            color: done ? "text.disabled" : "text.primary",
+          }}
         >
           {task.title}
-        </p>
+        </Typography>
 
         {editingDue ? (
-          <div className="mt-1 flex items-center gap-2">
-            <input
+          <Box sx={{ mt: 0.5, display: "flex", alignItems: "center", gap: 1 }}>
+            <TextField
               type="date"
+              size="small"
+              variant="standard"
+              autoFocus
               defaultValue={task.dueOn ?? ""}
               onBlur={() => setEditingDue(false)}
               onChange={(event) => {
                 onDueDateChange(task, event.target.value || null);
                 setEditingDue(false);
               }}
-              className="rounded border border-zinc-300 px-1.5 py-0.5 text-xs dark:border-zinc-700 dark:bg-black"
+              slotProps={{ htmlInput: { style: { fontSize: "0.75rem" } } }}
             />
             {task.dueOn && (
-              <button
-                type="button"
+              <Button
+                size="small"
+                sx={{
+                  p: 0,
+                  minWidth: 0,
+                  textTransform: "none",
+                  fontSize: "0.75rem",
+                }}
                 onClick={() => {
                   onDueDateChange(task, null);
                   setEditingDue(false);
                 }}
-                className="text-xs text-zinc-400 underline"
               >
                 期限なしにする
-              </button>
+              </Button>
             )}
-          </div>
+          </Box>
         ) : (
-          <button
-            type="button"
+          <Button
+            size="small"
             onClick={() => setEditingDue(true)}
-            className="mt-0.5 text-xs text-zinc-500 underline-offset-2 hover:underline dark:text-zinc-400"
+            sx={{
+              mt: 0.25,
+              p: 0,
+              minWidth: 0,
+              textTransform: "none",
+              fontSize: "0.75rem",
+              color: "text.secondary",
+            }}
           >
             {task.dueOn ? formatRelativeDue(task.dueOn, today) : "期限を設定"}
-          </button>
+          </Button>
         )}
-      </div>
+      </Box>
 
-      <button
-        type="button"
+      <IconButton
         onClick={() => onPurchaseToggle(task)}
+        color={task.isPurchase ? "warning" : "default"}
         aria-pressed={task.isPurchase}
         aria-label={task.isPurchase ? "買うものから外す" : "買うものにする"}
-        className={`shrink-0 rounded-full border px-2 py-1 text-xs ${
-          task.isPurchase
-            ? "border-amber-500 bg-amber-500 text-white"
-            : "border-zinc-300 text-zinc-300 dark:border-zinc-600 dark:text-zinc-600"
-        }`}
+        size="small"
       >
-        🛒
-      </button>
+        {task.isPurchase ? (
+          <ShoppingCartIcon fontSize="small" />
+        ) : (
+          <ShoppingCartOutlinedIcon fontSize="small" />
+        )}
+      </IconButton>
 
-      <button
-        type="button"
+      <IconButton
         onClick={() => onDelete(task)}
         aria-label="削除"
-        className="shrink-0 px-1 text-zinc-300 hover:text-red-500 dark:text-zinc-600"
+        size="small"
+        sx={{ color: "text.disabled" }}
       >
-        ✕
-      </button>
-    </div>
+        <DeleteOutlineIcon fontSize="small" />
+      </IconButton>
+    </Paper>
   );
 }
