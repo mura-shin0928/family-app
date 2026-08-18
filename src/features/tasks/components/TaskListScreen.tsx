@@ -143,7 +143,7 @@ function CollapsibleSection({
           {label}（{count}）
         </Typography>
       </AccordionSummary>
-      <AccordionDetails>
+      <AccordionDetails sx={{ pb: 0 }}>
         <Stack spacing={1}>{children}</Stack>
       </AccordionDetails>
     </Accordion>
@@ -180,7 +180,7 @@ function CompletedSection({
           </Tooltip>
         </Box>
       </AccordionSummary>
-      <AccordionDetails>
+      <AccordionDetails sx={{ pb: 0 }}>
         <Stack spacing={1}>{children}</Stack>
       </AccordionDetails>
     </Accordion>
