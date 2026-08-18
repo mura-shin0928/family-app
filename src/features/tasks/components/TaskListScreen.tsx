@@ -195,6 +195,20 @@ function CompletedSection({
   children: ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [hintOpen, setHintOpen] = useState(false);
+  const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function toggleHint() {
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+    setHintOpen((current) => {
+      const next = !current;
+      if (next) {
+        hintTimer.current = setTimeout(() => setHintOpen(false), 4000);
+      }
+      return next;
+    });
+  }
+
   return (
     <Box component="section">
       <CollapsibleHeader
@@ -202,12 +216,25 @@ function CompletedSection({
         expanded={expanded}
         onToggle={() => setExpanded((current) => !current)}
         extra={
-          <Tooltip title={COMPLETED_TASK_HINT}>
+          // MUIのTooltipはhover前提のためタッチ操作では長押し(既定約0.7秒)が
+          // 必要になり、単純なタップだと開かないことがある。ここではタップの
+          // クリックイベントだけで開閉を制御し、自動でも4秒後に閉じる。
+          <Tooltip
+            title={COMPLETED_TASK_HINT}
+            open={hintOpen}
+            onClose={() => setHintOpen(false)}
+            disableFocusListener
+            disableHoverListener
+            disableTouchListener
+          >
             <InfoOutlinedIcon
               fontSize="inherit"
               tabIndex={0}
               titleAccess={COMPLETED_TASK_HINT}
-              onClick={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                toggleHint();
+              }}
               sx={{ color: "text.disabled", cursor: "help" }}
             />
           </Tooltip>
