@@ -10,17 +10,17 @@ import { TASKS_QUERY_KEY } from "../types";
  * Reactのstateへ反映せず invalidateQueries のみ行い、DBを常にsource of
  * truthとして再取得させる（要件通りの「invalidate→再fetch」フロー）。
  *
- * モバイルOSはバックグラウンド中にWebSocketを切ることがあるため、
- * visibilitychangeでvisibleに戻るたびにチャンネルを作り直して再subscribeする
- * （realtime-jsは同一チャンネルインスタンスへの再subscribeを許可していない）。
+ * visibilitychangeでのデータ再取得自体はTanStack Queryの
+ * refetchOnWindowFocusが同じイベントで既に担っているため、ここでは
+ * 「モバイルOSがバックグラウンド中に切ったWebSocketを繋ぎ直す」ことだけを行う
+ * （realtime-jsは同一チャンネルインスタンスへの再subscribeを許可していないため
+ * 作り直す）。
  */
 export function useTasksRealtime(familyId: string) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
     const supabase = createClient();
-    const invalidate = () =>
-      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
 
     function subscribe() {
       return supabase
@@ -33,7 +33,7 @@ export function useTasksRealtime(familyId: string) {
             table: "tasks",
             filter: `family_id=eq.${familyId}`,
           },
-          invalidate,
+          () => queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY }),
         )
         .subscribe();
     }
@@ -44,7 +44,6 @@ export function useTasksRealtime(familyId: string) {
       if (document.visibilityState !== "visible") return;
       supabase.removeChannel(channel);
       channel = subscribe();
-      invalidate();
     }
     document.addEventListener("visibilitychange", onVisibilityChange);
 
