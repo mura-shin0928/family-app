@@ -187,6 +187,100 @@ describe("invitations RLS + accept_invitation / invitation_preview", () => {
     expect(acceptError).not.toBeNull();
   });
 
+  describe("check_invite_email (anon-callable pre-check for the invite email form)", () => {
+    it("anon gets ok for a valid invitation and a matching email", async () => {
+      const { hash } = makeToken();
+      await admin.from("invitations").insert({
+        family_id: familyF1,
+        token_hash: hash,
+        invited_email: invitee.email,
+        display_name: "事前確認テスト",
+        invited_by: memberAId,
+        expires_at: new Date(
+          Date.now() + 3 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+      });
+
+      const anon = createAnonClient();
+      const { data, error } = await anon
+        .rpc("check_invite_email", {
+          p_token_hash: hash,
+          p_email: invitee.email,
+        })
+        .single<{ family_name: string; status: string }>();
+      expect(error).toBeNull();
+      expect(data?.status).toBe("ok");
+      expect(data?.family_name).toBeTruthy();
+    });
+
+    it("returns email_mismatch for a non-matching email without requiring auth", async () => {
+      const { hash } = makeToken();
+      await admin.from("invitations").insert({
+        family_id: familyF1,
+        token_hash: hash,
+        invited_email: invitee.email,
+        display_name: "不一致テスト",
+        invited_by: memberAId,
+        expires_at: new Date(
+          Date.now() + 3 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+      });
+
+      const anon = createAnonClient();
+      const { data, error } = await anon
+        .rpc("check_invite_email", {
+          p_token_hash: hash,
+          p_email: stranger.email,
+        })
+        .single<{ family_name: string; status: string }>();
+      expect(error).toBeNull();
+      expect(data?.status).toBe("email_mismatch");
+    });
+
+    it("returns not_found for an unknown token", async () => {
+      const anon = createAnonClient();
+      const { data, error } = await anon
+        .rpc("check_invite_email", {
+          p_token_hash: "0".repeat(64),
+          p_email: invitee.email,
+        })
+        .single<{ family_name: string; status: string }>();
+      expect(error).toBeNull();
+      expect(data?.status).toBe("not_found");
+    });
+
+    it("is a pure read and never marks the invitation accepted", async () => {
+      const { hash } = makeToken();
+      const { data: inv } = await admin
+        .from("invitations")
+        .insert({
+          family_id: familyF1,
+          token_hash: hash,
+          invited_email: invitee.email,
+          display_name: "副作用なし確認",
+          invited_by: memberAId,
+          expires_at: new Date(
+            Date.now() + 3 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+        })
+        .select("id")
+        .single();
+
+      const anon = createAnonClient();
+      await anon.rpc("check_invite_email", {
+        p_token_hash: hash,
+        p_email: invitee.email,
+      });
+
+      const { data: after } = await admin
+        .from("invitations")
+        .select("accepted_at")
+        .eq("id", inv?.id)
+        .single();
+      expect(after?.accepted_at).toBeNull();
+    });
+  });
+
   describe("accept_invitation", () => {
     it("accepts a valid invitation and adds the invitee to family_members", async () => {
       const { token, hash } = makeToken();

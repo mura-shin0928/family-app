@@ -1,21 +1,38 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { INVITATION_TTL_DAYS } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/server";
+import { INVITE_REDIRECT_COOKIE } from "./constants";
+import { checkInviteEmail } from "./queries";
 import {
   acceptInvitationSchema,
   createInvitationSchema,
   invitationIdSchema,
+  sendInviteLoginLinkSchema,
 } from "./schema";
 import { generateInvitationToken, hashInvitationToken } from "./token";
+import type { InvitationPreviewStatus } from "./types";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type CreateInvitationResult =
   | { ok: true; token: string }
   | { ok: false; error: string };
+
+/** check_invite_email の status → 画面表示文言（未ログイン・フォーム入力直後の文脈）。 */
+const CHECK_EMAIL_ERROR_MESSAGES: Record<
+  Exclude<InvitationPreviewStatus, "ok">,
+  string
+> = {
+  not_found: "招待が見つかりません。URLを確認してください。",
+  revoked: "この招待は取り消されています。",
+  used: "この招待はすでに使用されています。",
+  expired: "この招待の有効期限が切れています。",
+  email_mismatch: "このメールアドレス宛の招待ではありません。",
+};
 
 /** accept_invitation (SQL) の raise exception メッセージ → 画面表示文言。 */
 const ACCEPT_ERROR_MESSAGES: Record<string, string> = {
@@ -101,6 +118,63 @@ export async function revokeInvitation(input: {
   }
 
   revalidatePath("/family");
+  return { ok: true };
+}
+
+/**
+ * 未ログインの訪問者が /invite/<token> でメールアドレスを送信した際のエントリーポイント。
+ * check_invite_email で招待と一致するか確認してから初めてマジックリンクを送る
+ * （不一致・期限切れ・取り消し済みの場合はメール送信自体を行わない）。
+ * ログイン完了後は /auth/callback が next で /invite/<token> に戻す。
+ */
+export async function sendInviteLoginLink(input: {
+  token: string;
+  email: string;
+}): Promise<ActionResult> {
+  const parsed = sendInviteLoginLinkSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  const tokenHash = hashInvitationToken(parsed.data.token);
+  const preview = await checkInviteEmail(tokenHash, parsed.data.email);
+
+  if (preview.status !== "ok") {
+    return { ok: false, error: CHECK_EMAIL_ERROR_MESSAGES[preview.status] };
+  }
+
+  const host = (await headers()).get("host");
+  const protocol =
+    host?.startsWith("localhost") || host?.startsWith("127.0.0.1")
+      ? "http"
+      : "https";
+
+  // next はcrypto queryではなくCookieで運ぶ（emailRedirectToにクエリを足すと
+  // Supabaseのredirect URL許可リストの完全一致チェックに落ち、site_urlへ
+  // フォールバックしてしまうため）。
+  const cookieStore = await cookies();
+  cookieStore.set(INVITE_REDIRECT_COOKIE, `/invite/${parsed.data.token}`, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60,
+  });
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithOtp({
+    email: parsed.data.email,
+    options: {
+      emailRedirectTo: `${protocol}://${host}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    return { ok: false, error: "ログインリンクの送信に失敗しました" };
+  }
+
   return { ok: true };
 }
 

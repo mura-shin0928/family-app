@@ -24,3 +24,8 @@ export const invitationIdSchema = z.object({
 export const acceptInvitationSchema = z.object({
   token: z.string().min(1, "招待トークンが不正です"),
 });
+
+export const sendInviteLoginLinkSchema = z.object({
+  token: z.string().min(1, "招待トークンが不正です"),
+  email: emailSchema,
+});

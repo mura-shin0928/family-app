@@ -1,7 +1,7 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { LinkButton } from "@/components/LinkButton";
 import { AcceptInvitationScreen } from "@/features/invitations/components/AcceptInvitationScreen";
+import { InviteEmailForm } from "@/features/invitations/components/InviteEmailForm";
 import { previewInvitation } from "@/features/invitations/queries";
 import { hashInvitationToken } from "@/features/invitations/token";
 import { createClient } from "@/lib/supabase/server";
@@ -33,20 +33,7 @@ export default async function InvitePage({
         <Typography variant="h6" component="h1" sx={{ fontWeight: 600 }}>
           Family App
         </Typography>
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{ maxWidth: 320 }}
-        >
-          招待の内容を確認するには、招待されたメールアドレスでログインしてください。
-        </Typography>
-        <LinkButton
-          href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`}
-          variant="contained"
-          sx={{ width: 1, maxWidth: 320 }}
-        >
-          ログインする
-        </LinkButton>
+        <InviteEmailForm token={token} />
       </Box>
     );
   }

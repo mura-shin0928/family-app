@@ -87,3 +87,28 @@ export async function previewInvitation(
     status: (data?.status ?? "not_found") as InvitationPreviewStatus,
   };
 }
+
+/**
+ * 未ログインの訪問者が /invite/<token> でメールアドレスを入力した際の事前確認。
+ * auth.uid() を使わずクライアント入力のメールをそのまま照合するため anon でも呼べるが、
+ * これ自体は本人確認にならない（実際の所有証明はこのあとのマジックリンク認証が担う）。
+ */
+export async function checkInviteEmail(
+  tokenHash: string,
+  email: string,
+): Promise<InvitationPreview> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .rpc("check_invite_email", { p_token_hash: tokenHash, p_email: email })
+    .single<{ family_name: string | null; status: string }>();
+
+  if (error) {
+    throw new Error(`failed to check invite email: ${error.message}`);
+  }
+
+  return {
+    familyName: data?.family_name ?? null,
+    status: (data?.status ?? "not_found") as InvitationPreviewStatus,
+  };
+}
