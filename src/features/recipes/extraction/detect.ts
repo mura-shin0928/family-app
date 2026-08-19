@@ -17,3 +17,25 @@ export function urlOnly(input: string): string | null {
 
   return trimmed;
 }
+
+const SNS_HOSTS = new Set([
+  "x.com",
+  "www.x.com",
+  "twitter.com",
+  "www.twitter.com",
+  "instagram.com",
+  "www.instagram.com",
+]);
+
+/**
+ * X / Instagram は本文を取得できる保証がない（IGはアプリトークン必須）ため、
+ * fetch を試みず「本文を貼り付けてください」に倒すホスト一覧。
+ */
+export function isSnsHost(urlString: string): boolean {
+  try {
+    const url = new URL(urlString);
+    return SNS_HOSTS.has(url.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}

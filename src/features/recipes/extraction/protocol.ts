@@ -1,15 +1,24 @@
 import { z } from "zod";
-import type { ExtractionResult, RecipeDraft } from "./types";
+import { normalizeDraft } from "./normalize";
+import type { ExtractionResult } from "./types";
 
 // 一次情報を確認済み（2026-08時点）: https://ai.google.dev/gemini-api/docs/structured-output
 // 学習データの `:generateContent` / `responseSchema` / `gemini-2.5-flash` から変わっている。
 export const GEMINI_MODEL = "gemini-3.7-flash";
+// 無料枠クォータ(429)を使い切った際のフォールバック連鎖。実測でモデルごとに別
+// クォータバケットであることを確認済み（3.7-flashが429でも他の3モデルは
+// いずれも200で成功する）。応答形式（steps/model_outputの入れ方）はparseOutputと
+// 互換で追加対応は不要だった。品質・レイテンシが近い順（3.7に近いバージョン→
+// 軽量モデル）に並べ、429のときだけ次に進む。
+// gemini-2.5-flash-liteは実測で404（廃止・3.5-flash-liteへの移行を促すメッセージ）
+// だったため候補に含めていない。
+export const GEMINI_FALLBACK_MODELS = [
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+];
 export const GEMINI_ENDPOINT =
   "https://generativelanguage.googleapis.com/v1beta/interactions";
-
-const MAX_INGREDIENTS = 50;
-const MAX_NAME_LENGTH = 100;
-const MAX_QUANTITY_LENGTH = 50;
 
 // 送信するのは呼び出し元が渡した本文のみ。family / task / メンバー名は一切載せない。
 const SYSTEM_INSTRUCTION =
@@ -17,12 +26,15 @@ const SYSTEM_INSTRUCTION =
   "与えられた本文だけを根拠にJSONを出力してください。" +
   "料理名が読み取れない場合は本文の内容から適切な短い名前を推測してください。" +
   "材料の分量が本文に書かれていない場合、quantityは空文字にしてください。" +
-  "材料が1つも見つからない場合はingredientsを空配列にしてください。";
+  "材料が1つも見つからない場合はingredientsを空配列にしてください。" +
+  "本文に人数・分量の目安（何人分・何人前など）の記載があれば、" +
+  "servingsに「2人分」のような形で書き出してください。記載がなければservingsは空文字にしてください。";
 
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
     title: { type: "string" },
+    servings: { type: "string" },
     ingredients: {
       type: "array",
       items: {
@@ -35,12 +47,12 @@ const RESPONSE_SCHEMA = {
       },
     },
   },
-  required: ["title", "ingredients"],
+  required: ["title", "servings", "ingredients"],
 } as const;
 
-export function buildRequestBody(text: string) {
+export function buildRequestBody(text: string, model: string = GEMINI_MODEL) {
   return {
-    model: GEMINI_MODEL,
+    model,
     input: text,
     system_instruction: SYSTEM_INSTRUCTION,
     store: false,
@@ -88,6 +100,9 @@ function extractOutputText(
 
 const draftSchema = z.object({
   title: z.string(),
+  // 既存の呼び出し元（thinking_levelを使わない旧レスポンス等）を壊さないよう
+  // 省略時は空文字扱いにする。
+  servings: z.string().optional().default(""),
   ingredients: z.array(
     z.object({
       name: z.string(),
@@ -95,21 +110,6 @@ const draftSchema = z.object({
     }),
   ),
 });
-
-function normalizeDraft(raw: z.infer<typeof draftSchema>): RecipeDraft {
-  const ingredients = raw.ingredients
-    .map((ingredient) => ({
-      name: ingredient.name.trim().slice(0, MAX_NAME_LENGTH),
-      quantity: ingredient.quantity.trim().slice(0, MAX_QUANTITY_LENGTH),
-    }))
-    .filter((ingredient) => ingredient.name !== "")
-    .slice(0, MAX_INGREDIENTS);
-
-  return {
-    title: raw.title.trim().slice(0, MAX_NAME_LENGTH),
-    ingredients,
-  };
-}
 
 export function parseOutput(rawResponseJson: unknown): ExtractionResult {
   const envelope = geminiResponseSchema.safeParse(rawResponseJson);

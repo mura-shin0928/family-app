@@ -2,17 +2,24 @@
 
 import { requireFamilyMember } from "@/features/auth/guard";
 import { createClient } from "@/lib/supabase/server";
-import { urlOnly } from "./extraction/detect";
+import { isSnsHost, urlOnly } from "./extraction/detect";
+import { fetchHtml } from "./extraction/fetch-html";
 import { extractRecipeFromText } from "./extraction/gemini";
+import { extractRecipeFromJsonLd } from "./extraction/jsonld";
+import { MAX_NAME_LENGTH } from "./extraction/normalize";
+import { extractReadable } from "./extraction/readable";
 import type { RecipeDraft } from "./extraction/types";
 import {
   addIngredientsToPurchasesSchema,
-  analyzeRecipeTextSchema,
+  analyzeRecipeSourceSchema,
   createRecipeSchema,
   recipeIdSchema,
   undoAddIngredientsToPurchasesSchema,
   updateRecipeSchema,
 } from "./schema";
+
+// ページのmaxDuration(30秒)に収まるよう、URL経路のfetchとGeminiで共有する予算。
+const ANALYZE_DEADLINE_MS = 27_000;
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -314,8 +321,13 @@ export async function undoAddIngredientsToPurchases(input: {
   return { ok: true };
 }
 
-export type AnalyzeRecipeTextResult =
-  | { ok: true; draft: RecipeDraft }
+export type AnalyzeRecipeSourceResult =
+  | {
+      ok: true;
+      draft: RecipeDraft;
+      sourceUrl?: string;
+      via: "jsonld" | "gemini";
+    }
   | { ok: false; error: string; detectedUrl?: string };
 
 const FAILURE_MESSAGES: Record<string, string> = {
@@ -328,10 +340,15 @@ const FAILURE_MESSAGES: Record<string, string> = {
     "解析結果を読み取れませんでした。手入力で保存してください。",
 };
 
-export async function analyzeRecipeText(input: {
+const URL_UNREADABLE_ERROR =
+  "ページを読み取れませんでした。本文をコピーして貼り付けてください。";
+const PASTE_ONLY_ERROR =
+  "URLだけでは材料を読み取れません。本文をコピーして貼り付けてください。";
+
+export async function analyzeRecipeSource(input: {
   text: string;
-}): Promise<AnalyzeRecipeTextResult> {
-  const parsed = analyzeRecipeTextSchema.safeParse(input);
+}): Promise<AnalyzeRecipeSourceResult> {
+  const parsed = analyzeRecipeSourceSchema.safeParse(input);
   if (!parsed.success) {
     return {
       ok: false,
@@ -342,25 +359,61 @@ export async function analyzeRecipeText(input: {
   await requireFamilyMember();
 
   const detectedUrl = urlOnly(parsed.data.text);
-  if (detectedUrl) {
+
+  if (!detectedUrl) {
+    const result = await extractRecipeFromText(parsed.data.text);
+    if (result.kind === "failed") {
+      return {
+        ok: false,
+        error:
+          FAILURE_MESSAGES[result.reason] ??
+          "解析に失敗しました。手入力で保存してください。",
+      };
+    }
+    return { ok: true, draft: result.draft, via: "gemini" };
+  }
+
+  if (isSnsHost(detectedUrl)) {
+    return { ok: false, error: PASTE_ONLY_ERROR, detectedUrl };
+  }
+
+  const deadlineAt = Date.now() + ANALYZE_DEADLINE_MS;
+  const fetched = await fetchHtml(detectedUrl, { deadlineAt });
+  if (!fetched.ok) {
+    return { ok: false, error: URL_UNREADABLE_ERROR, detectedUrl };
+  }
+
+  const jsonLdDraft = extractRecipeFromJsonLd(fetched.html);
+  if (jsonLdDraft) {
     return {
-      ok: false,
-      error:
-        "URLだけでは材料を読み取れません。本文をコピーして貼り付けてください。",
-      detectedUrl,
+      ok: true,
+      draft: jsonLdDraft,
+      sourceUrl: detectedUrl,
+      via: "jsonld",
     };
   }
 
-  const result = await extractRecipeFromText(parsed.data.text);
+  const { title: pageTitle, text: pageText } = extractReadable(fetched.html);
+  if (pageText === "") {
+    return { ok: false, error: URL_UNREADABLE_ERROR, detectedUrl };
+  }
 
+  const result = await extractRecipeFromText(pageText, { deadlineAt });
   if (result.kind === "failed") {
     return {
       ok: false,
       error:
         FAILURE_MESSAGES[result.reason] ??
         "解析に失敗しました。手入力で保存してください。",
+      detectedUrl,
     };
   }
 
-  return { ok: true, draft: result.draft };
+  // ページの og:title はGeminiの推測titleより素性が確かなので優先する。
+  const draft =
+    pageTitle !== ""
+      ? { ...result.draft, title: pageTitle.slice(0, MAX_NAME_LENGTH) }
+      : result.draft;
+
+  return { ok: true, draft, sourceUrl: detectedUrl, via: "gemini" };
 }

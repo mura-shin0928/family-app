@@ -44,6 +44,13 @@ describe("buildRequestBody", () => {
     expect(body.input).toBe("鶏もも肉 300g");
   });
 
+  it("defaults to GEMINI_MODEL but accepts a model override", () => {
+    expect(buildRequestBody("text").model).toBe("gemini-3.7-flash");
+    expect(buildRequestBody("text", "gemini-3.5-flash-lite").model).toBe(
+      "gemini-3.5-flash-lite",
+    );
+  });
+
   it("requests structured JSON output and stateless mode", () => {
     const body = buildRequestBody("text");
     expect(body.store).toBe(false);
@@ -51,6 +58,7 @@ describe("buildRequestBody", () => {
     expect(body.response_format.mime_type).toBe("application/json");
     expect(body.response_format.schema.required).toEqual([
       "title",
+      "servings",
       "ingredients",
     ]);
   });
@@ -82,12 +90,44 @@ describe("parseOutput", () => {
       kind: "draft",
       draft: {
         title: "鶏の照り焼き",
+        servings: "",
         ingredients: [
           { name: "鶏もも肉", quantity: "300g" },
           { name: "白菜", quantity: "1/4個" },
         ],
       },
     });
+  });
+
+  it("parses the servings field when present", () => {
+    const result = parseOutput(
+      envelope({
+        title: "鶏の照り焼き",
+        servings: "2人分",
+        ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
+      }),
+    );
+    expect(result).toEqual({
+      kind: "draft",
+      draft: {
+        title: "鶏の照り焼き",
+        servings: "2人分",
+        ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
+      },
+    });
+  });
+
+  it("defaults servings to an empty string when absent from the response", () => {
+    const result = parseOutput(
+      envelope({
+        title: "鶏の照り焼き",
+        ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
+      }),
+    );
+    expect(result.kind).toBe("draft");
+    if (result.kind === "draft") {
+      expect(result.draft.servings).toBe("");
+    }
   });
 
   it("fails when output_text is not JSON", () => {
@@ -127,6 +167,7 @@ describe("parseOutput", () => {
       kind: "draft",
       draft: {
         title: "鶏の照り焼き",
+        servings: "",
         ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
       },
     });
@@ -151,7 +192,7 @@ describe("parseOutput", () => {
     );
     expect(result).toEqual({
       kind: "draft",
-      draft: { title: "謎の料理", ingredients: [] },
+      draft: { title: "謎の料理", servings: "", ingredients: [] },
     });
   });
 
@@ -171,6 +212,7 @@ describe("parseOutput", () => {
       kind: "draft",
       draft: {
         title: "鶏の照り焼き",
+        servings: "",
         ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
       },
     });
@@ -202,6 +244,7 @@ describe("parseOutput", () => {
       kind: "draft",
       draft: {
         title: "鶏の照り焼き",
+        servings: "",
         ingredients: [{ name: "白菜", quantity: "" }],
       },
     });
@@ -275,6 +318,107 @@ describe("extractRecipeFromText", () => {
     expect(result).toEqual({ kind: "failed", reason: "timeout" });
   });
 
+  it("moves to the next fallback model each time the current one returns 429", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 429 }) // gemini-3.7-flash
+      .mockResolvedValueOnce({ ok: false, status: 429 }) // gemini-3.6-flash
+      .mockResolvedValueOnce({
+        ok: true, // gemini-3.5-flash
+        json: () =>
+          Promise.resolve(
+            envelope({
+              title: "鶏の照り焼き",
+              ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
+            }),
+          ),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await extractRecipeFromText("鶏もも肉 300g");
+
+    expect(result).toEqual({
+      kind: "draft",
+      draft: {
+        title: "鶏の照り焼き",
+        servings: "",
+        ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
+      },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const modelsCalled = fetchMock.mock.calls.map(
+      (call) => JSON.parse(call[1].body).model,
+    );
+    expect(modelsCalled).toEqual([
+      "gemini-3.7-flash",
+      "gemini-3.6-flash",
+      "gemini-3.5-flash",
+    ]);
+  });
+
+  it("does not retry non-429 errors", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await extractRecipeFromText("鶏もも肉 300g");
+
+    expect(result).toEqual({ kind: "failed", reason: "api-error" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns api-error when every model in the chain is rate-limited", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 429 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await extractRecipeFromText("鶏もも肉 300g");
+
+    expect(result).toEqual({ kind: "failed", reason: "api-error" });
+    // gemini-3.7-flash + 3つのフォールバック = 4回
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("does not call fetch at all once the shared deadline has already passed", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await extractRecipeFromText("鶏もも肉 300g", {
+      deadlineAt: Date.now() - 1,
+    });
+
+    expect(result).toEqual({ kind: "failed", reason: "timeout" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("stops the fallback chain once the shared deadline is exhausted, regardless of remaining models", async () => {
+    // 各モデルへの再試行は「新たに25秒もらえる」のではなく、呼び出し開始時に
+    // 固定した1つのdeadlineAtの残り時間を使い回す。429が連続しても、
+    // 経過時間の分だけ次の試行に使える時間は減っていくことを検証する。
+    process.env.GEMINI_API_KEY = "test-key";
+    vi.useFakeTimers();
+
+    const fetchMock = vi.fn().mockImplementation(async () => {
+      // 1回の試行に3秒かかったとみなして仮想時計を進める。
+      vi.advanceTimersByTime(3000);
+      return { ok: false, status: 429 };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const deadlineAt = Date.now() + 5000; // 4モデル分(3秒x4=12秒)には全く足りない
+
+    const result = await extractRecipeFromText("鶏もも肉 300g", { deadlineAt });
+
+    expect(result).toEqual({ kind: "failed", reason: "timeout" });
+    // 5秒の猶予に対して1回3秒かかるので、2回目までしか試せない
+    // （4モデル全部を律儀に試すわけではない）。
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    vi.useRealTimers();
+  });
+
   it("returns a draft on success", async () => {
     process.env.GEMINI_API_KEY = "test-key";
     vi.stubGlobal(
@@ -297,6 +441,7 @@ describe("extractRecipeFromText", () => {
       kind: "draft",
       draft: {
         title: "鶏の照り焼き",
+        servings: "",
         ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
       },
     });
