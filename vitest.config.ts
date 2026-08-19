@@ -12,4 +12,12 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  ssr: {
+    // "server-only" は既定でimport時に例外を投げる（Next.jsのビルド時にのみ
+    // react-server条件でno-opに差し替わる想定のパッケージ）。vitestはSSRモードで
+    // モジュールを解決するため、ここで同じ条件を与えてno-op化する。
+    resolve: {
+      conditions: ["react-server"],
+    },
+  },
 });
