@@ -1,19 +1,20 @@
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import { LinkIconButton } from "@/components/LinkIconButton";
+import { BackButton } from "@/components/BackButton";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { InvitationsScreen } from "@/features/invitations/components/InvitationsScreen";
 import {
+  getFamily,
   getFamilyMembers,
   getInvitations,
 } from "@/features/invitations/queries";
 
 export default async function FamilyPage() {
   const { member } = await requireFamilyMember();
-  const [members, invitations] = await Promise.all([
+  const [family, members, invitations] = await Promise.all([
+    getFamily(member.familyId),
     getFamilyMembers(member.familyId),
     getInvitations(member.familyId),
   ]);
@@ -25,22 +26,18 @@ export default async function FamilyPage() {
     >
       <AppBar position="fixed" color="default" elevation={1}>
         <Toolbar>
-          <LinkIconButton
-            href="/"
-            edge="start"
-            size="small"
-            sx={{ mr: 1 }}
-            aria-label="戻る"
-          >
-            <ArrowBackIcon fontSize="small" />
-          </LinkIconButton>
+          <BackButton fallbackHref="/" />
           <Typography variant="h6" component="h1">
-            Family
+            {family.name}
           </Typography>
         </Toolbar>
       </AppBar>
       <Toolbar />
-      <InvitationsScreen members={members} invitations={invitations} />
+      <InvitationsScreen
+        members={members}
+        invitations={invitations}
+        currentMemberId={member.id}
+      />
     </Box>
   );
 }

@@ -21,6 +21,10 @@ export const invitationIdSchema = z.object({
   invitationId: z.string().uuid(),
 });
 
+export const memberIdSchema = z.object({
+  memberId: z.string().uuid(),
+});
+
 export const acceptInvitationSchema = z.object({
   token: z.string().min(1, "招待トークンが不正です"),
 });

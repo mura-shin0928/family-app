@@ -1,6 +1,8 @@
 "use client";
 
+import AddIcon from "@mui/icons-material/Add";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -9,39 +11,64 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState, useTransition } from "react";
-import { createInvitation, revokeInvitation } from "../actions";
+import {
+  type FormEvent,
+  type MouseEvent,
+  useState,
+  useTransition,
+} from "react";
+import {
+  createInvitation,
+  deleteInvitation,
+  removeMember,
+  revokeInvitation,
+} from "../actions";
 import type { FamilyMemberDTO, InvitationDTO } from "../types";
 import { InvitationStatusChip } from "./InvitationStatusChip";
 
 type Props = {
   members: FamilyMemberDTO[];
   invitations: InvitationDTO[];
+  currentMemberId: string;
 };
 
-type MemberRow =
-  | { kind: "member"; id: string; displayName: string }
-  | (InvitationDTO & { kind: "invitation" });
+type MemberRow = {
+  kind: "member";
+  id: string;
+  displayName: string;
+  email: string | null;
+};
+type InvitationRow = InvitationDTO & { kind: "invitation" };
+type Row = MemberRow | InvitationRow;
 
-export function InvitationsScreen({ members, invitations }: Props) {
-  const rows: MemberRow[] = [
+export function InvitationsScreen({
+  members,
+  invitations,
+  currentMemberId,
+}: Props) {
+  const rows: Row[] = [
     ...members.map(
       (member): MemberRow => ({
         kind: "member",
         id: member.id,
         displayName: member.displayName,
+        email: member.email,
       }),
     ),
     // 受諾済みの招待は、対応する行がすでに members 側に出るため二重表示しない。
     ...invitations
       .filter((invitation) => invitation.status !== "accepted")
-      .map((invitation): MemberRow => ({ ...invitation, kind: "invitation" })),
+      .map(
+        (invitation): InvitationRow => ({ ...invitation, kind: "invitation" }),
+      ),
   ];
 
   const router = useRouter();
@@ -49,9 +76,23 @@ export function InvitationsScreen({ members, invitations }: Props) {
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [inviteFormOpen, setInviteFormOpen] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<InvitationDTO | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
+  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
+  const [menuTargetRow, setMenuTargetRow] = useState<Row | null>(null);
+
+  function openRowMenu(event: MouseEvent<HTMLElement>, row: Row) {
+    setMenuAnchorEl(event.currentTarget);
+    setMenuTargetRow(row);
+  }
+
+  function closeRowMenu() {
+    setMenuAnchorEl(null);
+    setMenuTargetRow(null);
+  }
 
   function handleCreate(event: FormEvent) {
     event.preventDefault();
@@ -62,6 +103,7 @@ export function InvitationsScreen({ members, invitations }: Props) {
         setFormError(result.error);
         return;
       }
+      setInviteFormOpen(false);
       setInviteUrl(`${window.location.origin}/invite/${result.token}`);
       setEmail("");
       setDisplayName("");
@@ -78,6 +120,18 @@ export function InvitationsScreen({ members, invitations }: Props) {
     });
   }
 
+  function handleDelete(target: Row) {
+    startTransition(async () => {
+      const result =
+        target.kind === "member"
+          ? await removeMember({ memberId: target.id })
+          : await deleteInvitation({ invitationId: target.id });
+      setDeleteTarget(null);
+      setToast(result.ok ? "メンバーを削除しました" : result.error);
+      if (result.ok) router.refresh();
+    });
+  }
+
   async function copyInviteUrl() {
     if (!inviteUrl) return;
     await navigator.clipboard.writeText(inviteUrl);
@@ -90,6 +144,7 @@ export function InvitationsScreen({ members, invitations }: Props) {
       sx={{
         p: 2,
         pb: "calc(16px + 56px + env(safe-area-inset-bottom))",
+        width: "100%",
         maxWidth: 480,
         mx: "auto",
       }}
@@ -106,7 +161,45 @@ export function InvitationsScreen({ members, invitations }: Props) {
                 variant="outlined"
                 sx={{ p: 1.5 }}
               >
-                <Typography variant="body2">{row.displayName}</Typography>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center", justifyContent: "space-between" }}
+                >
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="body2" noWrap>
+                      {row.displayName}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      noWrap
+                      component="div"
+                    >
+                      {row.email ?? "—"}
+                    </Typography>
+                  </Box>
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    sx={{ alignItems: "center", flexShrink: 0 }}
+                  >
+                    <InvitationStatusChip status="accepted" />
+                    <IconButton
+                      size="small"
+                      aria-label={`${row.displayName}の操作メニュー`}
+                      onClick={(event) => openRowMenu(event, row)}
+                      sx={
+                        row.id === currentMemberId
+                          ? { visibility: "hidden" }
+                          : undefined
+                      }
+                      tabIndex={row.id === currentMemberId ? -1 : undefined}
+                    >
+                      <MoreVertIcon fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                </Stack>
               </Paper>
             ) : (
               <Paper
@@ -134,57 +227,80 @@ export function InvitationsScreen({ members, invitations }: Props) {
                   </Box>
                   <Stack
                     direction="row"
-                    spacing={1}
-                    sx={{ alignItems: "center" }}
+                    spacing={0.5}
+                    sx={{ alignItems: "center", flexShrink: 0 }}
                   >
                     <InvitationStatusChip status={row.status} />
-                    {row.status === "pending" && (
-                      <Button
-                        size="small"
-                        color="inherit"
-                        onClick={() => setRevokeTarget(row)}
-                      >
-                        取り消す
-                      </Button>
-                    )}
+                    <IconButton
+                      size="small"
+                      aria-label={`${row.displayName}宛の招待の操作メニュー`}
+                      onClick={(event) => openRowMenu(event, row)}
+                    >
+                      <MoreVertIcon fontSize="small" />
+                    </IconButton>
                   </Stack>
                 </Stack>
               </Paper>
             ),
           )}
-        </Stack>
-      </Box>
 
-      <Box component="section">
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-          新しいメンバーを招待
-        </Typography>
-        <Stack component="form" onSubmit={handleCreate} spacing={1.5}>
-          <TextField
-            label="表示名"
-            size="small"
-            value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
-            required
-          />
-          <TextField
-            label="メールアドレス"
-            type="email"
-            size="small"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
-          {formError && (
-            <Alert severity="error" sx={{ py: 0 }}>
-              {formError}
-            </Alert>
-          )}
-          <Button type="submit" variant="contained" disabled={isPending}>
-            招待リンクを作成
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<AddIcon />}
+            sx={{ borderStyle: "dashed" }}
+            onClick={() => setInviteFormOpen(true)}
+          >
+            メンバーを招待
           </Button>
         </Stack>
       </Box>
+
+      <Dialog open={inviteFormOpen} onClose={() => setInviteFormOpen(false)}>
+        <DialogTitle>新しいメンバーを招待</DialogTitle>
+        <DialogContent>
+          <Stack
+            component="form"
+            id="invite-member-form"
+            onSubmit={handleCreate}
+            spacing={1.5}
+            sx={{ pt: 0.5 }}
+          >
+            <TextField
+              label="表示名"
+              size="small"
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+              required
+              autoFocus
+            />
+            <TextField
+              label="メールアドレス"
+              type="email"
+              size="small"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+            {formError && (
+              <Alert severity="error" sx={{ py: 0 }}>
+                {formError}
+              </Alert>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setInviteFormOpen(false)}>キャンセル</Button>
+          <Button
+            type="submit"
+            form="invite-member-form"
+            variant="contained"
+            disabled={isPending}
+          >
+            招待リンクを作成
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={inviteUrl !== null} onClose={() => setInviteUrl(null)}>
         <DialogTitle>招待リンクを作成しました</DialogTitle>
@@ -231,6 +347,65 @@ export function InvitationsScreen({ members, invitations }: Props) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Dialog
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+      >
+        <DialogTitle>{deleteTarget?.displayName}を削除しますか？</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            {deleteTarget?.displayName} を削除します。この操作は元に戻せません。
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteTarget(null)}>キャンセル</Button>
+          <Button
+            color="error"
+            disabled={isPending}
+            onClick={() => deleteTarget && handleDelete(deleteTarget)}
+          >
+            削除
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={menuAnchorEl !== null}
+        onClose={closeRowMenu}
+      >
+        {menuTargetRow?.kind === "member" && (
+          <MenuItem
+            onClick={() => {
+              setDeleteTarget(menuTargetRow);
+              closeRowMenu();
+            }}
+          >
+            削除
+          </MenuItem>
+        )}
+        {menuTargetRow?.kind === "invitation" &&
+          (menuTargetRow.status === "pending" ? (
+            <MenuItem
+              onClick={() => {
+                setRevokeTarget(menuTargetRow);
+                closeRowMenu();
+              }}
+            >
+              取り消す
+            </MenuItem>
+          ) : (
+            <MenuItem
+              onClick={() => {
+                setDeleteTarget(menuTargetRow);
+                closeRowMenu();
+              }}
+            >
+              削除
+            </MenuItem>
+          ))}
+      </Menu>
 
       <Snackbar
         open={toast !== null}

@@ -11,6 +11,7 @@
  *   node --env-file=.env.admin.local scripts/admin.mts list-members --family <uuid>
  *   node --env-file=.env.admin.local scripts/admin.mts list-invitations --family <uuid>
  *   node --env-file=.env.admin.local scripts/admin.mts revoke --invitation <uuid> --yes
+ *   node --env-file=.env.admin.local scripts/admin.mts remove-member --member <uuid> --yes
  *
  * 書き込み系コマンドは --yes を付けない限り、接続先と内容を表示するだけで何もしない
  * （config push事故の再発防止 — 常に「今どこに何をしようとしているか」を先に見せる）。
@@ -29,6 +30,7 @@ commands:
   list-members --family <uuid>
   list-invitations --family <uuid>
   revoke --invitation <uuid> [--yes]
+  remove-member --member <uuid> [--yes]
 
 .env.admin.example を .env.admin.local としてコピーし、値を埋めてから実行してください。`;
 
@@ -139,6 +141,7 @@ async function main() {
       email: { type: "string" },
       "display-name": { type: "string" },
       invitation: { type: "string" },
+      member: { type: "string" },
       yes: { type: "boolean", default: false },
     },
   });
@@ -233,6 +236,38 @@ async function main() {
         process.exit(1);
       }
       console.log("取り消しました");
+      break;
+    }
+
+    case "remove-member": {
+      const memberId = requireField(values.member, "member");
+
+      const { data: memberRow, error: lookupError } = await admin
+        .from("family_members")
+        .select("id, display_name, user_id")
+        .eq("id", memberId)
+        .single();
+      if (lookupError || !memberRow) {
+        console.error(`メンバーが見つかりません: ${lookupError?.message}`);
+        process.exit(1);
+      }
+
+      confirmOrExit(
+        `メンバー「${memberRow.display_name}」(${memberId}) を認証情報ごと削除します`,
+        values.yes,
+      );
+
+      // auth.users を消せば family_members 行は on delete cascade で
+      // 自動的に消える（アプリの「削除」ボタンは family_members 行だけを消すが、
+      // それだと本人のログイン自体は残るため、完全に消したいときはこちらを使う）。
+      const { error: deleteError } = await admin.auth.admin.deleteUser(
+        memberRow.user_id,
+      );
+      if (deleteError) {
+        console.error(`認証情報の削除に失敗しました: ${deleteError.message}`);
+        process.exit(1);
+      }
+      console.log("認証情報ごと削除しました");
       break;
     }
 
