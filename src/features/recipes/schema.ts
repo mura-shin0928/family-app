@@ -67,10 +67,10 @@ export const undoAddIngredientsToPurchasesSchema = z.object({
   taskIds: z.array(z.string().uuid()).min(1).max(50),
 });
 
-export const analyzeRecipeTextSchema = z.object({
+export const analyzeRecipeSourceSchema = z.object({
   text: z
     .string()
     .trim()
-    .min(1, "本文を入力してください")
+    .min(1, "URLまたは本文を入力してください")
     .max(20000, "本文は20000文字以内で入力してください"),
 });

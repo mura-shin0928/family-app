@@ -9,7 +9,7 @@ import { requireFamilyMember } from "@/features/auth/guard";
 import { RecipeEditor } from "@/features/recipes/components/RecipeEditor";
 import { getRecipe } from "@/features/recipes/queries";
 
-// Gemini解析（analyzeRecipeText）はこのページのServer Actionのため、ページ単位で延長する。
+// URL/Gemini解析（analyzeRecipeSource）はこのページのServer Actionのため、ページ単位で延長する。
 export const maxDuration = 30;
 
 export default async function EditRecipePage({

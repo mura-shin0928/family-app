@@ -9,14 +9,22 @@ const TIMEOUT_MS = 25_000;
 
 export async function extractRecipeFromText(
   text: string,
+  options?: { deadlineAt?: number },
 ): Promise<ExtractionResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return { kind: "failed", reason: "no-key" };
   }
 
+  const timeoutMs = options?.deadlineAt
+    ? Math.min(TIMEOUT_MS, options.deadlineAt - Date.now())
+    : TIMEOUT_MS;
+  if (timeoutMs <= 0) {
+    return { kind: "failed", reason: "timeout" };
+  }
+
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(GEMINI_ENDPOINT, {

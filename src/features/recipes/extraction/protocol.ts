@@ -1,15 +1,12 @@
 import { z } from "zod";
-import type { ExtractionResult, RecipeDraft } from "./types";
+import { normalizeDraft } from "./normalize";
+import type { ExtractionResult } from "./types";
 
 // 一次情報を確認済み（2026-08時点）: https://ai.google.dev/gemini-api/docs/structured-output
 // 学習データの `:generateContent` / `responseSchema` / `gemini-2.5-flash` から変わっている。
 export const GEMINI_MODEL = "gemini-3.7-flash";
 export const GEMINI_ENDPOINT =
   "https://generativelanguage.googleapis.com/v1beta/interactions";
-
-const MAX_INGREDIENTS = 50;
-const MAX_NAME_LENGTH = 100;
-const MAX_QUANTITY_LENGTH = 50;
 
 // 送信するのは呼び出し元が渡した本文のみ。family / task / メンバー名は一切載せない。
 const SYSTEM_INSTRUCTION =
@@ -95,21 +92,6 @@ const draftSchema = z.object({
     }),
   ),
 });
-
-function normalizeDraft(raw: z.infer<typeof draftSchema>): RecipeDraft {
-  const ingredients = raw.ingredients
-    .map((ingredient) => ({
-      name: ingredient.name.trim().slice(0, MAX_NAME_LENGTH),
-      quantity: ingredient.quantity.trim().slice(0, MAX_QUANTITY_LENGTH),
-    }))
-    .filter((ingredient) => ingredient.name !== "")
-    .slice(0, MAX_INGREDIENTS);
-
-  return {
-    title: raw.title.trim().slice(0, MAX_NAME_LENGTH),
-    ingredients,
-  };
-}
 
 export function parseOutput(rawResponseJson: unknown): ExtractionResult {
   const envelope = geminiResponseSchema.safeParse(rawResponseJson);

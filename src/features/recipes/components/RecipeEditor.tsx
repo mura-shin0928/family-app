@@ -12,7 +12,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState, useTransition } from "react";
-import { analyzeRecipeText, createRecipe, updateRecipe } from "../actions";
+import { analyzeRecipeSource, createRecipe, updateRecipe } from "../actions";
 import type { RecipeDetailDTO } from "../types";
 
 type IngredientRow = {
@@ -84,7 +84,7 @@ export function RecipeEditor({
 
     setAnalyzeMessage(null);
     startAnalyzeTransition(async () => {
-      const result = await analyzeRecipeText({ text: trimmedText });
+      const result = await analyzeRecipeSource({ text: trimmedText });
 
       if (!result.ok) {
         if (result.detectedUrl && !sourceUrl.trim()) {
@@ -109,9 +109,22 @@ export function RecipeEditor({
         ]);
       }
 
+      if (result.sourceUrl) {
+        // URLは専用フィールドに移したので、貼り付け欄に二重に残さない。
+        setSourceUrl(result.sourceUrl);
+        setSourceText("");
+      }
+
+      const via =
+        result.via === "jsonld"
+          ? "ページから"
+          : result.sourceUrl
+            ? "ページの本文をAIで読み取り"
+            : "AIで読み取り";
+
       setAnalyzeMessage({
         severity: "success",
-        text: `${result.draft.ingredients.length}件の材料を読み取りました。内容を確認して保存してください。`,
+        text: `${via}${result.draft.ingredients.length}件の材料を読み取りました。内容を確認して保存してください。`,
       });
     });
   }
@@ -180,11 +193,11 @@ export function RecipeEditor({
     >
       <Box component="section">
         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
-          レシピの本文を貼り付け（任意）
+          URL または 本文を貼り付け（任意）
         </Typography>
         <Stack spacing={1}>
           <TextField
-            label="本文を貼り付け"
+            label="URL または 本文を貼り付け"
             value={sourceText}
             onChange={(event) => setSourceText(event.target.value)}
             multiline
