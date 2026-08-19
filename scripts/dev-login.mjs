@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // ローカルSupabase (`supabase start`) 専用のログイン準備スクリプト。
-// family / family_members が無いとログインできない（招待フローなし）ため、
-// 指定emailのfamily_memberを（無ければfamilyごと）作成し、
-// email入力済みのログイン画面を開く。
+// family / family_members が無いとログインできない（参加は招待の受諾経由のみ）ため、
+// 指定emailのauthユーザーとfamily_memberを（無ければfamilyごと）service_roleで
+// 直接作成し、ログイン画面を開く（招待メールの発行・受諾を毎回手で辿らずに
+// 開発時にすぐ動作確認できるようにするための近道であり、本番の参加経路ではない）。
 //
 // マジックリンクの送信自体はこのスクリプトではなく、開いたブラウザから
 // 行う必要がある（PKCEのcode_verifierがブラウザのCookieに保存される
@@ -33,12 +34,29 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
+async function ensureAuthUser() {
+  const { data: list, error: listError } = await admin.auth.admin.listUsers();
+  if (listError)
+    throw new Error(`ユーザー一覧取得に失敗: ${listError.message}`);
+  const existing = list.users.find((u) => u.email === email);
+  if (existing) return existing.id;
+
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+  });
+  if (error || !data.user)
+    throw new Error(`ユーザー作成に失敗: ${error?.message}`);
+  return data.user.id;
+}
+
 async function ensureFamilyMember() {
+  const userId = await ensureAuthUser();
+
   const { data: existing, error: findError } = await admin
     .from("family_members")
     .select("id, family_id")
-    .eq("email", email)
-    .limit(1)
+    .eq("user_id", userId)
     .maybeSingle();
   if (findError)
     throw new Error(`family_members検索に失敗: ${findError.message}`);
@@ -53,7 +71,11 @@ async function ensureFamilyMember() {
 
   const { data: member, error: memberError } = await admin
     .from("family_members")
-    .insert({ family_id: family.id, email, display_name: displayName })
+    .insert({
+      family_id: family.id,
+      user_id: userId,
+      display_name: displayName,
+    })
     .select("id, family_id")
     .single();
   if (memberError)

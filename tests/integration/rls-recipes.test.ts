@@ -60,37 +60,37 @@ describe("recipes / recipe_ingredients RLS", () => {
     const { data: members, error: membersError } = await admin
       .from("family_members")
       .insert([
-        { family_id: familyF1, email: userA.email, display_name: "A" },
-        { family_id: familyF1, email: userB.email, display_name: "B" },
-        { family_id: familyF2, email: userC.email, display_name: "C" },
+        {
+          family_id: familyF1,
+          user_id: userIds[userA.email],
+          display_name: "A",
+        },
+        {
+          family_id: familyF1,
+          user_id: userIds[userB.email],
+          display_name: "B",
+        },
+        {
+          family_id: familyF2,
+          user_id: userIds[userC.email],
+          display_name: "C",
+        },
       ])
-      .select("id, email");
+      .select("id, user_id");
     if (membersError || !members)
       throw new Error(
         `failed to seed family_members: ${membersError?.message}`,
       );
 
-    const findMemberId = (email: string): string => {
-      const member = members.find((m) => m.email === email);
+    const findMemberId = (userId: string): string => {
+      const member = members.find((m) => m.user_id === userId);
       if (!member)
-        throw new Error(`seeded family_members row missing for ${email}`);
+        throw new Error(`seeded family_members row missing for ${userId}`);
       return member.id;
     };
-    memberAId = findMemberId(userA.email);
-    memberBId = findMemberId(userB.email);
-    memberCId = findMemberId(userC.email);
-
-    await Promise.all([
-      signInAsClient(userA.email, PASSWORD).then((c) =>
-        c.rpc("claim_membership"),
-      ),
-      signInAsClient(userB.email, PASSWORD).then((c) =>
-        c.rpc("claim_membership"),
-      ),
-      signInAsClient(userC.email, PASSWORD).then((c) =>
-        c.rpc("claim_membership"),
-      ),
-    ]);
+    memberAId = findMemberId(userIds[userA.email]);
+    memberBId = findMemberId(userIds[userB.email]);
+    memberCId = findMemberId(userIds[userC.email]);
 
     const { data: t1, error: t1Error } = await admin
       .from("tasks")

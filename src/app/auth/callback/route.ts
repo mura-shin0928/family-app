@@ -1,4 +1,7 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { INVITE_REDIRECT_COOKIE } from "@/features/invitations/constants";
+import { sanitizeNextPath } from "@/lib/next-path";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
@@ -10,7 +13,19 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      await supabase.rpc("claim_membership");
+      // 招待URL経由のログインは next をクエリではなくCookieで運ぶ
+      // （emailRedirectTo にクエリを足すとSupabaseのredirect URL許可リストの
+      // 完全一致チェックに通らず site_url にフォールバックしてしまうため）。
+      // まだどのFamilyにも属していなくても /invite ページ自身が状態を判定できる
+      // ため、所属チェックを待たず遷移させる。
+      const cookieStore = await cookies();
+      const safeNext = sanitizeNextPath(
+        cookieStore.get(INVITE_REDIRECT_COOKIE)?.value,
+      );
+      if (safeNext) {
+        cookieStore.delete(INVITE_REDIRECT_COOKIE);
+        return NextResponse.redirect(`${origin}${safeNext}`);
+      }
 
       const {
         data: { user },

@@ -30,7 +30,7 @@ export default function NoAccessPage() {
         アクセスできません
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 320 }}>
-        このアカウントはまだFamilyに登録されていません。管理者に登録を依頼してください。
+        このアカウントはまだどのFamilyにも参加していません。Familyのメンバーまたは管理者に招待を依頼してください。
       </Typography>
       <Box component="form" action={signOut}>
         <Button type="submit" size="small" sx={{ textTransform: "none" }}>
