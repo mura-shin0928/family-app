@@ -12,6 +12,9 @@
  *   node --env-file=.env.admin.local scripts/admin.mts list-invitations --family <uuid>
  *   node --env-file=.env.admin.local scripts/admin.mts revoke --invitation <uuid> --yes
  *   node --env-file=.env.admin.local scripts/admin.mts remove-member --member <uuid> --yes
+ *   node --env-file=.env.admin.local scripts/admin.mts grant-admin --email x@example.com --yes
+ *   node --env-file=.env.admin.local scripts/admin.mts revoke-admin --email x@example.com --yes
+ *   node --env-file=.env.admin.local scripts/admin.mts list-admins
  *
  * 書き込み系コマンドは --yes を付けない限り、接続先と内容を表示するだけで何もしない
  * （config push事故の再発防止 — 常に「今どこに何をしようとしているか」を先に見せる）。
@@ -31,6 +34,9 @@ commands:
   list-invitations --family <uuid>
   revoke --invitation <uuid> [--yes]
   remove-member --member <uuid> [--yes]
+  grant-admin --email <email> [--yes]
+  revoke-admin --email <email> [--yes]
+  list-admins
 
 .env.admin.example を .env.admin.local としてコピーし、値を埋めてから実行してください。`;
 
@@ -92,6 +98,33 @@ function printInviteUrl(token: string) {
     console.log(
       "  (APP_ORIGIN 未設定のため、アプリのドメインは各自で先頭に付けてください)",
     );
+  }
+}
+
+/**
+ * GoTrue admin API に email 検索が無いため、全ユーザーを1000件ずつ辿って探す。
+ * admin_users 付与はごく低頻度の運用操作なので、これで十分。
+ */
+async function findUserByEmail(
+  email: string,
+): Promise<{ id: string; email: string } | null> {
+  const target = email.trim().toLowerCase();
+  let page = 1;
+  for (;;) {
+    const { data, error } = await admin.auth.admin.listUsers({
+      page,
+      perPage: 1000,
+    });
+    if (error) {
+      console.error(`ユーザー検索に失敗しました: ${error.message}`);
+      process.exit(1);
+    }
+    const found = data.users.find(
+      (u) => (u.email ?? "").toLowerCase() === target,
+    );
+    if (found) return { id: found.id, email: found.email ?? target };
+    if (data.users.length < 1000) return null;
+    page += 1;
   }
 }
 
@@ -268,6 +301,83 @@ async function main() {
         process.exit(1);
       }
       console.log("認証情報ごと削除しました");
+      break;
+    }
+
+    case "grant-admin": {
+      const email = requireField(values.email, "email");
+      const user = await findUserByEmail(email);
+      if (!user) {
+        console.error(
+          `ユーザーが見つかりません（先にサインインが必要です）: ${email}`,
+        );
+        process.exit(1);
+      }
+
+      confirmOrExit(
+        `${user.email}（user_id=${user.id}）にadmin権限を付与します`,
+        values.yes,
+      );
+
+      const { error } = await admin
+        .from("admin_users")
+        .upsert({ user_id: user.id }, { onConflict: "user_id" });
+      if (error) {
+        console.error(`admin権限の付与に失敗しました: ${error.message}`);
+        process.exit(1);
+      }
+      console.log("admin権限を付与しました");
+      break;
+    }
+
+    case "revoke-admin": {
+      const email = requireField(values.email, "email");
+      const user = await findUserByEmail(email);
+      if (!user) {
+        console.error(`ユーザーが見つかりません: ${email}`);
+        process.exit(1);
+      }
+
+      confirmOrExit(
+        `${user.email}（user_id=${user.id}）のadmin権限を剥奪します`,
+        values.yes,
+      );
+
+      const { error } = await admin
+        .from("admin_users")
+        .delete()
+        .eq("user_id", user.id);
+      if (error) {
+        console.error(`admin権限の剥奪に失敗しました: ${error.message}`);
+        process.exit(1);
+      }
+      console.log("admin権限を剥奪しました");
+      break;
+    }
+
+    case "list-admins": {
+      const { data, error } = await admin
+        .from("admin_users")
+        .select("user_id, created_at")
+        .order("created_at");
+      if (error) {
+        console.error(error.message);
+        process.exit(1);
+      }
+
+      const rows = await Promise.all(
+        (data ?? []).map(async (row) => {
+          const { data: userData } = await admin.auth.admin.getUserById(
+            row.user_id,
+          );
+          return {
+            email: userData.user?.email ?? "(不明)",
+            user_id: row.user_id,
+            created_at: row.created_at,
+          };
+        }),
+      );
+      console.table(rows);
       break;
     }
 

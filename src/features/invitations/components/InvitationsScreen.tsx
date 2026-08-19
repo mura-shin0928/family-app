@@ -25,19 +25,22 @@ import {
   useState,
   useTransition,
 } from "react";
-import {
-  createInvitation,
-  deleteInvitation,
-  removeMember,
-  revokeInvitation,
-} from "../actions";
+import type { ActionResult, CreateInvitationResult } from "../actions";
 import type { FamilyMemberDTO, InvitationDTO } from "../types";
 import { InvitationStatusChip } from "./InvitationStatusChip";
 
 type Props = {
   members: FamilyMemberDTO[];
   invitations: InvitationDTO[];
-  currentMemberId: string;
+  /** 自分自身の行を削除操作から隠すためのID。/family以外（例: admin画面）では該当者がいないためnull。 */
+  currentMemberId: string | null;
+  createInvitation: (input: {
+    email: string;
+    displayName: string;
+  }) => Promise<CreateInvitationResult>;
+  revokeInvitation: (input: { invitationId: string }) => Promise<ActionResult>;
+  deleteInvitation: (input: { invitationId: string }) => Promise<ActionResult>;
+  removeMember: (input: { memberId: string }) => Promise<ActionResult>;
 };
 
 type MemberRow = {
@@ -53,6 +56,10 @@ export function InvitationsScreen({
   members,
   invitations,
   currentMemberId,
+  createInvitation,
+  revokeInvitation,
+  deleteInvitation,
+  removeMember,
 }: Props) {
   const rows: Row[] = [
     ...members.map(

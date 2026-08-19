@@ -52,3 +52,41 @@ export const requireFamilyMember = cache(
     };
   },
 );
+
+/**
+ * ログイン中ユーザーがapp_adminかどうか。admin_usersテーブルはRLSで直接読ませず、
+ * is_app_admin() (security definer RPC) 経由でのみ判定できる。
+ * 未ログインなら常にfalse（RPCがauth.uid()=nullを扱えるため、ここでガードしない）。
+ */
+export const getIsAppAdmin = cache(async (): Promise<boolean> => {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("is_app_admin");
+  return data === true;
+});
+
+export type CurrentAppAdmin = { userId: string };
+
+/**
+ * app_admin専用ページ/Server Actionの入口で呼ぶ。Family所属は問わない
+ * （adminは自分のFamilyの外側を管理するための権限のため）。
+ * ここが漏れても、実際のデータ操作はすべてRLS（is_app_admin()を含む）で
+ * 守られているため漏洩・改ざんはしない。
+ */
+export const requireAppAdmin = cache(async (): Promise<CurrentAppAdmin> => {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const isAdmin = await getIsAppAdmin();
+  if (!isAdmin) {
+    redirect("/");
+  }
+
+  return { userId: user.id };
+});
