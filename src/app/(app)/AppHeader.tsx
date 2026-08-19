@@ -1,20 +1,16 @@
 import AppBar from "@mui/material/AppBar";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import { redirect } from "next/navigation";
-import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { AccountMenu } from "./AccountMenu";
 
 type Props = {
   title: string;
   displayName: string;
-  /** サインアウトボタンの左側に並べる追加のアクション（例: Family画面への導線）。 */
-  actions?: ReactNode;
 };
 
-export function AppHeader({ title, displayName, actions }: Props) {
+export function AppHeader({ title, displayName }: Props) {
   async function signOut() {
     "use server";
     const supabase = await createClient();
@@ -29,14 +25,7 @@ export function AppHeader({ title, displayName, actions }: Props) {
           <Typography variant="h6" component="h1">
             {title}
           </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            {actions}
-            <Box component="form" action={signOut}>
-              <Button type="submit" color="inherit" size="small">
-                {displayName} / ログアウト
-              </Button>
-            </Box>
-          </Box>
+          <AccountMenu displayName={displayName} signOut={signOut} />
         </Toolbar>
       </AppBar>
       <Toolbar />
