@@ -122,7 +122,7 @@ describe("families / family_members RLS", () => {
     expect(families).toHaveLength(0);
   });
 
-  it("no client can write to families or family_members (no write policies)", async () => {
+  it("no client can insert/update families, or update family_members", async () => {
     const clientA = await signInAsClient(userA.email, PASSWORD);
 
     const { error: insertError } = await clientA
@@ -141,5 +141,79 @@ describe("families / family_members RLS", () => {
       .delete()
       .eq("id", familyF1);
     expect(deleteError).not.toBeNull();
+  });
+
+  describe("family_members_delete_own_family policy", () => {
+    it("a member can delete another member's row in their own family", async () => {
+      const target = await createConfirmedUser(
+        admin,
+        `del-own-${runId}@example.test`,
+        PASSWORD,
+      );
+      userIds[target.email] = target.id;
+
+      const { data: seeded, error: seedError } = await admin
+        .from("family_members")
+        .insert({
+          family_id: familyF1,
+          user_id: target.id,
+          display_name: "DelOwn",
+        })
+        .select("id")
+        .single();
+      if (seedError || !seeded) {
+        throw new Error(`failed to seed temp member: ${seedError?.message}`);
+      }
+
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+      const { error: deleteError } = await clientA
+        .from("family_members")
+        .delete()
+        .eq("id", seeded.id);
+      expect(deleteError).toBeNull();
+
+      const { data: after } = await admin
+        .from("family_members")
+        .select("id")
+        .eq("id", seeded.id);
+      expect(after).toHaveLength(0);
+    });
+
+    it("a member cannot delete another family's member row", async () => {
+      const target = await createConfirmedUser(
+        admin,
+        `del-other-${runId}@example.test`,
+        PASSWORD,
+      );
+      userIds[target.email] = target.id;
+
+      const { data: seeded, error: seedError } = await admin
+        .from("family_members")
+        .insert({
+          family_id: familyF2,
+          user_id: target.id,
+          display_name: "DelOther",
+        })
+        .select("id")
+        .single();
+      if (seedError || !seeded) {
+        throw new Error(`failed to seed temp member: ${seedError?.message}`);
+      }
+
+      // RLSに一致しない行を対象にした削除はエラーにはならず、単に0件が
+      // 対象になるだけ（postgrestの一般的な挙動）。行が消えていないことで確認する。
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+      const { error: deleteError } = await clientA
+        .from("family_members")
+        .delete()
+        .eq("id", seeded.id);
+      expect(deleteError).toBeNull();
+
+      const { data: after } = await admin
+        .from("family_members")
+        .select("id")
+        .eq("id", seeded.id);
+      expect(after).toHaveLength(1);
+    });
   });
 });

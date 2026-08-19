@@ -14,7 +14,13 @@ export type InvitationDTO = {
 export type FamilyMemberDTO = {
   id: string;
   displayName: string;
+  email: string | null;
   joinedAt: string;
+};
+
+export type FamilyDTO = {
+  id: string;
+  name: string;
 };
 
 /** invitation_preview RPC の status。受諾側（招待された本人）の視点。 */

@@ -510,4 +510,114 @@ describe("invitations RLS + accept_invitation / invitation_preview", () => {
       .single();
     expect(check?.revoked_at).not.toBeNull();
   });
+
+  describe("invitations_delete_inactive_own_family policy", () => {
+    it("a member can delete a revoked invitation in their own family", async () => {
+      const { hash } = makeToken();
+      const { data: inv, error: insertError } = await admin
+        .from("invitations")
+        .insert({
+          family_id: familyF1,
+          token_hash: hash,
+          invited_email: invitee.email,
+          display_name: "削除テスト（取り消し済み）",
+          invited_by: memberAId,
+          expires_at: new Date(
+            Date.now() + 3 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+          revoked_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+      if (insertError || !inv) {
+        throw new Error(`failed to seed invitation: ${insertError?.message}`);
+      }
+
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+      const { error: deleteError } = await clientA
+        .from("invitations")
+        .delete()
+        .eq("id", inv.id);
+      expect(deleteError).toBeNull();
+
+      const { data: after } = await admin
+        .from("invitations")
+        .select("id")
+        .eq("id", inv.id);
+      expect(after).toHaveLength(0);
+    });
+
+    it("a member cannot delete a still-pending invitation", async () => {
+      const { hash } = makeToken();
+      const { data: inv, error: insertError } = await admin
+        .from("invitations")
+        .insert({
+          family_id: familyF1,
+          token_hash: hash,
+          invited_email: invitee.email,
+          display_name: "削除テスト（招待中）",
+          invited_by: memberAId,
+          expires_at: new Date(
+            Date.now() + 3 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+        })
+        .select("id")
+        .single();
+      if (insertError || !inv) {
+        throw new Error(`failed to seed invitation: ${insertError?.message}`);
+      }
+
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+      const { error: deleteError } = await clientA
+        .from("invitations")
+        .delete()
+        .eq("id", inv.id);
+      expect(deleteError).toBeNull();
+
+      const { data: after } = await admin
+        .from("invitations")
+        .select("id")
+        .eq("id", inv.id);
+      expect(after).toHaveLength(1);
+
+      await admin.from("invitations").delete().eq("id", inv.id);
+    });
+
+    it("a member cannot delete another family's revoked invitation", async () => {
+      const { hash } = makeToken();
+      const { data: inv, error: insertError } = await admin
+        .from("invitations")
+        .insert({
+          family_id: familyF2,
+          token_hash: hash,
+          invited_email: invitee.email,
+          display_name: "他家族の削除テスト",
+          invited_by: memberCId,
+          expires_at: new Date(
+            Date.now() + 3 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+          revoked_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+      if (insertError || !inv) {
+        throw new Error(`failed to seed invitation: ${insertError?.message}`);
+      }
+
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+      const { error: deleteError } = await clientA
+        .from("invitations")
+        .delete()
+        .eq("id", inv.id);
+      expect(deleteError).toBeNull();
+
+      const { data: after } = await admin
+        .from("invitations")
+        .select("id")
+        .eq("id", inv.id);
+      expect(after).toHaveLength(1);
+
+      await admin.from("invitations").delete().eq("id", inv.id);
+    });
+  });
 });

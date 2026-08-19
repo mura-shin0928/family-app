@@ -10,7 +10,12 @@ import { usePathname } from "next/navigation";
 
 export function BottomNav() {
   const pathname = usePathname();
-  const value = pathname.startsWith("/recipes") ? "/recipes" : "/";
+  // タブに属さないページ（/family等）では、どちらのタブも選択状態にしない。
+  const value = pathname.startsWith("/recipes")
+    ? "/recipes"
+    : pathname === "/"
+      ? "/"
+      : false;
 
   return (
     <Paper

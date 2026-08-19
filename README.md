@@ -46,6 +46,7 @@ npm run admin -- invite --family <family_id> --email you@example.com --display-n
 npm run admin -- list-families
 npm run admin -- list-invitations --family <family_id>
 npm run admin -- revoke --invitation <invitation_id> --yes
+npm run admin -- remove-member --member <family_member_id> --yes
 ```
 
 書き込み系コマンドは `--yes` を付けない限り、接続先と内容を表示するだけで何も変更しない。
@@ -54,3 +55,7 @@ Familyに参加した既存メンバーは、アプリの `/family` 画面から
 （自分が所属するFamily宛の招待のみ発行可能。DB側のRLSで強制される）。
 発行された招待URL（`/invite/<token>`）は7日で失効し、1回受諾すると使えなくなる。
 生トークンはDBに保存されない（sha256ハッシュのみ保存）ため、発行直後の画面以外では再表示できない。
+
+`/family` 画面からもメンバーを削除できるが、消えるのは `family_members` 行だけで
+本人のログイン（auth.users）は残る。認証情報ごと完全に削除したい場合は
+`remove-member` を使う（service_role が要るためアプリからは行わない）。

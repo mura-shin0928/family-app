@@ -20,6 +20,16 @@ type Props = {
 };
 
 /**
+ * タイトル入力中に他のコントロールをタップすると、そちらへフォーカスが移って
+ * ソフトウェアキーボードが閉じてしまう（＝フォームが閉じたように見える）。
+ * mousedown 側でデフォルト動作（フォーカス移動）を止めることで、
+ * クリック自体は通しつつ入力中のフォーカス/キーボードを保つ。
+ */
+function preventBlur(event: { preventDefault: () => void }) {
+  event.preventDefault();
+}
+
+/**
  * 常設Quick Captureバー。タイトルだけで登録が完了する。
  * 「期限」チップをタップすると、今日/明日のワンタップ選択とカレンダーからの
  * 任意選択をまとめたパネルが開く（タグUIは意図的に置かない）。
@@ -80,6 +90,7 @@ export function QuickCaptureBar({ onSubmit }: Props) {
           clickable
           color={dueOn || showDuePanel ? "primary" : "default"}
           variant={dueOn || showDuePanel ? "filled" : "outlined"}
+          onMouseDown={preventBlur}
           onClick={() => setShowDuePanel((current) => !current)}
         />
         <Chip
@@ -88,6 +99,7 @@ export function QuickCaptureBar({ onSubmit }: Props) {
           clickable
           color={isPurchase ? "warning" : "default"}
           variant={isPurchase ? "filled" : "outlined"}
+          onMouseDown={preventBlur}
           onClick={() => setIsPurchase((current) => !current)}
         />
       </Stack>
@@ -107,6 +119,7 @@ export function QuickCaptureBar({ onSubmit }: Props) {
           <Button
             size="small"
             variant="outlined"
+            onMouseDown={preventBlur}
             onClick={() => selectDue(today)}
           >
             今日
@@ -114,6 +127,7 @@ export function QuickCaptureBar({ onSubmit }: Props) {
           <Button
             size="small"
             variant="outlined"
+            onMouseDown={preventBlur}
             onClick={() => selectDue(tomorrow)}
           >
             明日
@@ -128,6 +142,7 @@ export function QuickCaptureBar({ onSubmit }: Props) {
             <Button
               size="small"
               sx={{ textTransform: "none" }}
+              onMouseDown={preventBlur}
               onClick={() => selectDue(null)}
             >
               期限なしにする
