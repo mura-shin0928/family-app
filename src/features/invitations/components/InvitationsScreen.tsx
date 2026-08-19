@@ -25,7 +25,25 @@ type Props = {
   invitations: InvitationDTO[];
 };
 
+type MemberRow =
+  | { kind: "member"; id: string; displayName: string }
+  | (InvitationDTO & { kind: "invitation" });
+
 export function InvitationsScreen({ members, invitations }: Props) {
+  const rows: MemberRow[] = [
+    ...members.map(
+      (member): MemberRow => ({
+        kind: "member",
+        id: member.id,
+        displayName: member.displayName,
+      }),
+    ),
+    // 受諾済みの招待は、対応する行がすでに members 側に出るため二重表示しない。
+    ...invitations
+      .filter((invitation) => invitation.status !== "accepted")
+      .map((invitation): MemberRow => ({ ...invitation, kind: "invitation" })),
+  ];
+
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [email, setEmail] = useState("");
@@ -78,14 +96,62 @@ export function InvitationsScreen({ members, invitations }: Props) {
     >
       <Box component="section">
         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-          メンバー（{members.length}）
+          メンバー（{rows.length}）
         </Typography>
         <Stack spacing={1}>
-          {members.map((member) => (
-            <Paper key={member.id} variant="outlined" sx={{ p: 1.5 }}>
-              <Typography variant="body2">{member.displayName}</Typography>
-            </Paper>
-          ))}
+          {rows.map((row) =>
+            row.kind === "member" ? (
+              <Paper
+                key={`member-${row.id}`}
+                variant="outlined"
+                sx={{ p: 1.5 }}
+              >
+                <Typography variant="body2">{row.displayName}</Typography>
+              </Paper>
+            ) : (
+              <Paper
+                key={`invitation-${row.id}`}
+                variant="outlined"
+                sx={{ p: 1.5 }}
+              >
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center", justifyContent: "space-between" }}
+                >
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="body2" noWrap>
+                      {row.displayName}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      noWrap
+                      component="div"
+                    >
+                      {row.invitedEmail}
+                    </Typography>
+                  </Box>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ alignItems: "center" }}
+                  >
+                    <InvitationStatusChip status={row.status} />
+                    {row.status === "pending" && (
+                      <Button
+                        size="small"
+                        color="inherit"
+                        onClick={() => setRevokeTarget(row)}
+                      >
+                        取り消す
+                      </Button>
+                    )}
+                  </Stack>
+                </Stack>
+              </Paper>
+            ),
+          )}
         </Stack>
       </Box>
 
@@ -118,59 +184,6 @@ export function InvitationsScreen({ members, invitations }: Props) {
             招待リンクを作成
           </Button>
         </Stack>
-      </Box>
-
-      <Box component="section">
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-          招待の状況
-        </Typography>
-        {invitations.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
-            発行した招待はまだありません
-          </Typography>
-        ) : (
-          <Stack spacing={1}>
-            {invitations.map((invitation) => (
-              <Paper key={invitation.id} variant="outlined" sx={{ p: 1.5 }}>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{ alignItems: "center", justifyContent: "space-between" }}
-                >
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography variant="body2" noWrap>
-                      {invitation.displayName}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      noWrap
-                      component="div"
-                    >
-                      {invitation.invitedEmail}
-                    </Typography>
-                  </Box>
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{ alignItems: "center" }}
-                  >
-                    <InvitationStatusChip status={invitation.status} />
-                    {invitation.status === "pending" && (
-                      <Button
-                        size="small"
-                        color="inherit"
-                        onClick={() => setRevokeTarget(invitation)}
-                      >
-                        取り消す
-                      </Button>
-                    )}
-                  </Stack>
-                </Stack>
-              </Paper>
-            ))}
-          </Stack>
-        )}
       </Box>
 
       <Dialog open={inviteUrl !== null} onClose={() => setInviteUrl(null)}>
