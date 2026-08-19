@@ -82,6 +82,42 @@ export function QuickCaptureBar({ onSubmit }: Props) {
       <Stack
         direction="row"
         spacing={1}
+        sx={{ mx: "auto", maxWidth: "36rem", pb: 1, alignItems: "center" }}
+      >
+        <Box
+          component="label"
+          htmlFor={inputId}
+          sx={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            overflow: "hidden",
+            clip: "rect(0 0 0 0)",
+          }}
+        >
+          やること・買うものを入力
+        </Box>
+        <TextField
+          id={inputId}
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="やること・買うものを入力"
+          size="small"
+          fullWidth
+        />
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={!title.trim()}
+          sx={{ flexShrink: 0 }}
+        >
+          追加
+        </Button>
+      </Stack>
+
+      <Stack
+        direction="row"
+        spacing={1}
         sx={{ mx: "auto", maxWidth: "36rem", pb: 1 }}
       >
         <Chip
@@ -150,42 +186,6 @@ export function QuickCaptureBar({ onSubmit }: Props) {
           )}
         </Stack>
       )}
-
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ mx: "auto", maxWidth: "36rem", pb: 1, alignItems: "center" }}
-      >
-        <Box
-          component="label"
-          htmlFor={inputId}
-          sx={{
-            position: "absolute",
-            width: 1,
-            height: 1,
-            overflow: "hidden",
-            clip: "rect(0 0 0 0)",
-          }}
-        >
-          やること・買うものを入力
-        </Box>
-        <TextField
-          id={inputId}
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="やること・買うものを入力"
-          size="small"
-          fullWidth
-        />
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={!title.trim()}
-          sx={{ flexShrink: 0 }}
-        >
-          追加
-        </Button>
-      </Stack>
     </Paper>
   );
 }
