@@ -1,9 +1,11 @@
+import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import { redirect } from "next/navigation";
+import { LinkIconButton } from "@/components/LinkIconButton";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { TaskListScreen } from "@/features/tasks/components/TaskListScreen";
 import { getTasks } from "@/features/tasks/queries";
@@ -30,10 +32,15 @@ export default async function HomePage() {
           <Typography variant="h6" component="h1">
             一覧
           </Typography>
-          <Box component="form" action={signOut}>
-            <Button type="submit" color="inherit" size="small">
-              {member.displayName} / ログアウト
-            </Button>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <LinkIconButton href="/family" size="small" aria-label="Family">
+              <GroupOutlinedIcon fontSize="small" />
+            </LinkIconButton>
+            <Box component="form" action={signOut}>
+              <Button type="submit" color="inherit" size="small">
+                {member.displayName} / ログアウト
+              </Button>
+            </Box>
           </Box>
         </Toolbar>
       </AppBar>

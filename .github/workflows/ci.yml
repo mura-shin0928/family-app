@@ -11,6 +11,15 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # service role key (管理・migration専用、RLSをbypassする) がクライアント到達可能な
+      # src/ に紛れ込むと、ブラウザへ権限が露出する致命的な事故になる。scripts/ 側でのみ使う。
+      - name: Ensure service role key is never referenced from app code
+        run: |
+          if grep -rn "SERVICE_ROLE" src/; then
+            echo "SERVICE_ROLE_KEY must never be referenced from src/ (client-reachable code)." >&2
+            exit 1
+          fi
+
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: ".node-version"

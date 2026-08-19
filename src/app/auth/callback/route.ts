@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server";
+import { sanitizeNextPath } from "@/lib/next-path";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  const safeNext = sanitizeNextPath(searchParams.get("next"));
 
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      await supabase.rpc("claim_membership");
+      // 招待URL経由のログインは、まだどのFamilyにも属していなくても
+      // /invite ページ自身が状態を判定できるため、所属チェックを待たず遷移させる。
+      if (safeNext) {
+        return NextResponse.redirect(`${origin}${safeNext}`);
+      }
 
       const {
         data: { user },

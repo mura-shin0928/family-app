@@ -18,9 +18,7 @@ describe("families / family_members RLS", () => {
   let familyF2: string;
 
   const userA = { email: `a-${runId}@example.test` };
-  // メールの大文字小文字が違っても claim_membership が紐付けられることを確認する
-  const userBRegisteredEmail = `B-${runId}@Example.test`;
-  const userB = { email: userBRegisteredEmail.toLowerCase() };
+  const userB = { email: `b-${runId}@example.test` };
   const userC = { email: `c-${runId}@example.test` };
   // family_members に一切登録されていない未所属ユーザー
   const userD = { email: `d-${runId}@example.test` };
@@ -54,12 +52,14 @@ describe("families / family_members RLS", () => {
     ]);
     for (const u of created) userIds[u.email] = u.id;
 
+    // 実際の参加経路は招待の受諾（accept_invitation）だが、このテストの関心は
+    // familes/family_members のSELECT/書き込みRLSなので、member行は
+    // service_roleで直接 user_id を入れて作る。
     const { error: membersError } = await admin.from("family_members").insert([
-      { family_id: familyF1, email: userA.email, display_name: "A" },
-      // わざと登録時の表記ゆれ（大文字混じり）を入れておく
-      { family_id: familyF1, email: userBRegisteredEmail, display_name: "B" },
-      { family_id: familyF2, email: userC.email, display_name: "C" },
-      // userD 用の行は作らない（未登録メール）
+      { family_id: familyF1, user_id: userIds[userA.email], display_name: "A" },
+      { family_id: familyF1, user_id: userIds[userB.email], display_name: "B" },
+      { family_id: familyF2, user_id: userIds[userC.email], display_name: "C" },
+      // userD 用の行は作らない（未所属）
     ]);
     if (membersError)
       throw new Error(`failed to seed family_members: ${membersError.message}`);
@@ -72,35 +72,8 @@ describe("families / family_members RLS", () => {
     await admin.from("families").delete().in("id", [familyF1, familyF2]);
   });
 
-  it("claim_membership links user_id for a pre-registered, case-differing email", async () => {
-    const client = await signInAsClient(userB.email, PASSWORD);
-    const { error } = await client.rpc("claim_membership");
-    expect(error).toBeNull();
-
-    const { data: row } = await admin
-      .from("family_members")
-      .select("user_id")
-      .eq("family_id", familyF1)
-      .eq("email", userBRegisteredEmail)
-      .single();
-    expect(row?.user_id).toBe(userIds[userB.email]);
-  });
-
-  it("claim_membership is a no-op for an unregistered email", async () => {
-    const client = await signInAsClient(userD.email, PASSWORD);
-    const { error } = await client.rpc("claim_membership");
-    expect(error).toBeNull();
-
-    const { data: rows } = await admin
-      .from("family_members")
-      .select("id")
-      .eq("user_id", userIds[userD.email]);
-    expect(rows).toHaveLength(0);
-  });
-
   it("a family member can only see their own family via RLS", async () => {
     const clientA = await signInAsClient(userA.email, PASSWORD);
-    await clientA.rpc("claim_membership");
 
     const { data: families, error } = await clientA
       .from("families")
@@ -110,14 +83,13 @@ describe("families / family_members RLS", () => {
 
     const { data: members } = await clientA
       .from("family_members")
-      .select("email");
-    const emails = (members ?? []).map((m) => m.email.toLowerCase()).sort();
-    expect(emails).toEqual([userA.email, userB.email].sort());
+      .select("display_name");
+    const names = (members ?? []).map((m) => m.display_name).sort();
+    expect(names).toEqual(["A", "B"]);
   });
 
   it("a member of another family cannot see F1's data", async () => {
     const clientC = await signInAsClient(userC.email, PASSWORD);
-    await clientC.rpc("claim_membership");
 
     const { data: families, error } = await clientC
       .from("families")
@@ -152,7 +124,6 @@ describe("families / family_members RLS", () => {
 
   it("no client can write to families or family_members (no write policies)", async () => {
     const clientA = await signInAsClient(userA.email, PASSWORD);
-    await clientA.rpc("claim_membership");
 
     const { error: insertError } = await clientA
       .from("families")

@@ -5,10 +5,20 @@ import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { type FormEvent, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { type FormEvent, Suspense, useState } from "react";
+import { sanitizeNextPath } from "@/lib/next-path";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+function buildCallbackUrl(safeNext: string | null): string {
+  const url = `${window.location.origin}/auth/callback`;
+  return safeNext ? `${url}?next=${encodeURIComponent(safeNext)}` : url;
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const safeNext = sanitizeNextPath(searchParams.get("next"));
+
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -19,7 +29,7 @@ export default function LoginPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: buildCallbackUrl(safeNext) },
     });
     if (error) setError(error.message);
   }
@@ -31,7 +41,7 @@ export default function LoginPage() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: buildCallbackUrl(safeNext) },
     });
     setLoading(false);
     if (error) {
@@ -115,5 +125,13 @@ export default function LoginPage() {
         </Typography>
       )}
     </Box>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

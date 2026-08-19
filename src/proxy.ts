@@ -4,7 +4,10 @@ import { type NextRequest, NextResponse } from "next/server";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
 
-const PUBLIC_PATHS = ["/login", "/no-access", "/auth/callback"];
+// /invite: 未ログインでも「このFamilyへの招待です」という文脈を見せてから
+// ログインへ誘導したいため、force-redirectの対象から外す
+// （ページ自体は authenticated 前提のRPCしか呼ばないので、Family名等は漏れない）。
+const PUBLIC_PATHS = ["/login", "/no-access", "/auth/callback", "/invite"];
 
 /**
  * セッションCookieの更新と、未認証ユーザーの楽観的リダイレクトのみを行う。
