@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { isPasteOnlyHost } from "@/features/recipes/extraction/detect";
 import { extractRecipeFromJsonLd } from "@/features/recipes/extraction/jsonld";
 import { extractReadable } from "@/features/recipes/extraction/readable";
+import { splitIngredientNameAndQuantity } from "@/features/recipes/extraction/split-ingredient";
 
 describe("isPasteOnlyHost", () => {
   it("returns true for X (x.com / twitter.com), with or without www", () => {
@@ -25,6 +26,46 @@ describe("isPasteOnlyHost", () => {
   });
 });
 
+describe("splitIngredientNameAndQuantity", () => {
+  // 実サイト（キッコーマン、個別レシピページ）のrecipeIngredientをそのまま使った回帰テスト。
+  const kikkomanSample: [string, { name: string; quantity: string }][] = [
+    ["鶏むね肉 1枚（300g）", { name: "鶏むね肉", quantity: "1枚（300g）" }],
+    ["揚げ油 適量", { name: "揚げ油", quantity: "適量" }],
+    ["レタス 適宜", { name: "レタス", quantity: "適宜" }],
+    [
+      "キッコーマン旨みひろがる 香り白だし 大さじ1",
+      { name: "キッコーマン旨みひろがる 香り白だし", quantity: "大さじ1" },
+    ],
+    [
+      "おろしにんにく 小さじ1/2",
+      { name: "おろしにんにく", quantity: "小さじ1/2" },
+    ],
+    ["冷水 80ml", { name: "冷水", quantity: "80ml" }],
+    ["薄力粉 50g", { name: "薄力粉", quantity: "50g" }],
+    ["マヨネーズ 大さじ1", { name: "マヨネーズ", quantity: "大さじ1" }],
+  ];
+
+  it.each(kikkomanSample)("splits %s", (input, expected) => {
+    expect(splitIngredientNameAndQuantity(input)).toEqual(expected);
+  });
+
+  it("keeps the whole string as name when there is no space to split on", () => {
+    expect(splitIngredientNameAndQuantity("醤油")).toEqual({
+      name: "醤油",
+      quantity: "",
+    });
+  });
+
+  it("keeps the whole string as name when the trailing token doesn't look like a quantity", () => {
+    expect(
+      splitIngredientNameAndQuantity("エキストラバージン オリーブオイル"),
+    ).toEqual({
+      name: "エキストラバージン オリーブオイル",
+      quantity: "",
+    });
+  });
+});
+
 describe("extractRecipeFromJsonLd", () => {
   it("extracts title and ingredients from a plain Recipe object", () => {
     const html = `<html><head><script type="application/ld+json">
@@ -35,8 +76,8 @@ describe("extractRecipeFromJsonLd", () => {
     expect(extractRecipeFromJsonLd(html)).toEqual({
       title: "鶏の照り焼き",
       ingredients: [
-        { name: "鶏もも肉 300g", quantity: "" },
-        { name: "白菜 1/4個", quantity: "" },
+        { name: "鶏もも肉", quantity: "300g" },
+        { name: "白菜", quantity: "1/4個" },
       ],
     });
   });
@@ -48,7 +89,7 @@ describe("extractRecipeFromJsonLd", () => {
 
     expect(extractRecipeFromJsonLd(html)).toEqual({
       title: "カレー",
-      ingredients: [{ name: "カレールー 1箱", quantity: "" }],
+      ingredients: [{ name: "カレールー", quantity: "1箱" }],
     });
   });
 
@@ -62,7 +103,7 @@ describe("extractRecipeFromJsonLd", () => {
 
     expect(extractRecipeFromJsonLd(html)).toEqual({
       title: "味噌汁",
-      ingredients: [{ name: "味噌 大さじ2", quantity: "" }],
+      ingredients: [{ name: "味噌", quantity: "大さじ2" }],
     });
   });
 
@@ -73,7 +114,7 @@ describe("extractRecipeFromJsonLd", () => {
 
     expect(extractRecipeFromJsonLd(html)).toEqual({
       title: "炒飯",
-      ingredients: [{ name: "卵 2個", quantity: "" }],
+      ingredients: [{ name: "卵", quantity: "2個" }],
     });
   });
 
@@ -84,7 +125,7 @@ describe("extractRecipeFromJsonLd", () => {
 
     expect(extractRecipeFromJsonLd(html)).toEqual({
       title: "目玉焼き",
-      ingredients: [{ name: "卵 1個", quantity: "" }],
+      ingredients: [{ name: "卵", quantity: "1個" }],
     });
   });
 
@@ -107,7 +148,7 @@ describe("extractRecipeFromJsonLd", () => {
 
     expect(extractRecipeFromJsonLd(html)).toEqual({
       title: "焼き魚",
-      ingredients: [{ name: "鮭 1切れ", quantity: "" }],
+      ingredients: [{ name: "鮭", quantity: "1切れ" }],
     });
   });
 
@@ -118,7 +159,10 @@ describe("extractRecipeFromJsonLd", () => {
 
     const result = extractRecipeFromJsonLd(html);
     expect(result?.title).toBe("親子&丼");
-    expect(result?.ingredients[0]?.name).toBe("鶏もも肉 300g");
+    expect(result?.ingredients[0]).toEqual({
+      name: "鶏もも肉",
+      quantity: "300g",
+    });
   });
 
   it("caps ingredients at 50 and truncates overly long names", () => {
@@ -158,7 +202,7 @@ describe("extractRecipeFromJsonLd", () => {
     `;
     expect(extractRecipeFromJsonLd(html)).toEqual({
       title: "本命レシピ",
-      ingredients: [{ name: "鶏むね肉 1枚", quantity: "" }],
+      ingredients: [{ name: "鶏むね肉", quantity: "1枚" }],
     });
   });
 });

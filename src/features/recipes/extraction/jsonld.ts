@@ -1,5 +1,6 @@
 import { decodeHtmlEntities } from "./html-text";
 import { normalizeDraft } from "./normalize";
+import { splitIngredientNameAndQuantity } from "./split-ingredient";
 import type { RecipeDraft } from "./types";
 
 function extractJsonLdBlocks(html: string): unknown[] {
@@ -75,12 +76,11 @@ export function extractRecipeFromJsonLd(html: string): RecipeDraft | null {
 
     return normalizeDraft({
       title: decodeHtmlEntities(name),
-      // 材料は「鶏もも肉 300g」のような1文字列で来るため、名前/分量に分割せず
-      // そのまま name に入れる（R3でtasks.titleに連結する既存方針と整合）。
-      ingredients: ingredientNames.map((ingredient) => ({
-        name: ingredient,
-        quantity: "",
-      })),
+      // 「薄力粉 50g」のように末尾が分量らしいトークンなら分割する。
+      // 自信が持てない場合は元の文字列をそのままnameに入れる（誤った分量を作らない）。
+      ingredients: ingredientNames.map((ingredient) =>
+        splitIngredientNameAndQuantity(ingredient),
+      ),
     });
   }
 
