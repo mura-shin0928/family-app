@@ -55,6 +55,7 @@ export function RecipeDetailScreen({
     <Stack
       spacing={3}
       sx={{
+        width: "100%",
         p: 2,
         pb: "calc(16px + 56px + env(safe-area-inset-bottom))",
         maxWidth: 480,

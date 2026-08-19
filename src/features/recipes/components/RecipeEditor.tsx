@@ -122,6 +122,7 @@ export function RecipeEditor({
       onSubmit={handleSubmit}
       spacing={3}
       sx={{
+        width: "100%",
         p: 2,
         pb: "calc(16px + 56px + env(safe-area-inset-bottom))",
         maxWidth: 480,
