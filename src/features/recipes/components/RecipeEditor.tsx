@@ -109,6 +109,14 @@ export function RecipeEditor({
         ]);
       }
 
+      if (result.draft.servings && !note.includes(result.draft.servings)) {
+        setNote((current) =>
+          current.trim() === ""
+            ? result.draft.servings
+            : `${current}\n${result.draft.servings}`,
+        );
+      }
+
       if (result.sourceUrl) {
         // URLは専用フィールドに移したので、貼り付け欄に二重に残さない。
         setSourceUrl(result.sourceUrl);

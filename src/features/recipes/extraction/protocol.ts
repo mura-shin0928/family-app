@@ -26,12 +26,15 @@ const SYSTEM_INSTRUCTION =
   "与えられた本文だけを根拠にJSONを出力してください。" +
   "料理名が読み取れない場合は本文の内容から適切な短い名前を推測してください。" +
   "材料の分量が本文に書かれていない場合、quantityは空文字にしてください。" +
-  "材料が1つも見つからない場合はingredientsを空配列にしてください。";
+  "材料が1つも見つからない場合はingredientsを空配列にしてください。" +
+  "本文に人数・分量の目安（何人分・何人前など）の記載があれば、" +
+  "servingsに「2人分」のような形で書き出してください。記載がなければservingsは空文字にしてください。";
 
 const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
     title: { type: "string" },
+    servings: { type: "string" },
     ingredients: {
       type: "array",
       items: {
@@ -44,7 +47,7 @@ const RESPONSE_SCHEMA = {
       },
     },
   },
-  required: ["title", "ingredients"],
+  required: ["title", "servings", "ingredients"],
 } as const;
 
 export function buildRequestBody(text: string, model: string = GEMINI_MODEL) {
@@ -97,6 +100,9 @@ function extractOutputText(
 
 const draftSchema = z.object({
   title: z.string(),
+  // 既存の呼び出し元（thinking_levelを使わない旧レスポンス等）を壊さないよう
+  // 省略時は空文字扱いにする。
+  servings: z.string().optional().default(""),
   ingredients: z.array(
     z.object({
       name: z.string(),

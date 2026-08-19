@@ -75,11 +75,44 @@ describe("extractRecipeFromJsonLd", () => {
 
     expect(extractRecipeFromJsonLd(html)).toEqual({
       title: "鶏の照り焼き",
+      servings: "",
       ingredients: [
         { name: "鶏もも肉", quantity: "300g" },
         { name: "白菜", quantity: "1/4個" },
       ],
     });
+  });
+
+  it("extracts recipeYield as-is when it already reads naturally (実サイト形式)", () => {
+    const html = `<script type="application/ld+json">
+      {"@type":"Recipe","name":"サクサク鶏天","recipeYield":"2人分","recipeIngredient":["鶏むね肉 1枚"]}
+    </script>`;
+
+    expect(extractRecipeFromJsonLd(html)?.servings).toBe("2人分");
+  });
+
+  it("appends 人分 when recipeYield is a bare number or numeric string", () => {
+    const html = `<script type="application/ld+json">
+      {"@type":"Recipe","name":"カレー","recipeYield":4,"recipeIngredient":["カレールー 1箱"]}
+    </script>`;
+
+    expect(extractRecipeFromJsonLd(html)?.servings).toBe("4人分");
+  });
+
+  it("takes the first string when recipeYield is an array", () => {
+    const html = `<script type="application/ld+json">
+      {"@type":"Recipe","name":"パスタ","recipeYield":["2人分","2 servings"],"recipeIngredient":["パスタ 200g"]}
+    </script>`;
+
+    expect(extractRecipeFromJsonLd(html)?.servings).toBe("2人分");
+  });
+
+  it("defaults servings to an empty string when recipeYield is absent", () => {
+    const html = `<script type="application/ld+json">
+      {"@type":"Recipe","name":"目玉焼き","recipeIngredient":["卵 1個"]}
+    </script>`;
+
+    expect(extractRecipeFromJsonLd(html)?.servings).toBe("");
   });
 
   it("extracts from an array-rooted JSON-LD document", () => {
@@ -89,6 +122,7 @@ describe("extractRecipeFromJsonLd", () => {
 
     expect(extractRecipeFromJsonLd(html)).toEqual({
       title: "カレー",
+      servings: "",
       ingredients: [{ name: "カレールー", quantity: "1箱" }],
     });
   });
@@ -103,6 +137,7 @@ describe("extractRecipeFromJsonLd", () => {
 
     expect(extractRecipeFromJsonLd(html)).toEqual({
       title: "味噌汁",
+      servings: "",
       ingredients: [{ name: "味噌", quantity: "大さじ2" }],
     });
   });
@@ -114,6 +149,7 @@ describe("extractRecipeFromJsonLd", () => {
 
     expect(extractRecipeFromJsonLd(html)).toEqual({
       title: "炒飯",
+      servings: "",
       ingredients: [{ name: "卵", quantity: "2個" }],
     });
   });
@@ -125,6 +161,7 @@ describe("extractRecipeFromJsonLd", () => {
 
     expect(extractRecipeFromJsonLd(html)).toEqual({
       title: "目玉焼き",
+      servings: "",
       ingredients: [{ name: "卵", quantity: "1個" }],
     });
   });
@@ -148,6 +185,7 @@ describe("extractRecipeFromJsonLd", () => {
 
     expect(extractRecipeFromJsonLd(html)).toEqual({
       title: "焼き魚",
+      servings: "",
       ingredients: [{ name: "鮭", quantity: "1切れ" }],
     });
   });
@@ -202,6 +240,7 @@ describe("extractRecipeFromJsonLd", () => {
     `;
     expect(extractRecipeFromJsonLd(html)).toEqual({
       title: "本命レシピ",
+      servings: "",
       ingredients: [{ name: "鶏むね肉", quantity: "1枚" }],
     });
   });

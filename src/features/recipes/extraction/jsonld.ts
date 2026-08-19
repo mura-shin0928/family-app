@@ -52,6 +52,21 @@ function toIngredientList(value: unknown): string[] {
   return [];
 }
 
+// schema.orgのrecipeYieldはtext/number/配列のいずれでも来る（実サイトでは
+// "2人分" のような文字列が多い）。数字だけの場合は「人分」を補う。
+function extractServings(value: unknown): string {
+  const raw = Array.isArray(value)
+    ? value.find((item): item is string => typeof item === "string")
+    : value;
+
+  if (typeof raw === "number") return `${raw}人分`;
+  if (typeof raw !== "string") return "";
+
+  const trimmed = decodeHtmlEntities(raw).trim();
+  if (trimmed === "") return "";
+  return /^[0-90-9]+$/.test(trimmed) ? `${trimmed}人分` : trimmed;
+}
+
 /**
  * HTML文字列からschema.org Recipeの構造化データを取り出す。純関数（I/Oなし）。
  * 見つからない・title/材料が読み取れない場合は null（呼び出し側はGeminiにフォールバックする）。
@@ -76,6 +91,7 @@ export function extractRecipeFromJsonLd(html: string): RecipeDraft | null {
 
     return normalizeDraft({
       title: decodeHtmlEntities(name),
+      servings: extractServings(recipe.recipeYield),
       // 「薄力粉 50g」のように末尾が分量らしいトークンなら分割する。
       // 自信が持てない場合は元の文字列をそのままnameに入れる（誤った分量を作らない）。
       ingredients: ingredientNames.map((ingredient) =>

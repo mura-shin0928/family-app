@@ -58,6 +58,7 @@ describe("buildRequestBody", () => {
     expect(body.response_format.mime_type).toBe("application/json");
     expect(body.response_format.schema.required).toEqual([
       "title",
+      "servings",
       "ingredients",
     ]);
   });
@@ -89,12 +90,44 @@ describe("parseOutput", () => {
       kind: "draft",
       draft: {
         title: "鶏の照り焼き",
+        servings: "",
         ingredients: [
           { name: "鶏もも肉", quantity: "300g" },
           { name: "白菜", quantity: "1/4個" },
         ],
       },
     });
+  });
+
+  it("parses the servings field when present", () => {
+    const result = parseOutput(
+      envelope({
+        title: "鶏の照り焼き",
+        servings: "2人分",
+        ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
+      }),
+    );
+    expect(result).toEqual({
+      kind: "draft",
+      draft: {
+        title: "鶏の照り焼き",
+        servings: "2人分",
+        ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
+      },
+    });
+  });
+
+  it("defaults servings to an empty string when absent from the response", () => {
+    const result = parseOutput(
+      envelope({
+        title: "鶏の照り焼き",
+        ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
+      }),
+    );
+    expect(result.kind).toBe("draft");
+    if (result.kind === "draft") {
+      expect(result.draft.servings).toBe("");
+    }
   });
 
   it("fails when output_text is not JSON", () => {
@@ -134,6 +167,7 @@ describe("parseOutput", () => {
       kind: "draft",
       draft: {
         title: "鶏の照り焼き",
+        servings: "",
         ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
       },
     });
@@ -158,7 +192,7 @@ describe("parseOutput", () => {
     );
     expect(result).toEqual({
       kind: "draft",
-      draft: { title: "謎の料理", ingredients: [] },
+      draft: { title: "謎の料理", servings: "", ingredients: [] },
     });
   });
 
@@ -178,6 +212,7 @@ describe("parseOutput", () => {
       kind: "draft",
       draft: {
         title: "鶏の照り焼き",
+        servings: "",
         ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
       },
     });
@@ -209,6 +244,7 @@ describe("parseOutput", () => {
       kind: "draft",
       draft: {
         title: "鶏の照り焼き",
+        servings: "",
         ingredients: [{ name: "白菜", quantity: "" }],
       },
     });
@@ -306,6 +342,7 @@ describe("extractRecipeFromText", () => {
       kind: "draft",
       draft: {
         title: "鶏の照り焼き",
+        servings: "",
         ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
       },
     });
@@ -404,6 +441,7 @@ describe("extractRecipeFromText", () => {
       kind: "draft",
       draft: {
         title: "鶏の照り焼き",
+        servings: "",
         ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
       },
     });
