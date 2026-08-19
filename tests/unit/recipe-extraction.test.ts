@@ -44,6 +44,13 @@ describe("buildRequestBody", () => {
     expect(body.input).toBe("鶏もも肉 300g");
   });
 
+  it("defaults to GEMINI_MODEL but accepts a model override", () => {
+    expect(buildRequestBody("text").model).toBe("gemini-3.7-flash");
+    expect(buildRequestBody("text", "gemini-3.5-flash-lite").model).toBe(
+      "gemini-3.5-flash-lite",
+    );
+  });
+
   it("requests structured JSON output and stateless mode", () => {
     const body = buildRequestBody("text");
     expect(body.store).toBe(false);
@@ -273,6 +280,59 @@ describe("extractRecipeFromText", () => {
     const result = await extractRecipeFromText("鶏もも肉 300g");
 
     expect(result).toEqual({ kind: "failed", reason: "timeout" });
+  });
+
+  it("retries with the fallback model when the primary model returns 429", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 429 })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve(
+            envelope({
+              title: "鶏の照り焼き",
+              ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
+            }),
+          ),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await extractRecipeFromText("鶏もも肉 300g");
+
+    expect(result).toEqual({
+      kind: "draft",
+      draft: {
+        title: "鶏の照り焼き",
+        ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
+      },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const secondCallBody = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(secondCallBody.model).toBe("gemini-3.5-flash-lite");
+  });
+
+  it("does not retry non-429 errors", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await extractRecipeFromText("鶏もも肉 300g");
+
+    expect(result).toEqual({ kind: "failed", reason: "api-error" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns api-error when both the primary and fallback model are rate-limited", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 429 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await extractRecipeFromText("鶏もも肉 300g");
+
+    expect(result).toEqual({ kind: "failed", reason: "api-error" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("returns a draft on success", async () => {

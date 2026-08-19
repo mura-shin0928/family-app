@@ -5,6 +5,11 @@ import type { ExtractionResult } from "./types";
 // 一次情報を確認済み（2026-08時点）: https://ai.google.dev/gemini-api/docs/structured-output
 // 学習データの `:generateContent` / `responseSchema` / `gemini-2.5-flash` から変わっている。
 export const GEMINI_MODEL = "gemini-3.7-flash";
+// 無料枠クォータ(429)を使い切った際のフォールバック。実測でモデルごとに別クォータ
+// バケットであることを確認済み（3.7-flashが429でも3.5-flash-liteは成功する）。
+// 応答形式（steps/model_outputの入れ方）はparseOutputと互換で追加対応は不要だった。
+// gemini-2.5-flash-liteは実測で404（廃止・3.5-flash-liteへの移行を促すメッセージ）。
+export const GEMINI_FALLBACK_MODEL = "gemini-3.5-flash-lite";
 export const GEMINI_ENDPOINT =
   "https://generativelanguage.googleapis.com/v1beta/interactions";
 
@@ -35,9 +40,9 @@ const RESPONSE_SCHEMA = {
   required: ["title", "ingredients"],
 } as const;
 
-export function buildRequestBody(text: string) {
+export function buildRequestBody(text: string, model: string = GEMINI_MODEL) {
   return {
-    model: GEMINI_MODEL,
+    model,
     input: text,
     system_instruction: SYSTEM_INSTRUCTION,
     store: false,
