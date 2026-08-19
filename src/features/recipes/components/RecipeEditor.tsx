@@ -189,6 +189,7 @@ export function RecipeEditor({
             onChange={(event) => setSourceText(event.target.value)}
             multiline
             minRows={4}
+            maxRows={4}
           />
           <Button
             onClick={handleAnalyze}

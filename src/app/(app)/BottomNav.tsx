@@ -1,7 +1,7 @@
 "use client";
 
 import ChecklistOutlinedIcon from "@mui/icons-material/ChecklistOutlined";
-import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
+import DiningOutlinedIcon from "@mui/icons-material/DiningOutlined";
 import BottomNavigation from "@mui/material/BottomNavigation";
 import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import Paper from "@mui/material/Paper";
@@ -31,20 +31,20 @@ export function BottomNav() {
         zIndex: (theme) => theme.zIndex.appBar,
       }}
     >
-      <BottomNavigation value={value} showLabels>
+      <BottomNavigation value={value}>
         <BottomNavigationAction
           component={Link}
           href="/"
           value="/"
-          label="一覧"
+          aria-label="一覧"
           icon={<ChecklistOutlinedIcon />}
         />
         <BottomNavigationAction
           component={Link}
           href="/recipes"
           value="/recipes"
-          label="レシピ"
-          icon={<MenuBookOutlinedIcon />}
+          aria-label="レシピ"
+          icon={<DiningOutlinedIcon />}
         />
       </BottomNavigation>
     </Paper>
