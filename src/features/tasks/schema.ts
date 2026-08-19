@@ -34,3 +34,12 @@ export const updateDueDateSchema = z.object({
   taskId: z.string().uuid(),
   dueOn: z.union([dateStringSchema, z.literal("")]),
 });
+
+export const updateTitleSchema = z.object({
+  taskId: z.string().uuid(),
+  title: z
+    .string()
+    .trim()
+    .min(1, "タイトルを入力してください")
+    .max(200, "タイトルは200文字以内で入力してください"),
+});
