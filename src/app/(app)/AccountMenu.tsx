@@ -1,5 +1,6 @@
 "use client";
 
+import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
 import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
 import LogoutIcon from "@mui/icons-material/Logout";
 import Divider from "@mui/material/Divider";
@@ -13,11 +14,12 @@ import { type MouseEvent, useState, useTransition } from "react";
 
 type Props = {
   displayName: string;
+  isAppAdmin: boolean;
   /** Server Action。関数参照だが "use server" 付きのためClient Componentへpropとして渡してよい。 */
   signOut: () => Promise<void>;
 };
 
-export function AccountMenu({ displayName, signOut }: Props) {
+export function AccountMenu({ displayName, isAppAdmin, signOut }: Props) {
   const router = useRouter();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -34,6 +36,11 @@ export function AccountMenu({ displayName, signOut }: Props) {
   function handleFamily() {
     handleClose();
     router.push("/family");
+  }
+
+  function handleAdmin() {
+    handleClose();
+    router.push("/admin");
   }
 
   function handleSignOut() {
@@ -69,8 +76,16 @@ export function AccountMenu({ displayName, signOut }: Props) {
           <ListItemIcon>
             <GroupOutlinedIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>メンバー管理</ListItemText>
+          <ListItemText>メンバー</ListItemText>
         </MenuItem>
+        {isAppAdmin && (
+          <MenuItem onClick={handleAdmin}>
+            <ListItemIcon>
+              <AdminPanelSettingsOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Admin</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={handleSignOut} disabled={isPending}>
           <ListItemIcon>
             <LogoutIcon fontSize="small" />
