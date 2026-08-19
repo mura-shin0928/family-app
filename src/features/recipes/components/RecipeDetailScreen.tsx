@@ -7,7 +7,6 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
-import Chip from "@mui/material/Chip";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -106,12 +105,17 @@ export function RecipeDetailScreen({
     });
   }
 
-  const selectedIngredientIds = (recipe?.ingredients ?? [])
+  const ingredients = recipe?.ingredients ?? [];
+  const selectedIngredientIds = ingredients
     .filter(
       (ingredient) =>
         checkedOverride[ingredient.id] ?? !ingredient.isInPurchases,
     )
     .map((ingredient) => ingredient.id);
+  const allSelected =
+    ingredients.length > 0 &&
+    selectedIngredientIds.length === ingredients.length;
+  const someSelected = selectedIngredientIds.length > 0 && !allSelected;
 
   function handleAddToPurchases() {
     setError(null);
@@ -119,6 +123,14 @@ export function RecipeDetailScreen({
       recipeId: initialRecipe.id,
       ingredientIds: selectedIngredientIds,
     });
+  }
+
+  function handleToggleAll(checked: boolean) {
+    setCheckedOverride(
+      Object.fromEntries(
+        ingredients.map((ingredient) => [ingredient.id, checked]),
+      ),
+    );
   }
 
   return (
@@ -185,12 +197,27 @@ export function RecipeDetailScreen({
       <Divider />
 
       <Box component="section">
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-          材料（{recipe?.ingredients.length ?? 0}）
-        </Typography>
-        {recipe && recipe.ingredients.length > 0 ? (
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{ alignItems: "center", mb: 1 }}
+        >
+          {ingredients.length > 0 && (
+            <Checkbox
+              size="small"
+              checked={allSelected}
+              indeterminate={someSelected}
+              onChange={(event) => handleToggleAll(event.target.checked)}
+              sx={{ ml: -1 }}
+            />
+          )}
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            材料（{ingredients.length}）
+          </Typography>
+        </Stack>
+        {ingredients.length > 0 ? (
           <Stack spacing={0.25}>
-            {recipe.ingredients.map((ingredient) => {
+            {ingredients.map((ingredient) => {
               const checked =
                 checkedOverride[ingredient.id] ?? !ingredient.isInPurchases;
               return (
@@ -218,9 +245,6 @@ export function RecipeDetailScreen({
                       {ingredient.quantity}
                     </Typography>
                   )}
-                  {ingredient.isInPurchases && (
-                    <Chip label="追加済み" size="small" variant="outlined" />
-                  )}
                 </Stack>
               );
             })}
@@ -230,7 +254,7 @@ export function RecipeDetailScreen({
             材料は登録されていません
           </Typography>
         )}
-        {recipe && recipe.ingredients.length > 0 && (
+        {ingredients.length > 0 && (
           <Button
             variant="contained"
             fullWidth
