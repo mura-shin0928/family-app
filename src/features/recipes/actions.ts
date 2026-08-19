@@ -2,7 +2,11 @@
 
 import { requireFamilyMember } from "@/features/auth/guard";
 import { createClient } from "@/lib/supabase/server";
+import { urlOnly } from "./extraction/detect";
+import { extractRecipeFromText } from "./extraction/gemini";
+import type { RecipeDraft } from "./extraction/types";
 import {
+  analyzeRecipeTextSchema,
   createRecipeSchema,
   recipeIdSchema,
   updateRecipeSchema,
@@ -20,6 +24,7 @@ export async function createRecipe(input: {
   id: string;
   title: string;
   sourceUrl: string;
+  sourceText: string;
   note: string;
   ingredients: IngredientInput[];
 }): Promise<ActionResult> {
@@ -39,6 +44,7 @@ export async function createRecipe(input: {
     family_id: member.familyId,
     title: parsed.data.title,
     source_url: parsed.data.sourceUrl === "" ? null : parsed.data.sourceUrl,
+    source_text: parsed.data.sourceText === "" ? null : parsed.data.sourceText,
     note: parsed.data.note === "" ? null : parsed.data.note,
     created_by: member.id,
   });
@@ -72,6 +78,7 @@ export async function updateRecipe(input: {
   recipeId: string;
   title: string;
   sourceUrl: string;
+  sourceText: string;
   note: string;
   ingredients: IngredientInput[];
 }): Promise<ActionResult> {
@@ -91,6 +98,8 @@ export async function updateRecipe(input: {
     .update({
       title: parsed.data.title,
       source_url: parsed.data.sourceUrl === "" ? null : parsed.data.sourceUrl,
+      source_text:
+        parsed.data.sourceText === "" ? null : parsed.data.sourceText,
       note: parsed.data.note === "" ? null : parsed.data.note,
     })
     .eq("id", parsed.data.recipeId)
@@ -183,4 +192,55 @@ export async function deleteRecipe(input: {
   }
 
   return { ok: true };
+}
+
+export type AnalyzeRecipeTextResult =
+  | { ok: true; draft: RecipeDraft }
+  | { ok: false; error: string; detectedUrl?: string };
+
+const FAILURE_MESSAGES: Record<string, string> = {
+  "no-key": "解析機能は現在利用できません。手入力で保存してください。",
+  timeout:
+    "解析がタイムアウトしました。時間をおいて試すか、手入力で保存してください。",
+  "api-error":
+    "解析に失敗しました。時間をおいて試すか、手入力で保存してください。",
+  "invalid-response":
+    "解析結果を読み取れませんでした。手入力で保存してください。",
+};
+
+export async function analyzeRecipeText(input: {
+  text: string;
+}): Promise<AnalyzeRecipeTextResult> {
+  const parsed = analyzeRecipeTextSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  await requireFamilyMember();
+
+  const detectedUrl = urlOnly(parsed.data.text);
+  if (detectedUrl) {
+    return {
+      ok: false,
+      error:
+        "URLだけでは材料を読み取れません。本文をコピーして貼り付けてください。",
+      detectedUrl,
+    };
+  }
+
+  const result = await extractRecipeFromText(parsed.data.text);
+
+  if (result.kind === "failed") {
+    return {
+      ok: false,
+      error:
+        FAILURE_MESSAGES[result.reason] ??
+        "解析に失敗しました。手入力で保存してください。",
+    };
+  }
+
+  return { ok: true, draft: result.draft };
 }

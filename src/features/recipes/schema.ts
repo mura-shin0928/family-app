@@ -30,10 +30,17 @@ const noteSchema = z.union([
   z.literal(""),
 ]);
 
+// recipes.source_text のDB制約（20000字）と揃える。
+const sourceTextSchema = z.union([
+  z.string().max(20000, "本文は20000文字以内で入力してください"),
+  z.literal(""),
+]);
+
 export const createRecipeSchema = z.object({
   id: z.string().uuid(),
   title: titleSchema,
   sourceUrl: sourceUrlSchema,
+  sourceText: sourceTextSchema,
   note: noteSchema,
   ingredients: z
     .array(ingredientInputSchema)
@@ -46,4 +53,12 @@ export const updateRecipeSchema = createRecipeSchema.omit({ id: true }).extend({
 
 export const recipeIdSchema = z.object({
   recipeId: z.string().uuid(),
+});
+
+export const analyzeRecipeTextSchema = z.object({
+  text: z
+    .string()
+    .trim()
+    .min(1, "本文を入力してください")
+    .max(20000, "本文は20000文字以内で入力してください"),
 });

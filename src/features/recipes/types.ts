@@ -19,5 +19,6 @@ export type RecipeIngredientDTO = {
 };
 
 export type RecipeDetailDTO = RecipeDTO & {
+  sourceText: string | null;
   ingredients: RecipeIngredientDTO[];
 };

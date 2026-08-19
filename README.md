@@ -20,6 +20,9 @@ npm run dev
 
 http://localhost:3000 を開く。
 
+`GEMINI_API_KEY`（レシピ本文からの材料抽出用、Google AI Studio で発行）を`.env.local`に
+設定しなくてもアプリは動く。未設定のときは解析機能だけ使えず、手入力での保存はできる。
+
 ## スクリプト
 
 ```bash

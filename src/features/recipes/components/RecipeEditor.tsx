@@ -4,12 +4,15 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
+import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState, useTransition } from "react";
-import { createRecipe, updateRecipe } from "../actions";
+import { analyzeRecipeText, createRecipe, updateRecipe } from "../actions";
 import type { RecipeDetailDTO } from "../types";
 
 type IngredientRow = {
@@ -38,13 +41,19 @@ export function RecipeEditor({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isAnalyzing, startAnalyzeTransition] = useTransition();
   const [title, setTitle] = useState(recipe?.title ?? "");
   const [sourceUrl, setSourceUrl] = useState(recipe?.sourceUrl ?? "");
+  const [sourceText, setSourceText] = useState(recipe?.sourceText ?? "");
   const [note, setNote] = useState(recipe?.note ?? "");
   const [ingredients, setIngredients] = useState<IngredientRow[]>(() =>
     toRows(recipe),
   );
   const [error, setError] = useState<string | null>(null);
+  const [analyzeMessage, setAnalyzeMessage] = useState<{
+    severity: "success" | "warning";
+    text: string;
+  } | null>(null);
 
   function addIngredientRow() {
     setIngredients((current) => [
@@ -67,6 +76,44 @@ export function RecipeEditor({
 
   function removeIngredientRow(key: string) {
     setIngredients((current) => current.filter((row) => row.key !== key));
+  }
+
+  function handleAnalyze() {
+    const trimmedText = sourceText.trim();
+    if (!trimmedText) return;
+
+    setAnalyzeMessage(null);
+    startAnalyzeTransition(async () => {
+      const result = await analyzeRecipeText({ text: trimmedText });
+
+      if (!result.ok) {
+        if (result.detectedUrl && !sourceUrl.trim()) {
+          setSourceUrl(result.detectedUrl);
+        }
+        setAnalyzeMessage({ severity: "warning", text: result.error });
+        return;
+      }
+
+      if (!title.trim() && result.draft.title) {
+        setTitle(result.draft.title);
+      }
+
+      if (result.draft.ingredients.length > 0) {
+        setIngredients((current) => [
+          ...current,
+          ...result.draft.ingredients.map((ingredient) => ({
+            key: crypto.randomUUID(),
+            name: ingredient.name,
+            quantity: ingredient.quantity,
+          })),
+        ]);
+      }
+
+      setAnalyzeMessage({
+        severity: "success",
+        text: `${result.draft.ingredients.length}件の材料を読み取りました。内容を確認して保存してください。`,
+      });
+    });
   }
 
   function handleSubmit(event: FormEvent) {
@@ -94,6 +141,7 @@ export function RecipeEditor({
               id: crypto.randomUUID(),
               title: trimmedTitle,
               sourceUrl: sourceUrl.trim(),
+              sourceText: sourceText.trim(),
               note: note.trim(),
               ingredients: submittedIngredients,
             })
@@ -101,6 +149,7 @@ export function RecipeEditor({
               recipeId: recipe?.id ?? "",
               title: trimmedTitle,
               sourceUrl: sourceUrl.trim(),
+              sourceText: sourceText.trim(),
               note: note.trim(),
               ingredients: submittedIngredients,
             });
@@ -129,6 +178,36 @@ export function RecipeEditor({
         mx: "auto",
       }}
     >
+      <Box component="section">
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
+          レシピの本文を貼り付け（任意）
+        </Typography>
+        <Stack spacing={1}>
+          <TextField
+            label="本文を貼り付け"
+            value={sourceText}
+            onChange={(event) => setSourceText(event.target.value)}
+            multiline
+            minRows={4}
+          />
+          <Button
+            onClick={handleAnalyze}
+            disabled={isAnalyzing || sourceText.trim() === ""}
+            startIcon={isAnalyzing ? <CircularProgress size={16} /> : undefined}
+            sx={{ alignSelf: "flex-start" }}
+          >
+            レシピをAIで読み取る
+          </Button>
+          {analyzeMessage && (
+            <Alert severity={analyzeMessage.severity}>
+              {analyzeMessage.text}
+            </Alert>
+          )}
+        </Stack>
+      </Box>
+
+      <Divider />
+
       <Stack spacing={1.5}>
         <TextField
           label="タイトル"
