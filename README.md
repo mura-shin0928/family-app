@@ -14,6 +14,7 @@
 
 ```bash
 npm install
+make db-reset   # ローカルSupabase起動 + migration適用（supabase start + db reset --local）
 npm run dev
 ```
 
