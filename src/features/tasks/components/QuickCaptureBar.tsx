@@ -61,12 +61,12 @@ export function QuickCaptureBar({ onSubmit }: Props) {
       sx={{
         position: "fixed",
         insetInline: 0,
-        bottom: 0,
+        bottom: "calc(56px + env(safe-area-inset-bottom))",
         borderTop: 1,
         borderColor: "divider",
         px: 2,
         pt: 1,
-        pb: "calc(env(safe-area-inset-bottom) + 8px)",
+        pb: 1,
       }}
     >
       <Stack

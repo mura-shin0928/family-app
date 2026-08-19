@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { AppUpdateNotice } from "./AppUpdateNotice";
+import { BottomNav } from "./BottomNav";
 import { QueryProvider } from "./QueryProvider";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -9,6 +10,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <QueryProvider>
       {children}
       <AppUpdateNotice />
+      <BottomNav />
     </QueryProvider>
   );
 }
