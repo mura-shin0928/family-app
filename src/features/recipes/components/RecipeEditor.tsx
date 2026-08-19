@@ -7,7 +7,6 @@ import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState, useTransition } from "react";
 import { createRecipe, updateRecipe } from "../actions";
@@ -153,10 +152,7 @@ export function RecipeEditor({
       </Stack>
 
       <Box component="section">
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-          材料
-        </Typography>
-        <Stack spacing={1}>
+        <Stack spacing={1.5}>
           {ingredients.map((row) => (
             <Stack
               key={row.key}
@@ -166,34 +162,31 @@ export function RecipeEditor({
             >
               <TextField
                 label="材料名"
-                size="small"
                 value={row.name}
                 onChange={(event) =>
                   updateIngredientRow(row.key, "name", event.target.value)
                 }
-                sx={{ flex: 2 }}
+                sx={{ flex: 1, minWidth: 0 }}
               />
               <TextField
                 label="分量"
-                size="small"
                 value={row.quantity}
                 onChange={(event) =>
                   updateIngredientRow(row.key, "quantity", event.target.value)
                 }
-                sx={{ flex: 1 }}
+                sx={{ width: 104, flexShrink: 0 }}
               />
               <IconButton
                 onClick={() => removeIngredientRow(row.key)}
                 aria-label="材料を削除"
-                size="small"
-                sx={{ color: "text.disabled" }}
+                sx={{ color: "text.disabled", flexShrink: 0 }}
               >
                 <DeleteOutlineIcon fontSize="small" />
               </IconButton>
             </Stack>
           ))}
         </Stack>
-        <Button size="small" onClick={addIngredientRow} sx={{ mt: 1 }}>
+        <Button onClick={addIngredientRow} sx={{ mt: 1.5 }}>
           材料を追加
         </Button>
       </Box>
