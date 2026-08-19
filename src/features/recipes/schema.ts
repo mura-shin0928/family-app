@@ -55,6 +55,18 @@ export const recipeIdSchema = z.object({
   recipeId: z.string().uuid(),
 });
 
+export const addIngredientsToPurchasesSchema = z.object({
+  recipeId: z.string().uuid(),
+  ingredientIds: z
+    .array(z.string().uuid())
+    .min(1, "材料を選択してください")
+    .max(50, "一度に追加できるのは50件までです"),
+});
+
+export const undoAddIngredientsToPurchasesSchema = z.object({
+  taskIds: z.array(z.string().uuid()).min(1).max(50),
+});
+
 export const analyzeRecipeTextSchema = z.object({
   text: z
     .string()

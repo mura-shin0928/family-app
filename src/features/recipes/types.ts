@@ -16,6 +16,11 @@ export type RecipeIngredientDTO = {
   quantity: string | null;
   sortOrder: number;
   taskId: string | null;
+  /**
+   * 連結先のタスクが「生きている買うもの」として存在するか（未完了・未削除）。
+   * 完了/削除されていれば false に倒れ、次回また既定ONで追加できる。
+   */
+  isInPurchases: boolean;
 };
 
 export type RecipeDetailDTO = RecipeDTO & {
