@@ -59,33 +59,6 @@ export async function getRecipe(
     );
   }
 
-  const linkedTaskIds = [
-    ...new Set(
-      (ingredients ?? [])
-        .map((row) => row.task_id)
-        .filter((id): id is string => !!id),
-    ),
-  ];
-
-  let livePurchaseTaskIds = new Set<string>();
-  if (linkedTaskIds.length > 0) {
-    const { data: liveTasks, error: liveTasksError } = await supabase
-      .from("tasks")
-      .select("id")
-      .eq("family_id", familyId)
-      .in("id", linkedTaskIds)
-      .is("deleted_at", null)
-      .eq("status", "open");
-
-    if (liveTasksError) {
-      throw new Error(
-        `failed to load linked purchase tasks: ${liveTasksError.message}`,
-      );
-    }
-
-    livePurchaseTaskIds = new Set((liveTasks ?? []).map((row) => row.id));
-  }
-
   return {
     id: recipe.id,
     title: recipe.title,
@@ -99,7 +72,6 @@ export async function getRecipe(
       quantity: row.quantity,
       sortOrder: row.sort_order,
       taskId: row.task_id,
-      isInPurchases: row.task_id ? livePurchaseTaskIds.has(row.task_id) : false,
     })),
   };
 }

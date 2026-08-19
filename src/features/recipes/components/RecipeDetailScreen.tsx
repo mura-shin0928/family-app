@@ -39,9 +39,7 @@ export function RecipeDetailScreen({
   const [isPending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [checkedOverride, setCheckedOverride] = useState<
-    Record<string, boolean>
-  >({});
+  const [checkedIds, setCheckedIds] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState<{
     message: string;
     taskIds: string[];
@@ -60,7 +58,7 @@ export function RecipeDetailScreen({
         setError(result.error);
         return;
       }
-      setCheckedOverride({});
+      setCheckedIds({});
       queryClient.invalidateQueries({
         queryKey: recipeDetailQueryKey(initialRecipe.id),
       });
@@ -107,10 +105,7 @@ export function RecipeDetailScreen({
 
   const ingredients = recipe?.ingredients ?? [];
   const selectedIngredientIds = ingredients
-    .filter(
-      (ingredient) =>
-        checkedOverride[ingredient.id] ?? !ingredient.isInPurchases,
-    )
+    .filter((ingredient) => checkedIds[ingredient.id])
     .map((ingredient) => ingredient.id);
   const allSelected =
     ingredients.length > 0 &&
@@ -126,7 +121,7 @@ export function RecipeDetailScreen({
   }
 
   function handleToggleAll(checked: boolean) {
-    setCheckedOverride(
+    setCheckedIds(
       Object.fromEntries(
         ingredients.map((ingredient) => [ingredient.id, checked]),
       ),
@@ -218,8 +213,7 @@ export function RecipeDetailScreen({
         {ingredients.length > 0 ? (
           <Stack spacing={0.25}>
             {ingredients.map((ingredient) => {
-              const checked =
-                checkedOverride[ingredient.id] ?? !ingredient.isInPurchases;
+              const checked = !!checkedIds[ingredient.id];
               return (
                 <Stack
                   key={ingredient.id}
@@ -231,7 +225,7 @@ export function RecipeDetailScreen({
                     size="small"
                     checked={checked}
                     onChange={(event) =>
-                      setCheckedOverride((prev) => ({
+                      setCheckedIds((prev) => ({
                         ...prev,
                         [ingredient.id]: event.target.checked,
                       }))
