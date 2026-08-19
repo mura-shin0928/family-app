@@ -53,4 +53,8 @@ jobs:
 
       - run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
 
-      - run: supabase db push --yes
+      # 並行して進むworktree/PRごとにmigrationのタイムスタンプが前後することがあるため、
+      # 「直前に適用したmigrationより古い日付のファイルを検出したら止める」安全チェックは
+      # 常時bypassする（--include-all）。中身は各migrationファイル自体の内容で守られており、
+      # 順序チェックはこのプロジェクトの開発体制とは噛み合わないため。
+      - run: supabase db push --include-all --yes
