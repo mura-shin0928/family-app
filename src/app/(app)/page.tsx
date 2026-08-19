@@ -1,50 +1,29 @@
 import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
-import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
-import { redirect } from "next/navigation";
 import { LinkIconButton } from "@/components/LinkIconButton";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { TaskListScreen } from "@/features/tasks/components/TaskListScreen";
 import { getTasks } from "@/features/tasks/queries";
-import { createClient } from "@/lib/supabase/server";
+import { AppHeader } from "./AppHeader";
 
 export default async function HomePage() {
   const { member } = await requireFamilyMember();
   const tasks = await getTasks(member.familyId);
-
-  async function signOut() {
-    "use server";
-    const supabase = await createClient();
-    await supabase.auth.signOut();
-    redirect("/login");
-  }
 
   return (
     <Box
       component="main"
       sx={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}
     >
-      <AppBar position="fixed" color="default" elevation={1}>
-        <Toolbar sx={{ justifyContent: "space-between" }}>
-          <Typography variant="h6" component="h1">
-            一覧
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            <LinkIconButton href="/family" size="small" aria-label="Family">
-              <GroupOutlinedIcon fontSize="small" />
-            </LinkIconButton>
-            <Box component="form" action={signOut}>
-              <Button type="submit" color="inherit" size="small">
-                {member.displayName} / ログアウト
-              </Button>
-            </Box>
-          </Box>
-        </Toolbar>
-      </AppBar>
-      <Toolbar />
+      <AppHeader
+        title="一覧"
+        displayName={member.displayName}
+        actions={
+          <LinkIconButton href="/family" size="small" aria-label="Family">
+            <GroupOutlinedIcon fontSize="small" />
+          </LinkIconButton>
+        }
+      />
       <TaskListScreen initialTasks={tasks} familyId={member.familyId} />
     </Box>
   );

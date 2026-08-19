@@ -67,7 +67,15 @@ export function InvitationsScreen({ members, invitations }: Props) {
   }
 
   return (
-    <Stack spacing={4} sx={{ p: 2, maxWidth: 480, mx: "auto" }}>
+    <Stack
+      spacing={4}
+      sx={{
+        p: 2,
+        pb: "calc(16px + 56px + env(safe-area-inset-bottom))",
+        maxWidth: 480,
+        mx: "auto",
+      }}
+    >
       <Box component="section">
         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
           メンバー（{members.length}）
