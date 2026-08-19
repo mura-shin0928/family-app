@@ -451,7 +451,7 @@ export function TaskListScreen({
   };
 
   return (
-    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", pb: 20 }}>
+    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", pb: 27 }}>
       <Stack spacing={2} sx={{ flex: 1, px: 2, py: 2 }}>
         <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
           <Chip
@@ -583,7 +583,7 @@ export function TaskListScreen({
       <Snackbar
         open={!!toast}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        sx={{ bottom: 96 }}
+        sx={{ bottom: 152 }}
         message={toast?.message}
         action={
           toast?.actionLabel ? (
