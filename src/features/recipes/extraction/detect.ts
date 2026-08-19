@@ -18,7 +18,7 @@ export function urlOnly(input: string): string | null {
   return trimmed;
 }
 
-const PASTE_ONLY_HOSTS = new Set([
+const SNS_HOSTS = new Set([
   "x.com",
   "www.x.com",
   "twitter.com",
@@ -31,10 +31,10 @@ const PASTE_ONLY_HOSTS = new Set([
  * X / Instagram は本文を取得できる保証がない（IGはアプリトークン必須）ため、
  * fetch を試みず「本文を貼り付けてください」に倒すホスト一覧。
  */
-export function isPasteOnlyHost(urlString: string): boolean {
+export function isSnsHost(urlString: string): boolean {
   try {
     const url = new URL(urlString);
-    return PASTE_ONLY_HOSTS.has(url.hostname.toLowerCase());
+    return SNS_HOSTS.has(url.hostname.toLowerCase());
   } catch {
     return false;
   }

@@ -2,7 +2,7 @@
 
 import { requireFamilyMember } from "@/features/auth/guard";
 import { createClient } from "@/lib/supabase/server";
-import { isPasteOnlyHost, urlOnly } from "./extraction/detect";
+import { isSnsHost, urlOnly } from "./extraction/detect";
 import { fetchHtml } from "./extraction/fetch-html";
 import { extractRecipeFromText } from "./extraction/gemini";
 import { extractRecipeFromJsonLd } from "./extraction/jsonld";
@@ -373,7 +373,7 @@ export async function analyzeRecipeSource(input: {
     return { ok: true, draft: result.draft, via: "gemini" };
   }
 
-  if (isPasteOnlyHost(detectedUrl)) {
+  if (isSnsHost(detectedUrl)) {
     return { ok: false, error: PASTE_ONLY_ERROR, detectedUrl };
   }
 

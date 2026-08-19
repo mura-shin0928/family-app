@@ -1,28 +1,28 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isPasteOnlyHost } from "@/features/recipes/extraction/detect";
+import { isSnsHost } from "@/features/recipes/extraction/detect";
 import { extractRecipeFromJsonLd } from "@/features/recipes/extraction/jsonld";
 import { extractReadable } from "@/features/recipes/extraction/readable";
 import { splitIngredientNameAndQuantity } from "@/features/recipes/extraction/split-ingredient";
 
-describe("isPasteOnlyHost", () => {
+describe("isSnsHost", () => {
   it("returns true for X (x.com / twitter.com), with or without www", () => {
-    expect(isPasteOnlyHost("https://x.com/foo/status/1")).toBe(true);
-    expect(isPasteOnlyHost("https://www.x.com/foo/status/1")).toBe(true);
-    expect(isPasteOnlyHost("https://twitter.com/foo/status/1")).toBe(true);
-    expect(isPasteOnlyHost("https://www.twitter.com/foo")).toBe(true);
+    expect(isSnsHost("https://x.com/foo/status/1")).toBe(true);
+    expect(isSnsHost("https://www.x.com/foo/status/1")).toBe(true);
+    expect(isSnsHost("https://twitter.com/foo/status/1")).toBe(true);
+    expect(isSnsHost("https://www.twitter.com/foo")).toBe(true);
   });
 
   it("returns true for Instagram, with or without www", () => {
-    expect(isPasteOnlyHost("https://instagram.com/p/abc")).toBe(true);
-    expect(isPasteOnlyHost("https://www.instagram.com/p/abc")).toBe(true);
+    expect(isSnsHost("https://instagram.com/p/abc")).toBe(true);
+    expect(isSnsHost("https://www.instagram.com/p/abc")).toBe(true);
   });
 
   it("returns false for a general recipe site", () => {
-    expect(isPasteOnlyHost("https://cookpad.com/recipe/12345")).toBe(false);
+    expect(isSnsHost("https://cookpad.com/recipe/12345")).toBe(false);
   });
 
   it("returns false for an invalid URL", () => {
-    expect(isPasteOnlyHost("not a url")).toBe(false);
+    expect(isSnsHost("not a url")).toBe(false);
   });
 });
 

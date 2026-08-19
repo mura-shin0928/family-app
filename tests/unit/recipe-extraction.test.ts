@@ -343,6 +343,45 @@ describe("extractRecipeFromText", () => {
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
+  it("does not call fetch at all once the shared deadline has already passed", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await extractRecipeFromText("鶏もも肉 300g", {
+      deadlineAt: Date.now() - 1,
+    });
+
+    expect(result).toEqual({ kind: "failed", reason: "timeout" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("stops the fallback chain once the shared deadline is exhausted, regardless of remaining models", async () => {
+    // 各モデルへの再試行は「新たに25秒もらえる」のではなく、呼び出し開始時に
+    // 固定した1つのdeadlineAtの残り時間を使い回す。429が連続しても、
+    // 経過時間の分だけ次の試行に使える時間は減っていくことを検証する。
+    process.env.GEMINI_API_KEY = "test-key";
+    vi.useFakeTimers();
+
+    const fetchMock = vi.fn().mockImplementation(async () => {
+      // 1回の試行に3秒かかったとみなして仮想時計を進める。
+      vi.advanceTimersByTime(3000);
+      return { ok: false, status: 429 };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const deadlineAt = Date.now() + 5000; // 4モデル分(3秒x4=12秒)には全く足りない
+
+    const result = await extractRecipeFromText("鶏もも肉 300g", { deadlineAt });
+
+    expect(result).toEqual({ kind: "failed", reason: "timeout" });
+    // 5秒の猶予に対して1回3秒かかるので、2回目までしか試せない
+    // （4モデル全部を律儀に試すわけではない）。
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    vi.useRealTimers();
+  });
+
   it("returns a draft on success", async () => {
     process.env.GEMINI_API_KEY = "test-key";
     vi.stubGlobal(
