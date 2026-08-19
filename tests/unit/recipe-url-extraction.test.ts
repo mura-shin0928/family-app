@@ -139,6 +139,28 @@ describe("extractRecipeFromJsonLd", () => {
     </script>`;
     expect(extractRecipeFromJsonLd(html)).toBeNull();
   });
+
+  it("returns null for a Recipe node with a name but no recipeIngredient (roundup pages)", () => {
+    // 実サイトで確認したパターン: まとめ記事に@type:Recipeが付与され、
+    // nameはページ自体のタイトル、recipeIngredientは存在しない。
+    // これを採用すると材料0件で「成功」扱いになりGeminiフォールバックが働かなくなるため、
+    // 材料が空のRecipeノードは不採用にする。
+    const html = `<script type="application/ld+json">
+      {"@type":"Recipe","name":"鶏むね肉の人気レシピ特集","description":"..."}
+    </script>`;
+    expect(extractRecipeFromJsonLd(html)).toBeNull();
+  });
+
+  it("falls through to a later Recipe node when an earlier one has no ingredients", () => {
+    const html = `
+      <script type="application/ld+json">{"@type":"Recipe","name":"まとめ記事"}</script>
+      <script type="application/ld+json">{"@type":"Recipe","name":"本命レシピ","recipeIngredient":["鶏むね肉 1枚"]}</script>
+    `;
+    expect(extractRecipeFromJsonLd(html)).toEqual({
+      title: "本命レシピ",
+      ingredients: [{ name: "鶏むね肉 1枚", quantity: "" }],
+    });
+  });
 });
 
 describe("extractReadable", () => {

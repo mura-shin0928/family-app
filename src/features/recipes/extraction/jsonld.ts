@@ -68,6 +68,10 @@ export function extractRecipeFromJsonLd(html: string): RecipeDraft | null {
     const ingredientNames = toIngredientList(recipe.recipeIngredient).map(
       (ingredient) => decodeHtmlEntities(ingredient),
     );
+    // recipeIngredientを持たないRecipeノードは、まとめ記事などにSEO目的で
+    // 付与された名ばかりのJSON-LDである可能性が高い。材料が読み取れない
+    // ノードは採用せず、他の候補 → 最終的にはGeminiフォールバックに委ねる。
+    if (ingredientNames.length === 0) continue;
 
     return normalizeDraft({
       title: decodeHtmlEntities(name),
