@@ -3,7 +3,15 @@ name: CI
 on:
   push:
     branches: [main]
+    # ドキュメントだけの変更でCI/migrationを回さない。
+    # GitHub ActionsはYAMLアンカーを解釈しないため、push/pull_requestで同じ内容を書く。
+    paths-ignore:
+      - "**.md"
+      - ".gitignore"
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - ".gitignore"
   workflow_dispatch:
 
 jobs:
