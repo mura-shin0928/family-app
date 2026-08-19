@@ -8,6 +8,7 @@ import {
   toggleDoneSchema,
   togglePurchaseSchema,
   updateDueDateSchema,
+  updateTitleSchema,
 } from "./schema";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -137,6 +138,34 @@ export async function updateTaskDueDate(input: {
 
   if (error) {
     return { ok: false, error: "期限の更新に失敗しました" };
+  }
+
+  return { ok: true };
+}
+
+export async function updateTaskTitle(input: {
+  taskId: string;
+  title: string;
+}): Promise<ActionResult> {
+  const parsed = updateTitleSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({ title: parsed.data.title })
+    .eq("id", parsed.data.taskId)
+    .eq("family_id", member.familyId);
+
+  if (error) {
+    return { ok: false, error: "タイトルの更新に失敗しました" };
   }
 
   return { ok: true };

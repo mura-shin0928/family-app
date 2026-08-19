@@ -19,6 +19,7 @@ type Props = {
   today: string;
   onToggle: (task: TaskDTO) => void;
   onDueDateChange: (task: TaskDTO, dueOn: string | null) => void;
+  onTitleChange: (task: TaskDTO, title: string) => void;
   onPurchaseToggle: (task: TaskDTO) => void;
   onDelete: (task: TaskDTO) => void;
 };
@@ -28,11 +29,21 @@ export function TaskRow({
   today,
   onToggle,
   onDueDateChange,
+  onTitleChange,
   onPurchaseToggle,
   onDelete,
 }: Props) {
   const [editingDue, setEditingDue] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
   const done = task.status === "done";
+
+  function commitTitle(value: string) {
+    const trimmed = value.trim();
+    setEditingTitle(false);
+    if (trimmed && trimmed !== task.title) {
+      onTitleChange(task, trimmed);
+    }
+  }
 
   return (
     <Paper
@@ -53,16 +64,40 @@ export function TaskRow({
       />
 
       <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography
-          variant="body2"
-          noWrap
-          sx={{
-            textDecoration: done ? "line-through" : "none",
-            color: done ? "text.disabled" : "text.primary",
-          }}
-        >
-          {task.title}
-        </Typography>
+        {editingTitle ? (
+          <TextField
+            multiline
+            fullWidth
+            size="small"
+            variant="standard"
+            autoFocus
+            defaultValue={task.title}
+            onFocus={(event) => event.target.select()}
+            onBlur={(event) => commitTitle(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                event.currentTarget.blur();
+              } else if (event.key === "Escape") {
+                setEditingTitle(false);
+              }
+            }}
+            slotProps={{ htmlInput: { style: { fontSize: "0.875rem" } } }}
+          />
+        ) : (
+          <Typography
+            variant="body2"
+            onClick={() => setEditingTitle(true)}
+            sx={{
+              cursor: "text",
+              overflowWrap: "break-word",
+              textDecoration: done ? "line-through" : "none",
+              color: done ? "text.disabled" : "text.primary",
+            }}
+          >
+            {task.title}
+          </Typography>
+        )}
 
         {editingDue ? (
           <Box sx={{ mt: 0.5, display: "flex", alignItems: "center", gap: 1 }}>

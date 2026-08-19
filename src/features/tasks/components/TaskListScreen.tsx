@@ -27,6 +27,7 @@ import {
   setTaskDone,
   setTaskPurchase,
   updateTaskDueDate,
+  updateTaskTitle,
 } from "../actions";
 import {
   bucketOpenTasks,
@@ -58,6 +59,7 @@ type Action =
   | { type: "toggle"; id: string; done: boolean }
   | { type: "dueDate"; id: string; dueOn: string | null }
   | { type: "purchase"; id: string; isPurchase: boolean }
+  | { type: "title"; id: string; title: string }
   | { type: "remove"; id: string };
 
 function applyAction(tasks: TaskDTO[], action: Action): TaskDTO[] {
@@ -83,6 +85,10 @@ function applyAction(tasks: TaskDTO[], action: Action): TaskDTO[] {
         task.id === action.id
           ? { ...task, isPurchase: action.isPurchase }
           : task,
+      );
+    case "title":
+      return tasks.map((task) =>
+        task.id === action.id ? { ...task, title: action.title } : task,
       );
     case "remove":
       return tasks.filter((task) => task.id !== action.id);
@@ -375,6 +381,16 @@ export function TaskListScreen({
     { onFail: (error) => showToast({ message: error }) },
   );
 
+  const titleMutation = useOptimisticTasksMutation(
+    updateTaskTitle,
+    (input: { taskId: string; title: string }): Action => ({
+      type: "title",
+      id: input.taskId,
+      title: input.title,
+    }),
+    { onFail: (error) => showToast({ message: error }) },
+  );
+
   const purchaseMutation = useOptimisticTasksMutation(
     setTaskPurchase,
     (input: { taskId: string; isPurchase: boolean }): Action => ({
@@ -428,6 +444,11 @@ export function TaskListScreen({
     dueDateMutation.mutate({ taskId: task.id, dueOn: dueOn ?? "" });
   }
 
+  function handleTitleChange(task: TaskDTO, title: string) {
+    if (title === task.title) return;
+    titleMutation.mutate({ taskId: task.id, title });
+  }
+
   function handlePurchaseToggle(task: TaskDTO) {
     purchaseMutation.mutate({
       taskId: task.id,
@@ -446,6 +467,7 @@ export function TaskListScreen({
   const rowHandlers = {
     onToggle: handleToggle,
     onDueDateChange: handleDueDateChange,
+    onTitleChange: handleTitleChange,
     onPurchaseToggle: handlePurchaseToggle,
     onDelete: setTaskPendingDelete,
   };
