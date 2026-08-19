@@ -6,9 +6,11 @@ import { urlOnly } from "./extraction/detect";
 import { extractRecipeFromText } from "./extraction/gemini";
 import type { RecipeDraft } from "./extraction/types";
 import {
+  addIngredientsToPurchasesSchema,
   analyzeRecipeTextSchema,
   createRecipeSchema,
   recipeIdSchema,
+  undoAddIngredientsToPurchasesSchema,
   updateRecipeSchema,
 } from "./schema";
 
@@ -189,6 +191,124 @@ export async function deleteRecipe(input: {
 
   if (error) {
     return { ok: false, error: "削除に失敗しました" };
+  }
+
+  return { ok: true };
+}
+
+export type AddIngredientsToPurchasesResult =
+  | { ok: true; taskIds: string[] }
+  | { ok: false; error: string };
+
+export async function addIngredientsToPurchases(input: {
+  recipeId: string;
+  ingredientIds: string[];
+}): Promise<AddIngredientsToPurchasesResult> {
+  const parsed = addIngredientsToPurchasesSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { data: ingredients, error: ingredientsError } = await supabase
+    .from("recipe_ingredients")
+    .select("id, name, quantity, sort_order, recipe_id, family_id")
+    .eq("recipe_id", parsed.data.recipeId)
+    .eq("family_id", member.familyId)
+    .in("id", parsed.data.ingredientIds)
+    .order("sort_order", { ascending: true });
+
+  if (ingredientsError) {
+    return { ok: false, error: "買うものへの追加に失敗しました" };
+  }
+  if ((ingredients ?? []).length !== parsed.data.ingredientIds.length) {
+    return { ok: false, error: "不正な操作です" };
+  }
+
+  const { data: lastTask } = await supabase
+    .from("tasks")
+    .select("sort_order")
+    .eq("family_id", member.familyId)
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const baseSortOrder = lastTask?.sort_order ?? 0;
+
+  const taskIdByIngredientId = new Map(
+    ingredients.map((ingredient) => [ingredient.id, crypto.randomUUID()]),
+  );
+
+  const { error: tasksError } = await supabase.from("tasks").insert(
+    ingredients.map((ingredient, index) => ({
+      id: taskIdByIngredientId.get(ingredient.id),
+      family_id: member.familyId,
+      title: ingredient.name,
+      due_on: null,
+      is_purchase: true,
+      sort_order: baseSortOrder + 1 + index,
+      created_by: member.id,
+    })),
+  );
+
+  if (tasksError) {
+    return { ok: false, error: "買うものへの追加に失敗しました" };
+  }
+
+  const { error: linkError } = await supabase.from("recipe_ingredients").upsert(
+    ingredients.map((ingredient) => ({
+      id: ingredient.id,
+      recipe_id: ingredient.recipe_id,
+      family_id: ingredient.family_id,
+      name: ingredient.name,
+      quantity: ingredient.quantity,
+      sort_order: ingredient.sort_order,
+      task_id: taskIdByIngredientId.get(ingredient.id) ?? null,
+    })),
+  );
+
+  if (linkError) {
+    return { ok: false, error: "買うものへの追加に失敗しました" };
+  }
+
+  return { ok: true, taskIds: [...taskIdByIngredientId.values()] };
+}
+
+export async function undoAddIngredientsToPurchases(input: {
+  taskIds: string[];
+}): Promise<ActionResult> {
+  const parsed = undoAddIngredientsToPurchasesSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "不正な操作です" };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { error: tasksError } = await supabase
+    .from("tasks")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", parsed.data.taskIds)
+    .eq("family_id", member.familyId);
+
+  if (tasksError) {
+    return { ok: false, error: "取り消しに失敗しました" };
+  }
+
+  const { error: unlinkError } = await supabase
+    .from("recipe_ingredients")
+    .update({ task_id: null })
+    .in("task_id", parsed.data.taskIds)
+    .eq("family_id", member.familyId);
+
+  if (unlinkError) {
+    return { ok: false, error: "取り消しに失敗しました" };
   }
 
   return { ok: true };

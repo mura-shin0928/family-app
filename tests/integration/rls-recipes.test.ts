@@ -441,6 +441,68 @@ describe("recipes / recipe_ingredients RLS", () => {
       expect(data?.id).toBeTruthy();
     });
 
+    it("via upsert, a member can link an ingredient to a task in the same family", async () => {
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+
+      const { data: seeded, error: seedError } = await admin
+        .from("recipe_ingredients")
+        .insert({
+          recipe_id: recipeF1,
+          family_id: familyF1,
+          name: "upsert対象",
+          sort_order: 5,
+        })
+        .select("id, name, quantity, sort_order, recipe_id, family_id")
+        .single();
+      if (seedError || !seeded)
+        throw new Error(`failed to seed ingredient: ${seedError?.message}`);
+
+      const { error } = await clientA.from("recipe_ingredients").upsert({
+        ...seeded,
+        task_id: taskF1,
+      });
+
+      expect(error).toBeNull();
+
+      const { data: check } = await admin
+        .from("recipe_ingredients")
+        .select("task_id")
+        .eq("id", seeded.id)
+        .single();
+      expect(check?.task_id).toBe(taskF1);
+    });
+
+    it("via upsert, cannot link an ingredient to another family's task", async () => {
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+
+      const { data: seeded, error: seedError } = await admin
+        .from("recipe_ingredients")
+        .insert({
+          recipe_id: recipeF1,
+          family_id: familyF1,
+          name: "upsertなりすまし対象",
+          sort_order: 6,
+        })
+        .select("id, name, quantity, sort_order, recipe_id, family_id")
+        .single();
+      if (seedError || !seeded)
+        throw new Error(`failed to seed ingredient: ${seedError?.message}`);
+
+      const { error } = await clientA.from("recipe_ingredients").upsert({
+        ...seeded,
+        task_id: taskF2,
+      });
+
+      expect(error).not.toBeNull();
+
+      const { data: check } = await admin
+        .from("recipe_ingredients")
+        .select("task_id")
+        .eq("id", seeded.id)
+        .single();
+      expect(check?.task_id).toBeNull();
+    });
+
     it("a member can update their own family's ingredient", async () => {
       const clientA = await signInAsClient(userA.email, PASSWORD);
 
