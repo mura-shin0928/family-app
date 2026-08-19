@@ -2,7 +2,7 @@ import "server-only";
 import {
   buildRequestBody,
   GEMINI_ENDPOINT,
-  GEMINI_FALLBACK_MODEL,
+  GEMINI_FALLBACK_MODELS,
   GEMINI_MODEL,
   parseOutput,
 } from "./protocol";
@@ -72,23 +72,18 @@ export async function extractRecipeFromText(
 
   const deadlineAt = options?.deadlineAt ?? Date.now() + TIMEOUT_MS;
 
-  let result = await callGemini(
-    text,
-    GEMINI_MODEL,
-    apiKey,
-    Math.min(TIMEOUT_MS, deadlineAt - Date.now()),
-  );
-
-  // 無料枠クォータ超過（429）のときだけ、別クォータバケットの軽量モデルに
-  // 切り替えて1回だけ再試行する。それ以外の失敗（タイムアウト・5xx等）は
-  // 再試行しても状況が変わらないため素通しする。
-  if (result.kind === "http-error" && result.status === 429) {
+  // 無料枠クォータ超過（429）のときだけ、別クォータバケットのモデルへ順に
+  // 切り替えて再試行する。それ以外の失敗（タイムアウト・5xx等）は再試行しても
+  // 状況が変わらないため、その場で結果を確定する。
+  let result: CallResult = { kind: "aborted" };
+  for (const model of [GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS]) {
     result = await callGemini(
       text,
-      GEMINI_FALLBACK_MODEL,
+      model,
       apiKey,
-      deadlineAt - Date.now(),
+      Math.min(TIMEOUT_MS, deadlineAt - Date.now()),
     );
+    if (!(result.kind === "http-error" && result.status === 429)) break;
   }
 
   switch (result.kind) {

@@ -282,13 +282,14 @@ describe("extractRecipeFromText", () => {
     expect(result).toEqual({ kind: "failed", reason: "timeout" });
   });
 
-  it("retries with the fallback model when the primary model returns 429", async () => {
+  it("moves to the next fallback model each time the current one returns 429", async () => {
     process.env.GEMINI_API_KEY = "test-key";
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce({ ok: false, status: 429 })
+      .mockResolvedValueOnce({ ok: false, status: 429 }) // gemini-3.7-flash
+      .mockResolvedValueOnce({ ok: false, status: 429 }) // gemini-3.6-flash
       .mockResolvedValueOnce({
-        ok: true,
+        ok: true, // gemini-3.5-flash
         json: () =>
           Promise.resolve(
             envelope({
@@ -308,9 +309,15 @@ describe("extractRecipeFromText", () => {
         ingredients: [{ name: "鶏もも肉", quantity: "300g" }],
       },
     });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    const secondCallBody = JSON.parse(fetchMock.mock.calls[1][1].body);
-    expect(secondCallBody.model).toBe("gemini-3.5-flash-lite");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const modelsCalled = fetchMock.mock.calls.map(
+      (call) => JSON.parse(call[1].body).model,
+    );
+    expect(modelsCalled).toEqual([
+      "gemini-3.7-flash",
+      "gemini-3.6-flash",
+      "gemini-3.5-flash",
+    ]);
   });
 
   it("does not retry non-429 errors", async () => {
@@ -324,7 +331,7 @@ describe("extractRecipeFromText", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("returns api-error when both the primary and fallback model are rate-limited", async () => {
+  it("returns api-error when every model in the chain is rate-limited", async () => {
     process.env.GEMINI_API_KEY = "test-key";
     const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 429 });
     vi.stubGlobal("fetch", fetchMock);
@@ -332,7 +339,8 @@ describe("extractRecipeFromText", () => {
     const result = await extractRecipeFromText("鶏もも肉 300g");
 
     expect(result).toEqual({ kind: "failed", reason: "api-error" });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // gemini-3.7-flash + 3つのフォールバック = 4回
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it("returns a draft on success", async () => {
