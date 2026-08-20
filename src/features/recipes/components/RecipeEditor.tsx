@@ -1,6 +1,7 @@
 "use client";
 
 import AddPhotoAlternateOutlinedIcon from "@mui/icons-material/AddPhotoAlternateOutlined";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -306,7 +307,7 @@ export function RecipeEditor({
     >
       <Box component="section">
         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
-          レシピを読み取る（任意）
+          レシピのAI読み取り
         </Typography>
         <RadioGroup
           row
@@ -342,7 +343,7 @@ export function RecipeEditor({
         {inputMode === "text" ? (
           <Stack spacing={1}>
             <TextField
-              label="URL または 本文を貼り付け"
+              label="URL または テキストを貼り付け"
               value={sourceText}
               onChange={(event) => setSourceText(event.target.value)}
               multiline
@@ -350,19 +351,25 @@ export function RecipeEditor({
               maxRows={4}
             />
             <Button
+              variant="outlined"
               onClick={handleAnalyze}
               disabled={isAnalyzing || sourceText.trim() === ""}
               startIcon={
-                isAnalyzing ? <CircularProgress size={16} /> : undefined
+                isAnalyzing ? (
+                  <CircularProgress size={16} />
+                ) : (
+                  <AutoAwesomeIcon fontSize="small" />
+                )
               }
               sx={{ alignSelf: "flex-start" }}
             >
-              レシピをAIで読み取る
+              読み取り
             </Button>
           </Stack>
         ) : (
           <Stack spacing={1}>
             <Button
+              variant="outlined"
               onClick={() => imageInputRef.current?.click()}
               disabled={isAnalyzingImage}
               startIcon={
@@ -374,11 +381,11 @@ export function RecipeEditor({
               }
               sx={{ alignSelf: "flex-start" }}
             >
-              画像から読み取る
+              選択・読み取り
             </Button>
             <Typography variant="caption" color="text.secondary">
               画像はGoogle Gemini
-              APIへ送信して解析します。解析後は保存されません。
+              APIへ送信して解析します。なお、画像は保存されません。
             </Typography>
           </Stack>
         )}
