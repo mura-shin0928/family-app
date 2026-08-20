@@ -306,9 +306,20 @@ export function RecipeEditor({
       }}
     >
       <Box component="section">
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
-          レシピのAI読み取り
-        </Typography>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{ alignItems: "center", mb: 0.5 }}
+        >
+          <AutoAwesomeIcon color="primary" fontSize="small" />
+          <Typography
+            variant="subtitle1"
+            color="primary"
+            sx={{ fontWeight: 700 }}
+          >
+            レシピのAI読み取り
+          </Typography>
+        </Stack>
         <RadioGroup
           row
           value={inputMode}
@@ -352,11 +363,12 @@ export function RecipeEditor({
             />
             <Button
               variant="outlined"
+              size="small"
               onClick={handleAnalyze}
               disabled={isAnalyzing || sourceText.trim() === ""}
               startIcon={
                 isAnalyzing ? (
-                  <CircularProgress size={16} />
+                  <CircularProgress size={14} />
                 ) : (
                   <AutoAwesomeIcon fontSize="small" />
                 )
