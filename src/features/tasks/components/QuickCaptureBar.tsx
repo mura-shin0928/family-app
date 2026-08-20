@@ -5,8 +5,8 @@ import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import ClickAwayListener from "@mui/material/ClickAwayListener";
 import Paper from "@mui/material/Paper";
-import Popover from "@mui/material/Popover";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import { type FormEvent, useId, useState } from "react";
@@ -39,7 +39,7 @@ export function QuickCaptureBar({ onSubmit }: Props) {
   const [title, setTitle] = useState("");
   const [dueOn, setDueOn] = useState<string | null>(null);
   const [isPurchase, setIsPurchase] = useState(false);
-  const [dueAnchorEl, setDueAnchorEl] = useState<HTMLElement | null>(null);
+  const [dueOpen, setDueOpen] = useState(false);
   const inputId = useId();
 
   const today = todayInJst();
@@ -55,12 +55,12 @@ export function QuickCaptureBar({ onSubmit }: Props) {
     setTitle("");
     setDueOn(null);
     setIsPurchase(false);
-    setDueAnchorEl(null);
+    setDueOpen(false);
   }
 
   function selectDue(value: string | null) {
     setDueOn(value);
-    setDueAnchorEl(null);
+    setDueOpen(false);
   }
 
   return (
@@ -115,86 +115,102 @@ export function QuickCaptureBar({ onSubmit }: Props) {
           追加
         </Button>
 
-        {/* TextFieldと同じグリッド列に入れて、その列内で右揃えにする */}
-        <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
-          <Chip
-            icon={<CalendarTodayOutlinedIcon sx={{ width: 16, height: 16 }} />}
-            label={dueLabel}
-            clickable
-            color={dueOn || dueAnchorEl ? "primary" : "default"}
-            variant={dueOn || dueAnchorEl ? "filled" : "outlined"}
-            onMouseDown={preventBlur}
-            onClick={(event) =>
-              setDueAnchorEl((current) =>
-                current ? null : event.currentTarget,
-              )
-            }
-          />
-          <Chip
-            icon={<ShoppingCartOutlinedIcon sx={{ width: 16, height: 16 }} />}
-            label="買うもの"
-            clickable
-            color={isPurchase ? "primary" : "default"}
-            variant={isPurchase ? "filled" : "outlined"}
-            onMouseDown={preventBlur}
-            onClick={() => setIsPurchase((current) => !current)}
-          />
-        </Stack>
-      </Box>
+        {/*
+          TextFieldと同じグリッド列に入れて、その列内で右揃えにする。
+          「期限」チップと期限パネルの両方をClickAwayListenerの内側に
+          含めることで、チップの外側クリック判定にチップ自身を含めないための
+          ref/除外ロジックなしで「開いてる時に再タップしたら閉じる」を実現する
+          （チップは境界の内側なので、そのクリックはonClickAwayの対象にならず、
+          チップ自身のonClickだけがトグルする）。
+        */}
+        <ClickAwayListener onClickAway={() => setDueOpen(false)}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ position: "relative", justifyContent: "flex-end" }}
+          >
+            <Chip
+              icon={
+                <CalendarTodayOutlinedIcon sx={{ width: 16, height: 16 }} />
+              }
+              label={dueLabel}
+              clickable
+              color={dueOn || dueOpen ? "primary" : "default"}
+              variant={dueOn || dueOpen ? "filled" : "outlined"}
+              onMouseDown={preventBlur}
+              onClick={() => setDueOpen((current) => !current)}
+            />
+            <Chip
+              icon={<ShoppingCartOutlinedIcon sx={{ width: 16, height: 16 }} />}
+              label="買うもの"
+              clickable
+              color={isPurchase ? "primary" : "default"}
+              variant={isPurchase ? "filled" : "outlined"}
+              onMouseDown={preventBlur}
+              onClick={() => setIsPurchase((current) => !current)}
+            />
 
-      <Popover
-        open={Boolean(dueAnchorEl)}
-        anchorEl={dueAnchorEl}
-        onClose={() => setDueAnchorEl(null)}
-        anchorOrigin={{ vertical: "top", horizontal: "left" }}
-        transformOrigin={{ vertical: "bottom", horizontal: "left" }}
-        // タイトル入力中に開いてもソフトウェアキーボードを閉じさせないため、
-        // Popover既定のフォーカス奪取（マウント時オートフォーカス/フォーカストラップ）を止める。
-        disableAutoFocus
-        disableEnforceFocus
-        disableRestoreFocus
-      >
-        <Stack spacing={1} sx={{ p: 1.5, width: "16rem" }}>
-          <TextField
-            type="date"
-            size="small"
-            fullWidth
-            value={dueOn ?? ""}
-            onChange={(event) => setDueOn(event.target.value || null)}
-          />
-          <Stack direction="row" spacing={1}>
-            <Button
-              size="small"
-              variant="outlined"
-              fullWidth
-              onMouseDown={preventBlur}
-              onClick={() => selectDue(today)}
-            >
-              今日
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              fullWidth
-              onMouseDown={preventBlur}
-              onClick={() => selectDue(tomorrow)}
-            >
-              明日
-            </Button>
+            {dueOpen && (
+              // MUIのPopoverはPortal+絶対座標計算のため、iOSでキーボード表示中は
+              // visual viewportとのズレで位置がおかしくなる。この行（position:
+              // relative）をcontaining blockにしたposition:absoluteで、JSでの
+              // 座標計算なしに右揃えのChip群の真上に出す。Modal/FocusTrapを
+              // 使わないのでキーボードを閉じさせる副作用もない。
+              <Paper
+                elevation={4}
+                sx={{
+                  position: "absolute",
+                  insetInlineEnd: 0,
+                  bottom: "100%",
+                  mb: 1,
+                  width: "16rem",
+                }}
+              >
+                <Stack spacing={1} sx={{ p: 1.5 }}>
+                  <TextField
+                    type="date"
+                    size="small"
+                    fullWidth
+                    value={dueOn ?? ""}
+                    onChange={(event) => setDueOn(event.target.value || null)}
+                  />
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      fullWidth
+                      onMouseDown={preventBlur}
+                      onClick={() => selectDue(today)}
+                    >
+                      今日
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      fullWidth
+                      onMouseDown={preventBlur}
+                      onClick={() => selectDue(tomorrow)}
+                    >
+                      明日
+                    </Button>
+                  </Stack>
+                  {dueOn && (
+                    <Button
+                      size="small"
+                      fullWidth
+                      sx={{ textTransform: "none" }}
+                      onMouseDown={preventBlur}
+                      onClick={() => selectDue(null)}
+                    >
+                      期限なしにする
+                    </Button>
+                  )}
+                </Stack>
+              </Paper>
+            )}
           </Stack>
-          {dueOn && (
-            <Button
-              size="small"
-              fullWidth
-              sx={{ textTransform: "none" }}
-              onMouseDown={preventBlur}
-              onClick={() => selectDue(null)}
-            >
-              期限なしにする
-            </Button>
-          )}
-        </Stack>
-      </Popover>
+        </ClickAwayListener>
+      </Box>
     </Paper>
   );
 }
