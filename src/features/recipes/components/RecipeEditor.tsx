@@ -1,6 +1,6 @@
 "use client";
 
-import AddPhotoAlternateOutlinedIcon from "@mui/icons-material/AddPhotoAlternateOutlined";
+import AssistantIcon from "@mui/icons-material/Assistant";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import Alert from "@mui/material/Alert";
@@ -319,13 +319,13 @@ export function RecipeEditor({
             bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
           }}
         >
-          <AutoAwesomeIcon color="primary" fontSize="small" />
+          <AssistantIcon color="primary" fontSize="small" />
           <Typography
             variant="subtitle1"
             color="primary"
             sx={{ fontWeight: 700 }}
           >
-            レシピのAI読み取り
+            レシピの簡単読み取り
           </Typography>
         </Box>
         <RadioGroup
@@ -396,12 +396,12 @@ export function RecipeEditor({
                 isAnalyzingImage ? (
                   <CircularProgress size={16} />
                 ) : (
-                  <AddPhotoAlternateOutlinedIcon fontSize="small" />
+                  <AutoAwesomeIcon fontSize="small" />
                 )
               }
               sx={{ alignSelf: "flex-start" }}
             >
-              選択・読み取り
+              画像選択・読み取り
             </Button>
             <Typography variant="caption" color="text.secondary">
               画像はGoogle Gemini
