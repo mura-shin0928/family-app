@@ -123,6 +123,7 @@ export function TaskRow({
                   textTransform: "none",
                   fontSize: "0.75rem",
                 }}
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
                   onDueDateChange(task, null);
                   setEditingDue(false);
@@ -152,7 +153,7 @@ export function TaskRow({
 
       <IconButton
         onClick={() => onPurchaseToggle(task)}
-        color={task.isPurchase ? "warning" : "default"}
+        color={task.isPurchase ? "primary" : "default"}
         aria-pressed={task.isPurchase}
         aria-label={task.isPurchase ? "買うものから外す" : "買うものにする"}
         size="small"

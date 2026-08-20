@@ -205,7 +205,6 @@ export function RecipeEditor({
         </Typography>
         <Stack spacing={1}>
           <TextField
-            label="URL または 本文を貼り付け"
             value={sourceText}
             onChange={(event) => setSourceText(event.target.value)}
             multiline
@@ -239,13 +238,13 @@ export function RecipeEditor({
           autoFocus
         />
         <TextField
-          label="元のURL（任意）"
+          label="元のURL"
           type="url"
           value={sourceUrl}
           onChange={(event) => setSourceUrl(event.target.value)}
         />
         <TextField
-          label="メモ（任意）"
+          label="メモ"
           value={note}
           onChange={(event) => setNote(event.target.value)}
           multiline

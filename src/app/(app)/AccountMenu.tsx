@@ -53,13 +53,13 @@ export function AccountMenu({ displayName, isAppAdmin, signOut }: Props) {
   return (
     <>
       <IconButton
-        size="small"
+        size="medium"
         aria-label={`${displayName}のメニュー`}
         aria-haspopup="true"
         aria-expanded={open}
         onClick={handleOpen}
       >
-        <GroupOutlinedIcon fontSize="small" />
+        <GroupOutlinedIcon fontSize="medium" />
       </IconButton>
       <Menu
         anchorEl={anchorEl}

@@ -6,6 +6,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Paper from "@mui/material/Paper";
+import Popover from "@mui/material/Popover";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import { type FormEvent, useId, useState } from "react";
@@ -38,7 +39,7 @@ export function QuickCaptureBar({ onSubmit }: Props) {
   const [title, setTitle] = useState("");
   const [dueOn, setDueOn] = useState<string | null>(null);
   const [isPurchase, setIsPurchase] = useState(false);
-  const [showDuePanel, setShowDuePanel] = useState(false);
+  const [dueAnchorEl, setDueAnchorEl] = useState<HTMLElement | null>(null);
   const inputId = useId();
 
   const today = todayInJst();
@@ -54,12 +55,12 @@ export function QuickCaptureBar({ onSubmit }: Props) {
     setTitle("");
     setDueOn(null);
     setIsPurchase(false);
-    setShowDuePanel(false);
+    setDueAnchorEl(null);
   }
 
   function selectDue(value: string | null) {
     setDueOn(value);
-    setShowDuePanel(false);
+    setDueAnchorEl(null);
   }
 
   return (
@@ -72,6 +73,9 @@ export function QuickCaptureBar({ onSubmit }: Props) {
         position: "fixed",
         insetInline: 0,
         bottom: "calc(56px + env(safe-area-inset-bottom))",
+        // Checkbox内部のネイティブinputがz-index:1を持つため、指定しないと
+        // タスク行と重なった際にそちらへクリックが先取りされてしまう。
+        zIndex: (theme) => theme.zIndex.appBar,
         borderTop: 1,
         borderColor: "divider",
         px: 2,
@@ -79,24 +83,18 @@ export function QuickCaptureBar({ onSubmit }: Props) {
         pb: 1,
       }}
     >
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ mx: "auto", maxWidth: "36rem", pb: 1, alignItems: "center" }}
+      <Box
+        sx={{
+          mx: "auto",
+          maxWidth: "36rem",
+          pb: 1,
+          display: "grid",
+          gridTemplateColumns: "1fr auto",
+          columnGap: 1,
+          rowGap: 1,
+          alignItems: "center",
+        }}
       >
-        <Box
-          component="label"
-          htmlFor={inputId}
-          sx={{
-            position: "absolute",
-            width: 1,
-            height: 1,
-            overflow: "hidden",
-            clip: "rect(0 0 0 0)",
-          }}
-        >
-          やること・買うものを入力
-        </Box>
         <TextField
           id={inputId}
           value={title}
@@ -104,6 +102,9 @@ export function QuickCaptureBar({ onSubmit }: Props) {
           placeholder="やること・買うものを入力"
           size="small"
           fullWidth
+          slotProps={{
+            htmlInput: { "aria-label": "やること・買うものを入力" },
+          }}
         />
         <Button
           type="submit"
@@ -113,70 +114,73 @@ export function QuickCaptureBar({ onSubmit }: Props) {
         >
           追加
         </Button>
-      </Stack>
 
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ mx: "auto", maxWidth: "36rem", pb: 1 }}
+        {/* TextFieldと同じグリッド列に入れて、その列内で右揃えにする */}
+        <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+          <Chip
+            icon={<CalendarTodayOutlinedIcon sx={{ width: 16, height: 16 }} />}
+            label={dueLabel}
+            clickable
+            color={dueOn || dueAnchorEl ? "primary" : "default"}
+            variant={dueOn || dueAnchorEl ? "filled" : "outlined"}
+            onMouseDown={preventBlur}
+            onClick={(event) =>
+              setDueAnchorEl((current) =>
+                current ? null : event.currentTarget,
+              )
+            }
+          />
+          <Chip
+            icon={<ShoppingCartOutlinedIcon sx={{ width: 16, height: 16 }} />}
+            label="買うもの"
+            clickable
+            color={isPurchase ? "primary" : "default"}
+            variant={isPurchase ? "filled" : "outlined"}
+            onMouseDown={preventBlur}
+            onClick={() => setIsPurchase((current) => !current)}
+          />
+        </Stack>
+      </Box>
+
+      <Popover
+        open={Boolean(dueAnchorEl)}
+        anchorEl={dueAnchorEl}
+        onClose={() => setDueAnchorEl(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "left" }}
+        transformOrigin={{ vertical: "bottom", horizontal: "left" }}
       >
-        <Chip
-          icon={<CalendarTodayOutlinedIcon />}
-          label={dueLabel}
-          clickable
-          color={dueOn || showDuePanel ? "primary" : "default"}
-          variant={dueOn || showDuePanel ? "filled" : "outlined"}
-          onMouseDown={preventBlur}
-          onClick={() => setShowDuePanel((current) => !current)}
-        />
-        <Chip
-          icon={<ShoppingCartOutlinedIcon />}
-          label="買うもの"
-          clickable
-          color={isPurchase ? "warning" : "default"}
-          variant={isPurchase ? "filled" : "outlined"}
-          onMouseDown={preventBlur}
-          onClick={() => setIsPurchase((current) => !current)}
-        />
-      </Stack>
-
-      {showDuePanel && (
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{
-            mx: "auto",
-            maxWidth: "36rem",
-            pb: 1,
-            flexWrap: "wrap",
-            alignItems: "center",
-          }}
-        >
-          <Button
-            size="small"
-            variant="outlined"
-            onMouseDown={preventBlur}
-            onClick={() => selectDue(today)}
-          >
-            今日
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            onMouseDown={preventBlur}
-            onClick={() => selectDue(tomorrow)}
-          >
-            明日
-          </Button>
+        <Stack spacing={1} sx={{ p: 1.5, width: "16rem" }}>
           <TextField
             type="date"
             size="small"
+            fullWidth
             value={dueOn ?? ""}
             onChange={(event) => setDueOn(event.target.value || null)}
           />
+          <Stack direction="row" spacing={1}>
+            <Button
+              size="small"
+              variant="outlined"
+              fullWidth
+              onMouseDown={preventBlur}
+              onClick={() => selectDue(today)}
+            >
+              今日
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              fullWidth
+              onMouseDown={preventBlur}
+              onClick={() => selectDue(tomorrow)}
+            >
+              明日
+            </Button>
+          </Stack>
           {dueOn && (
             <Button
               size="small"
+              fullWidth
               sx={{ textTransform: "none" }}
               onMouseDown={preventBlur}
               onClick={() => selectDue(null)}
@@ -185,7 +189,7 @@ export function QuickCaptureBar({ onSubmit }: Props) {
             </Button>
           )}
         </Stack>
-      )}
+      </Popover>
     </Paper>
   );
 }
