@@ -7,7 +7,10 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
+import Radio from "@mui/material/Radio";
+import RadioGroup from "@mui/material/RadioGroup";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -65,6 +68,8 @@ export function RecipeEditor({
     toRows(recipe),
   );
   const [error, setError] = useState<string | null>(null);
+  // URL・テキストと画像は同時に表示せず切り替える（縦に伸ばさないため）。
+  const [inputMode, setInputMode] = useState<"text" | "image">("text");
   const [analyzeMessage, setAnalyzeMessage] = useState<{
     severity: "success" | "warning";
     text: string;
@@ -301,73 +306,103 @@ export function RecipeEditor({
     >
       <Box component="section">
         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
-          URL または 本文を貼り付け（任意）
+          レシピを読み取る（任意）
         </Typography>
-        <Stack spacing={1}>
-          <TextField
-            value={sourceText}
-            onChange={(event) => setSourceText(event.target.value)}
-            multiline
-            minRows={4}
-            maxRows={4}
+        <RadioGroup
+          row
+          value={inputMode}
+          onChange={(event) => {
+            setInputMode(event.target.value as "text" | "image");
+            setAnalyzeMessage(null);
+          }}
+          sx={{ mb: 1 }}
+        >
+          <FormControlLabel
+            value="text"
+            control={<Radio size="small" />}
+            label="URL・テキスト"
           />
-          <Button
-            onClick={handleAnalyze}
-            disabled={isAnalyzing || sourceText.trim() === ""}
-            startIcon={isAnalyzing ? <CircularProgress size={16} /> : undefined}
-            sx={{ alignSelf: "flex-start" }}
-          >
-            レシピをAIで読み取る
-          </Button>
-
-          <Divider>または</Divider>
-
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={handleImagePick}
+          <FormControlLabel
+            value="image"
+            control={<Radio size="small" />}
+            label="画像"
           />
-          <Button
-            onClick={() => imageInputRef.current?.click()}
-            disabled={isAnalyzingImage}
-            startIcon={
-              isAnalyzingImage ? (
-                <CircularProgress size={16} />
-              ) : (
-                <AddPhotoAlternateOutlinedIcon fontSize="small" />
-              )
-            }
-            sx={{ alignSelf: "flex-start" }}
-          >
-            画像から読み取る
-          </Button>
-          <Typography variant="caption" color="text.secondary">
-            画像はGoogle Gemini
-            APIへ送信して解析します。解析後は保存されません。
-          </Typography>
+        </RadioGroup>
 
-          {analyzeMessage && (
-            <Alert
-              severity={analyzeMessage.severity}
-              action={
-                pendingImage && analyzeMessage.severity === "warning" ? (
-                  <Button
-                    color="inherit"
-                    size="small"
-                    onClick={handleRetryImageAnalysis}
-                    disabled={isAnalyzingImage}
-                  >
-                    もう一度解析
-                  </Button>
-                ) : undefined
+        {/* modeに関わらず常時マウントしておき、ラジオボタン切り替えでもrefが
+            外れないようにする（hiddenなので表示には影響しない）。 */}
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={handleImagePick}
+        />
+
+        {inputMode === "text" ? (
+          <Stack spacing={1}>
+            <TextField
+              label="URL または 本文を貼り付け"
+              value={sourceText}
+              onChange={(event) => setSourceText(event.target.value)}
+              multiline
+              minRows={4}
+              maxRows={4}
+            />
+            <Button
+              onClick={handleAnalyze}
+              disabled={isAnalyzing || sourceText.trim() === ""}
+              startIcon={
+                isAnalyzing ? <CircularProgress size={16} /> : undefined
               }
+              sx={{ alignSelf: "flex-start" }}
             >
-              {analyzeMessage.text}
-            </Alert>
-          )}
-        </Stack>
+              レシピをAIで読み取る
+            </Button>
+          </Stack>
+        ) : (
+          <Stack spacing={1}>
+            <Button
+              onClick={() => imageInputRef.current?.click()}
+              disabled={isAnalyzingImage}
+              startIcon={
+                isAnalyzingImage ? (
+                  <CircularProgress size={16} />
+                ) : (
+                  <AddPhotoAlternateOutlinedIcon fontSize="small" />
+                )
+              }
+              sx={{ alignSelf: "flex-start" }}
+            >
+              画像から読み取る
+            </Button>
+            <Typography variant="caption" color="text.secondary">
+              画像はGoogle Gemini
+              APIへ送信して解析します。解析後は保存されません。
+            </Typography>
+          </Stack>
+        )}
+
+        {analyzeMessage && (
+          <Alert
+            severity={analyzeMessage.severity}
+            sx={{ mt: 1.5 }}
+            action={
+              pendingImage && analyzeMessage.severity === "warning" ? (
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={handleRetryImageAnalysis}
+                  disabled={isAnalyzingImage}
+                >
+                  もう一度解析
+                </Button>
+              ) : undefined
+            }
+          >
+            {analyzeMessage.text}
+          </Alert>
+        )}
       </Box>
 
       <Divider />
