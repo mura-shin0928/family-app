@@ -68,6 +68,50 @@ export function buildRequestBody(text: string, model: string = GEMINI_MODEL) {
   };
 }
 
+// テキスト版と共通の抽出項目に加えて、画像固有の注意点（写り込み・関係ない文字の無視）を
+// 追記する。出力スキーマ・parseOutputはテキスト版と完全に共用する。
+const IMAGE_SYSTEM_INSTRUCTION =
+  "あなたは日本語のレシピ画像から料理名と材料を抽出するアシスタントです。" +
+  "画像に写っているレシピの情報だけを根拠にJSONを出力してください。" +
+  "読み取れない文字は推測で埋めず、その材料を省いてください。" +
+  "広告・ページ番号・関係のない文字は無視してください。" +
+  "料理名が読み取れない場合は画像の内容から適切な短い名前を推測してください。" +
+  "材料の分量が画像に書かれていない場合、quantityは空文字にしてください。" +
+  "材料が1つも見つからない場合はingredientsを空配列にしてください。" +
+  "画像に人数・分量の目安（何人分・何人前など）の記載があれば、" +
+  "servingsに「2人分」のような形で書き出してください。記載がなければservingsは空文字にしてください。" +
+  "人名・住所・電話番号など、レシピと関係のない情報は出力しないでください。";
+
+export type ImageInput = { data: string; mimeType: string };
+
+export function buildImageRequestBody(
+  images: ImageInput[],
+  model: string = GEMINI_MODEL,
+) {
+  return {
+    model,
+    input: [
+      { type: "text", text: "この画像からレシピ情報を抽出してください。" },
+      ...images.map((image) => ({
+        type: "image",
+        data: image.data,
+        mime_type: image.mimeType,
+      })),
+    ],
+    system_instruction: IMAGE_SYSTEM_INSTRUCTION,
+    store: false,
+    generation_config: {
+      temperature: 0,
+      thinking_level: "low",
+    },
+    response_format: {
+      type: "text",
+      mime_type: "application/json",
+      schema: RESPONSE_SCHEMA,
+    },
+  };
+}
+
 // output_text は便宜フィールドで、thinking_level を使うと省略され steps だけが
 // 返ってくることが実疎通で確認できた（thought ステップの後に model_output ステップが来る）。
 // 両方に対応する。

@@ -8,6 +8,14 @@ const nextConfig: NextConfig = {
     staleTimes: {
       dynamic: 30,
     },
+    // 既定は1MB。レシピ画像取り込み(analyzeRecipeImage)がクライアント側で
+    // 圧縮した画像(目標1.2MB、ハード上限2MB)+multipartのオーバーヘッドを
+    // 通すため引き上げる。Vercel Functionのリクエストボディ上限(4.5MB)には
+    // 十分な余裕がある。認証必須・夫婦2人利用のアプリのため、上限引き上げに
+    // よる悪用リスクは小さいと判断。
+    serverActions: {
+      bodySizeLimit: "3mb",
+    },
   },
 };
 

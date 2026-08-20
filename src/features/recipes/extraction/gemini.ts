@@ -1,9 +1,11 @@
 import "server-only";
 import {
+  buildImageRequestBody,
   buildRequestBody,
   GEMINI_ENDPOINT,
   GEMINI_FALLBACK_MODELS,
   GEMINI_MODEL,
+  type ImageInput,
   parseOutput,
 } from "./protocol";
 import type { ExtractionResult } from "./types";
@@ -13,6 +15,11 @@ import type { ExtractionResult } from "./types";
 // に収まる範囲で余裕を持たせる。
 const TIMEOUT_MS = 25_000;
 
+// 画像はテキストより入力トークンが多くレイテンシが伸びる想定。実測（サンプル1枚で
+// 8〜10秒）はテキストと大差なかったが、実機の高解像度画像ではさらに伸びる可能性が
+// あるため、ページ側maxDuration(60秒)に収まる範囲で余裕を持たせる。
+const IMAGE_TIMEOUT_MS = 45_000;
+
 type CallResult =
   | { kind: "ok"; json: unknown }
   | { kind: "http-error"; status: number }
@@ -21,8 +28,7 @@ type CallResult =
   | { kind: "network-error" };
 
 async function callGemini(
-  text: string,
-  model: string,
+  body: unknown,
   apiKey: string,
   timeoutMs: number,
 ): Promise<CallResult> {
@@ -38,7 +44,7 @@ async function callGemini(
         "x-goog-api-key": apiKey,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(buildRequestBody(text, model)),
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
 
@@ -61,6 +67,40 @@ async function callGemini(
   }
 }
 
+// 無料枠クォータ超過（429）のときだけ、別クォータバケットのモデルへ順に
+// 切り替えて再試行する。それ以外の失敗（タイムアウト・5xx等）は再試行しても
+// 状況が変わらないため、その場で結果を確定する。テキスト・画像の両経路で共用。
+async function runWithModelFallback(
+  buildBody: (model: string) => unknown,
+  apiKey: string,
+  deadlineAt: number,
+  timeoutMs: number,
+): Promise<CallResult> {
+  let result: CallResult = { kind: "aborted" };
+  for (const model of [GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS]) {
+    result = await callGemini(
+      buildBody(model),
+      apiKey,
+      Math.min(timeoutMs, deadlineAt - Date.now()),
+    );
+    if (!(result.kind === "http-error" && result.status === 429)) break;
+  }
+  return result;
+}
+
+function toExtractionResult(result: CallResult): ExtractionResult {
+  switch (result.kind) {
+    case "ok":
+      return parseOutput(result.json);
+    case "aborted":
+      return { kind: "failed", reason: "timeout" };
+    case "parse-error":
+      return { kind: "failed", reason: "invalid-response" };
+    default:
+      return { kind: "failed", reason: "api-error" };
+  }
+}
+
 export async function extractRecipeFromText(
   text: string,
   options?: { deadlineAt?: number },
@@ -72,28 +112,33 @@ export async function extractRecipeFromText(
 
   const deadlineAt = options?.deadlineAt ?? Date.now() + TIMEOUT_MS;
 
-  // 無料枠クォータ超過（429）のときだけ、別クォータバケットのモデルへ順に
-  // 切り替えて再試行する。それ以外の失敗（タイムアウト・5xx等）は再試行しても
-  // 状況が変わらないため、その場で結果を確定する。
-  let result: CallResult = { kind: "aborted" };
-  for (const model of [GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS]) {
-    result = await callGemini(
-      text,
-      model,
-      apiKey,
-      Math.min(TIMEOUT_MS, deadlineAt - Date.now()),
-    );
-    if (!(result.kind === "http-error" && result.status === 429)) break;
+  const result = await runWithModelFallback(
+    (model) => buildRequestBody(text, model),
+    apiKey,
+    deadlineAt,
+    TIMEOUT_MS,
+  );
+
+  return toExtractionResult(result);
+}
+
+export async function extractRecipeFromImage(
+  images: ImageInput[],
+  options?: { deadlineAt?: number },
+): Promise<ExtractionResult> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return { kind: "failed", reason: "no-key" };
   }
 
-  switch (result.kind) {
-    case "ok":
-      return parseOutput(result.json);
-    case "aborted":
-      return { kind: "failed", reason: "timeout" };
-    case "parse-error":
-      return { kind: "failed", reason: "invalid-response" };
-    default:
-      return { kind: "failed", reason: "api-error" };
-  }
+  const deadlineAt = options?.deadlineAt ?? Date.now() + IMAGE_TIMEOUT_MS;
+
+  const result = await runWithModelFallback(
+    (model) => buildImageRequestBody(images, model),
+    apiKey,
+    deadlineAt,
+    IMAGE_TIMEOUT_MS,
+  );
+
+  return toExtractionResult(result);
 }
