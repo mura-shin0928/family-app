@@ -13,6 +13,7 @@ import IconButton from "@mui/material/IconButton";
 import Radio from "@mui/material/Radio";
 import RadioGroup from "@mui/material/RadioGroup";
 import Stack from "@mui/material/Stack";
+import { alpha } from "@mui/material/styles";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
@@ -306,10 +307,17 @@ export function RecipeEditor({
       }}
     >
       <Box component="section">
-        <Stack
-          direction="row"
-          spacing={0.5}
-          sx={{ alignItems: "center", mb: 0.5 }}
+        <Box
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 0.5,
+            px: 1.25,
+            py: 0.5,
+            mb: 0.5,
+            borderRadius: 999,
+            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+          }}
         >
           <AutoAwesomeIcon color="primary" fontSize="small" />
           <Typography
@@ -319,7 +327,7 @@ export function RecipeEditor({
           >
             レシピのAI読み取り
           </Typography>
-        </Stack>
+        </Box>
         <RadioGroup
           row
           value={inputMode}
