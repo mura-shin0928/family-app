@@ -1,5 +1,6 @@
 "use client";
 
+import AddPhotoAlternateOutlinedIcon from "@mui/icons-material/AddPhotoAlternateOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -11,8 +12,21 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState, useTransition } from "react";
-import { analyzeRecipeSource, createRecipe, updateRecipe } from "../actions";
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import {
+  analyzeRecipeImage,
+  analyzeRecipeSource,
+  createRecipe,
+  updateRecipe,
+} from "../actions";
+import type { RecipeDraft } from "../extraction/types";
+import { compressImage } from "../image/compress";
 import type { RecipeDetailDTO } from "../types";
 
 type IngredientRow = {
@@ -42,6 +56,7 @@ export function RecipeEditor({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isAnalyzing, startAnalyzeTransition] = useTransition();
+  const [isAnalyzingImage, startImageTransition] = useTransition();
   const [title, setTitle] = useState(recipe?.title ?? "");
   const [sourceUrl, setSourceUrl] = useState(recipe?.sourceUrl ?? "");
   const [sourceText, setSourceText] = useState(recipe?.sourceText ?? "");
@@ -54,6 +69,13 @@ export function RecipeEditor({
     severity: "success" | "warning";
     text: string;
   } | null>(null);
+  // 解析に失敗したときだけ保持し、「もう一度解析」で選び直しなしに再送する。
+  // 保存後は不要になるため、handleSubmit成功時に破棄する。
+  const [pendingImage, setPendingImage] = useState<{
+    blob: Blob;
+    mimeType: string;
+  } | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   function addIngredientRow() {
     setIngredients((current) => [
@@ -78,6 +100,40 @@ export function RecipeEditor({
     setIngredients((current) => current.filter((row) => row.key !== key));
   }
 
+  // URL/テキスト解析・画像解析の両方から呼ぶ、フォームへのdraft反映処理だけを
+  // 切り出したもの。成功/失敗メッセージの組み立ては呼び出し元ごとに異なる
+  // （画像解析だけ材料0件をwarning扱いにする等）ため、ここには含めない。
+  function addDraftToForm(draft: RecipeDraft, sourceUrlFromDraft?: string) {
+    if (!title.trim() && draft.title) {
+      setTitle(draft.title);
+    }
+
+    if (draft.ingredients.length > 0) {
+      setIngredients((current) => [
+        ...current,
+        ...draft.ingredients.map((ingredient) => ({
+          key: crypto.randomUUID(),
+          name: ingredient.name,
+          quantity: ingredient.quantity,
+        })),
+      ]);
+    }
+
+    if (draft.servings && !note.includes(draft.servings)) {
+      setNote((current) =>
+        current.trim() === ""
+          ? draft.servings
+          : `${current}\n${draft.servings}`,
+      );
+    }
+
+    if (sourceUrlFromDraft) {
+      // URLは専用フィールドに移したので、貼り付け欄に二重に残さない。
+      setSourceUrl(sourceUrlFromDraft);
+      setSourceText("");
+    }
+  }
+
   function handleAnalyze() {
     const trimmedText = sourceText.trim();
     if (!trimmedText) return;
@@ -94,34 +150,7 @@ export function RecipeEditor({
         return;
       }
 
-      if (!title.trim() && result.draft.title) {
-        setTitle(result.draft.title);
-      }
-
-      if (result.draft.ingredients.length > 0) {
-        setIngredients((current) => [
-          ...current,
-          ...result.draft.ingredients.map((ingredient) => ({
-            key: crypto.randomUUID(),
-            name: ingredient.name,
-            quantity: ingredient.quantity,
-          })),
-        ]);
-      }
-
-      if (result.draft.servings && !note.includes(result.draft.servings)) {
-        setNote((current) =>
-          current.trim() === ""
-            ? result.draft.servings
-            : `${current}\n${result.draft.servings}`,
-        );
-      }
-
-      if (result.sourceUrl) {
-        // URLは専用フィールドに移したので、貼り付け欄に二重に残さない。
-        setSourceUrl(result.sourceUrl);
-        setSourceText("");
-      }
+      addDraftToForm(result.draft, result.sourceUrl);
 
       const via =
         result.via === "jsonld"
@@ -135,6 +164,76 @@ export function RecipeEditor({
         text: `${via}${result.draft.ingredients.length}件の材料を読み取りました。内容を確認して保存してください。`,
       });
     });
+  }
+
+  async function runImageAnalysis(blob: Blob, mimeType: string) {
+    const formData = new FormData();
+    const extension =
+      mimeType === "image/jpeg" ? "jpg" : (mimeType.split("/")[1] ?? "bin");
+    formData.append("images", blob, `recipe.${extension}`);
+
+    const result = await analyzeRecipeImage(formData);
+
+    if (!result.ok) {
+      setAnalyzeMessage({ severity: "warning", text: result.error });
+      return;
+    }
+
+    addDraftToForm(result.draft);
+    setPendingImage(null);
+
+    if (result.draft.ingredients.length === 0) {
+      setAnalyzeMessage({
+        severity: "warning",
+        text: "画像から材料を読み取れませんでした。材料は手入力で追加してください。",
+      });
+      return;
+    }
+
+    setAnalyzeMessage({
+      severity: "success",
+      text: `画像から${result.draft.ingredients.length}件の材料を読み取りました。内容を確認して保存してください。`,
+    });
+  }
+
+  function handleImagePick(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    // 同じファイルを選び直せるようにする（inputはchangeイベントが2回目以降
+    // 発火しないため、値を毎回リセットする）。
+    event.target.value = "";
+    if (!file) return;
+
+    setAnalyzeMessage(null);
+    setPendingImage(null);
+    startImageTransition(async () => {
+      const compressed = await compressImage(file);
+
+      if (compressed.kind === "unsupported") {
+        setAnalyzeMessage({
+          severity: "warning",
+          text: "この画像は読み取れませんでした。スクリーンショットを撮り直すか、タイトル・材料を手入力してください。",
+        });
+        return;
+      }
+      if (compressed.kind === "too-large") {
+        setAnalyzeMessage({
+          severity: "warning",
+          text: "画像が大きすぎます。撮り直すか、手入力で保存してください。",
+        });
+        return;
+      }
+
+      setPendingImage({ blob: compressed.blob, mimeType: compressed.mimeType });
+      await runImageAnalysis(compressed.blob, compressed.mimeType);
+    });
+  }
+
+  function handleRetryImageAnalysis() {
+    if (!pendingImage) return;
+    setAnalyzeMessage(null);
+    startImageTransition(() =>
+      runImageAnalysis(pendingImage.blob, pendingImage.mimeType),
+    );
   }
 
   function handleSubmit(event: FormEvent) {
@@ -180,6 +279,7 @@ export function RecipeEditor({
         return;
       }
 
+      setPendingImage(null);
       router.push(
         mode === "create" ? "/recipes" : `/recipes/${recipe?.id ?? ""}`,
       );
@@ -219,8 +319,51 @@ export function RecipeEditor({
           >
             レシピをAIで読み取る
           </Button>
+
+          <Divider>または</Divider>
+
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={handleImagePick}
+          />
+          <Button
+            onClick={() => imageInputRef.current?.click()}
+            disabled={isAnalyzingImage}
+            startIcon={
+              isAnalyzingImage ? (
+                <CircularProgress size={16} />
+              ) : (
+                <AddPhotoAlternateOutlinedIcon fontSize="small" />
+              )
+            }
+            sx={{ alignSelf: "flex-start" }}
+          >
+            画像から読み取る
+          </Button>
+          <Typography variant="caption" color="text.secondary">
+            画像はGoogle Gemini
+            APIへ送信して解析します。解析後は保存されません。
+          </Typography>
+
           {analyzeMessage && (
-            <Alert severity={analyzeMessage.severity}>
+            <Alert
+              severity={analyzeMessage.severity}
+              action={
+                pendingImage && analyzeMessage.severity === "warning" ? (
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={handleRetryImageAnalysis}
+                    disabled={isAnalyzingImage}
+                  >
+                    もう一度解析
+                  </Button>
+                ) : undefined
+              }
+            >
               {analyzeMessage.text}
             </Alert>
           )}

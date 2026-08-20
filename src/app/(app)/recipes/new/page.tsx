@@ -7,8 +7,10 @@ import { LinkIconButton } from "@/components/LinkIconButton";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { RecipeEditor } from "@/features/recipes/components/RecipeEditor";
 
-// URL/Gemini解析（analyzeRecipeSource）はこのページのServer Actionのため、ページ単位で延長する。
-export const maxDuration = 30;
+// URL/Gemini解析（analyzeRecipeSource）・画像解析（analyzeRecipeImage）はこのページの
+// Server Actionのため、ページ単位で延長する。画像は入力トークンが多くテキストより
+// レイテンシが伸びる想定のため60秒に広げる（Hobbyプランの上限300秒に対して余裕あり）。
+export const maxDuration = 60;
 
 export default async function NewRecipePage() {
   await requireFamilyMember();

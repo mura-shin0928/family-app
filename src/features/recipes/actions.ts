@@ -4,7 +4,10 @@ import { requireFamilyMember } from "@/features/auth/guard";
 import { createClient } from "@/lib/supabase/server";
 import { isSnsHost, urlOnly } from "./extraction/detect";
 import { fetchHtml } from "./extraction/fetch-html";
-import { extractRecipeFromText } from "./extraction/gemini";
+import {
+  extractRecipeFromImage,
+  extractRecipeFromText,
+} from "./extraction/gemini";
 import { extractRecipeFromJsonLd } from "./extraction/jsonld";
 import { MAX_NAME_LENGTH } from "./extraction/normalize";
 import { extractReadable } from "./extraction/readable";
@@ -13,13 +16,19 @@ import {
   addIngredientsToPurchasesSchema,
   analyzeRecipeSourceSchema,
   createRecipeSchema,
+  IMAGE_HARD_LIMIT_BYTES,
+  MAX_RECIPE_IMAGES,
   recipeIdSchema,
+  SUPPORTED_IMAGE_MIME_TYPES,
   undoAddIngredientsToPurchasesSchema,
   updateRecipeSchema,
 } from "./schema";
 
 // ページのmaxDuration(30秒)に収まるよう、URL経路のfetchとGeminiで共有する予算。
 const ANALYZE_DEADLINE_MS = 27_000;
+// 画像経路のページはmaxDuration=60秒。画像は入力トークンが多くテキストより
+// レイテンシが伸びる想定のため、テキスト経路より広く予算を取る。
+const IMAGE_ANALYZE_DEADLINE_MS = 50_000;
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -416,4 +425,69 @@ export async function analyzeRecipeSource(input: {
       : result.draft;
 
   return { ok: true, draft, sourceUrl: detectedUrl, via: "gemini" };
+}
+
+export type AnalyzeRecipeImageResult =
+  | { ok: true; draft: RecipeDraft; via: "gemini-image" }
+  | { ok: false; error: string };
+
+const IMAGE_UNSUPPORTED_FORMAT_ERROR =
+  "この画像の形式には対応していません。JPEG・PNG・HEIC等の画像を選んでください。";
+const IMAGE_TOO_LARGE_ERROR =
+  "画像が大きすぎます。撮り直すか、手入力で保存してください。";
+const IMAGE_MISSING_ERROR = "画像を選択してください";
+const IMAGE_TOO_MANY_ERROR = "画像は1枚だけ選択してください";
+
+// クライアント側で圧縮済みの画像1枚をGeminiへ送りRecipeDraftへ変換する。
+// クライアント側の圧縮結果は改ざん可能なため、形式・サイズをここでも再検証する。
+// 画像そのものはこの呼び出しの中でのみ扱い、DBやログへは一切書き込まない。
+export async function analyzeRecipeImage(
+  formData: FormData,
+): Promise<AnalyzeRecipeImageResult> {
+  await requireFamilyMember();
+
+  const files = formData
+    .getAll("images")
+    .filter((value): value is File => value instanceof File);
+
+  if (files.length === 0) {
+    return { ok: false, error: IMAGE_MISSING_ERROR };
+  }
+  if (files.length > MAX_RECIPE_IMAGES) {
+    return { ok: false, error: IMAGE_TOO_MANY_ERROR };
+  }
+
+  const file = files[0];
+
+  if (
+    !SUPPORTED_IMAGE_MIME_TYPES.includes(
+      file.type as (typeof SUPPORTED_IMAGE_MIME_TYPES)[number],
+    )
+  ) {
+    return { ok: false, error: IMAGE_UNSUPPORTED_FORMAT_ERROR };
+  }
+
+  if (file.size > IMAGE_HARD_LIMIT_BYTES) {
+    return { ok: false, error: IMAGE_TOO_LARGE_ERROR };
+  }
+
+  const buffer = await file.arrayBuffer();
+  const base64 = Buffer.from(buffer).toString("base64");
+
+  const deadlineAt = Date.now() + IMAGE_ANALYZE_DEADLINE_MS;
+  const result = await extractRecipeFromImage(
+    [{ data: base64, mimeType: file.type }],
+    { deadlineAt },
+  );
+
+  if (result.kind === "failed") {
+    return {
+      ok: false,
+      error:
+        FAILURE_MESSAGES[result.reason] ??
+        "解析に失敗しました。手入力で保存してください。",
+    };
+  }
+
+  return { ok: true, draft: result.draft, via: "gemini-image" };
 }
