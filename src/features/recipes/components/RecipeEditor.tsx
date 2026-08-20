@@ -440,7 +440,6 @@ export function RecipeEditor({
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           required
-          autoFocus
         />
         <TextField
           label="元のURL"
