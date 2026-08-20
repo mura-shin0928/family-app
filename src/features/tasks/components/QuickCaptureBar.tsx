@@ -148,6 +148,11 @@ export function QuickCaptureBar({ onSubmit }: Props) {
         onClose={() => setDueAnchorEl(null)}
         anchorOrigin={{ vertical: "top", horizontal: "left" }}
         transformOrigin={{ vertical: "bottom", horizontal: "left" }}
+        // タイトル入力中に開いてもソフトウェアキーボードを閉じさせないため、
+        // Popover既定のフォーカス奪取（マウント時オートフォーカス/フォーカストラップ）を止める。
+        disableAutoFocus
+        disableEnforceFocus
+        disableRestoreFocus
       >
         <Stack spacing={1} sx={{ p: 1.5, width: "16rem" }}>
           <TextField
