@@ -1,16 +1,24 @@
-import { format } from "date-fns";
-import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import { fromZonedTime } from "date-fns-tz";
 
 /** DBの `due_on` と同じ 'YYYY-MM-DD' 形式。TZを持たないカレンダー日付。 */
 export type DateString = string;
 
 export const JST_TIME_ZONE = "Asia/Tokyo";
 
-const DATE_FORMAT = "yyyy-MM-dd";
+// en-CAロケールはIntlの短い日付形式がYYYY-MM-DDになる（date-fns-tzのtoZonedTime
+// +formatより軽い）。todayInJst/addDaysToDateString/daysUntil/formatRelativeDueは
+// クライアントからも呼ばれるため、この経路にdate-fns/date-fns-tzを持ち込まない
+// （startOfTodayJstUtcだけがサーバー専用でfromZonedTimeを使う）。
+const jstDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: JST_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 
 /** 現在時刻（UTCのDate）から、JSTの「今日」を 'YYYY-MM-DD' で返す。 */
 export function todayInJst(now: Date = new Date()): DateString {
-  return format(toZonedTime(now, JST_TIME_ZONE), DATE_FORMAT);
+  return jstDateFormatter.format(now);
 }
 
 /** 現在時刻（UTCのDate）から、JSTの「明日」を 'YYYY-MM-DD' で返す。 */

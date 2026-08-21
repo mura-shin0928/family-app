@@ -300,6 +300,7 @@ describe("fetchHtml", () => {
         get: (key: string) => (key === "content-type" ? contentType : null),
       },
       body: {
+        cancel: async () => {},
         getReader: () => ({
           read: async () => {
             if (sent) return { done: true, value: undefined };

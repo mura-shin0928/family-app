@@ -11,6 +11,9 @@ export function QueryProvider({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             refetchOnWindowFocus: true,
+            // Server Componentが渡すinitialDataをmount直後にstale扱いして
+            // 即再取得しないよう、next.config.tsのstaleTimes.dynamicと揃える。
+            staleTime: 30_000,
           },
         },
       }),
