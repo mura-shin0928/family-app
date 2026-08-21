@@ -443,7 +443,7 @@ export function RecipeEditor({
             gap: 0.5,
             px: 1.25,
             py: 0.5,
-            mb: 1,
+            mb: 2,
             borderRadius: 999,
             bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
           }}
