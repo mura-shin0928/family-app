@@ -3,6 +3,7 @@
 import AssistantIcon from "@mui/icons-material/Assistant";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
+import NotesIcon from "@mui/icons-material/Notes";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -434,27 +435,50 @@ export function RecipeEditor({
 
       <Divider />
 
-      <Stack spacing={1.5}>
-        <TextField
-          label="タイトル"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          required
-        />
-        <TextField
-          label="元のURL"
-          type="url"
-          value={sourceUrl}
-          onChange={(event) => setSourceUrl(event.target.value)}
-        />
-        <TextField
-          label="メモ"
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          multiline
-          minRows={2}
-        />
-      </Stack>
+      <Box component="section">
+        <Box
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 0.5,
+            px: 1.25,
+            py: 0.5,
+            mb: 1,
+            borderRadius: 999,
+            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+          }}
+        >
+          <NotesIcon color="primary" fontSize="small" />
+          <Typography
+            variant="subtitle1"
+            color="primary"
+            sx={{ fontWeight: 700 }}
+          >
+            レシピ詳細
+          </Typography>
+        </Box>
+        <Stack spacing={1.5}>
+          <TextField
+            label="タイトル"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            required
+          />
+          <TextField
+            label="元のURL"
+            type="url"
+            value={sourceUrl}
+            onChange={(event) => setSourceUrl(event.target.value)}
+          />
+          <TextField
+            label="メモ"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            multiline
+            minRows={2}
+          />
+        </Stack>
+      </Box>
 
       <Box component="section">
         <Stack spacing={1.5}>

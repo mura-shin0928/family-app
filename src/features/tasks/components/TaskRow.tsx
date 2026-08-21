@@ -6,6 +6,7 @@ import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
+import ClickAwayListener from "@mui/material/ClickAwayListener";
 import IconButton from "@mui/material/IconButton";
 import Paper from "@mui/material/Paper";
 import TextField from "@mui/material/TextField";
@@ -99,56 +100,68 @@ export function TaskRow({
           </Typography>
         )}
 
-        {editingDue ? (
-          <Box sx={{ mt: 0.5, display: "flex", alignItems: "center", gap: 1 }}>
-            <TextField
-              type="date"
-              size="small"
-              variant="standard"
-              autoFocus
-              defaultValue={task.dueOn ?? ""}
-              onBlur={() => setEditingDue(false)}
-              onChange={(event) => {
-                onDueDateChange(task, event.target.value || null);
-                setEditingDue(false);
-              }}
-              slotProps={{ htmlInput: { style: { fontSize: "0.75rem" } } }}
-            />
-            {task.dueOn && (
+        {/*
+          iOSではネイティブdateピッカー操作時に、他ボタンへのタップより先に
+          onBlurが発火しeditingDueがfalseになってボタンごと消えてしまう
+          （「期限なしにする」が反応しない不具合の原因だった）。QuickCaptureBar
+          の期限パネルと同様、blurではなくClickAwayListenerで閉じる。
+        */}
+        <ClickAwayListener onClickAway={() => setEditingDue(false)}>
+          <Box>
+            {editingDue ? (
+              <Box
+                sx={{ mt: 0.5, display: "flex", alignItems: "center", gap: 1 }}
+              >
+                <TextField
+                  type="date"
+                  size="small"
+                  variant="standard"
+                  autoFocus
+                  defaultValue={task.dueOn ?? ""}
+                  onChange={(event) => {
+                    onDueDateChange(task, event.target.value || null);
+                    setEditingDue(false);
+                  }}
+                  slotProps={{ htmlInput: { style: { fontSize: "0.75rem" } } }}
+                />
+                {task.dueOn && (
+                  <Button
+                    size="small"
+                    sx={{
+                      p: 0,
+                      minWidth: 0,
+                      textTransform: "none",
+                      fontSize: "0.75rem",
+                    }}
+                    onClick={() => {
+                      onDueDateChange(task, null);
+                      setEditingDue(false);
+                    }}
+                  >
+                    期限なしにする
+                  </Button>
+                )}
+              </Box>
+            ) : (
               <Button
                 size="small"
+                onClick={() => setEditingDue(true)}
                 sx={{
+                  mt: 0.25,
                   p: 0,
                   minWidth: 0,
                   textTransform: "none",
                   fontSize: "0.75rem",
-                }}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                  onDueDateChange(task, null);
-                  setEditingDue(false);
+                  color: "text.secondary",
                 }}
               >
-                期限なしにする
+                {task.dueOn
+                  ? formatRelativeDue(task.dueOn, today)
+                  : "期限を設定"}
               </Button>
             )}
           </Box>
-        ) : (
-          <Button
-            size="small"
-            onClick={() => setEditingDue(true)}
-            sx={{
-              mt: 0.25,
-              p: 0,
-              minWidth: 0,
-              textTransform: "none",
-              fontSize: "0.75rem",
-              color: "text.secondary",
-            }}
-          >
-            {task.dueOn ? formatRelativeDue(task.dueOn, today) : "期限を設定"}
-          </Button>
-        )}
+        </ClickAwayListener>
       </Box>
 
       <IconButton

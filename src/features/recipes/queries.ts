@@ -33,25 +33,31 @@ export async function getRecipe(
 ): Promise<RecipeDetailDTO | null> {
   const supabase = await createClient();
 
-  const { data: recipe, error } = await supabase
-    .from("recipes")
-    .select("id, title, source_url, source_text, note, created_at")
-    .eq("family_id", familyId)
-    .eq("id", recipeId)
-    .is("deleted_at", null)
-    .maybeSingle();
+  // レシピ本体と材料は互いに依存しないクエリなので、往復レイテンシを重ねない
+  // よう並行して投げる（材料側はrecipeIdの所有チェックをfamily_idで直接行う）。
+  const [
+    { data: recipe, error },
+    { data: ingredients, error: ingredientsError },
+  ] = await Promise.all([
+    supabase
+      .from("recipes")
+      .select("id, title, source_url, source_text, note, created_at")
+      .eq("family_id", familyId)
+      .eq("id", recipeId)
+      .is("deleted_at", null)
+      .maybeSingle(),
+    supabase
+      .from("recipe_ingredients")
+      .select("id, name, quantity, sort_order, task_id")
+      .eq("recipe_id", recipeId)
+      .eq("family_id", familyId)
+      .order("sort_order", { ascending: true }),
+  ]);
 
   if (error) {
     throw new Error(`failed to load recipe: ${error.message}`);
   }
   if (!recipe) return null;
-
-  const { data: ingredients, error: ingredientsError } = await supabase
-    .from("recipe_ingredients")
-    .select("id, name, quantity, sort_order, task_id")
-    .eq("recipe_id", recipeId)
-    .eq("family_id", familyId)
-    .order("sort_order", { ascending: true });
 
   if (ingredientsError) {
     throw new Error(
