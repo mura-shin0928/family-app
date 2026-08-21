@@ -17,6 +17,7 @@ import Stack from "@mui/material/Stack";
 import { alpha } from "@mui/material/styles";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   type ChangeEvent,
@@ -33,7 +34,7 @@ import {
 } from "../actions";
 import type { RecipeDraft } from "../extraction/types";
 import { compressImage } from "../image/compress";
-import type { RecipeDetailDTO } from "../types";
+import { RECIPES_QUERY_KEY, type RecipeDetailDTO } from "../types";
 
 type IngredientRow = {
   key: string;
@@ -60,6 +61,7 @@ export function RecipeEditor({
   recipe?: RecipeDetailDTO;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
   const [isAnalyzing, startAnalyzeTransition] = useTransition();
   const [isAnalyzingImage, startImageTransition] = useTransition();
@@ -288,6 +290,11 @@ export function RecipeEditor({
       }
 
       setPendingImage(null);
+      // Server Action + router.pushでの遷移はTanStack Queryのキャッシュに
+      // 関知しないため、遷移先が古いキャッシュ（staleTime内）を表示し続け
+      // ないよう明示的に無効化する。["recipes"]は一覧・詳細どちらの
+      // queryKeyもprefixとして含むため、1回でまとめて無効化できる。
+      queryClient.invalidateQueries({ queryKey: RECIPES_QUERY_KEY });
       router.push(
         mode === "create" ? "/recipes" : `/recipes/${recipe?.id ?? ""}`,
       );

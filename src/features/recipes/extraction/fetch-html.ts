@@ -103,6 +103,10 @@ export async function fetchHtml(
     }
 
     if (response.status >= 300 && response.status < 400) {
+      // ここで消費しないとNodeのfetch実装がコネクションを解放せず、
+      // リダイレクトを重ねるたびに未消費のbodyが溜まる。
+      await response.body?.cancel();
+
       if (redirects >= MAX_REDIRECTS) return { ok: false };
       const location = response.headers.get("location");
       if (!location) return { ok: false };
@@ -120,10 +124,14 @@ export async function fetchHtml(
       continue;
     }
 
-    if (!response.ok) return { ok: false };
+    if (!response.ok) {
+      await response.body?.cancel();
+      return { ok: false };
+    }
 
     const contentType = response.headers.get("content-type") ?? "";
     if (!contentType.toLowerCase().includes("text/html")) {
+      await response.body?.cancel();
       return { ok: false };
     }
 

@@ -26,8 +26,11 @@ import {
   undoAddIngredientsToPurchases,
 } from "../actions";
 import { fetchRecipe } from "../query-actions";
-import type { RecipeDetailDTO } from "../types";
-import { recipeDetailQueryKey } from "../types";
+import {
+  RECIPES_QUERY_KEY,
+  type RecipeDetailDTO,
+  recipeDetailQueryKey,
+} from "../types";
 
 export function RecipeDetailScreen({
   initialRecipe,
@@ -99,6 +102,9 @@ export function RecipeDetailScreen({
         setError(result.error);
         return;
       }
+      // 遷移先の一覧がstaleTime内の古いキャッシュを表示し続けないよう無効化する
+      // （RecipeEditorの保存後リダイレクトと同じ理由）。
+      queryClient.invalidateQueries({ queryKey: RECIPES_QUERY_KEY });
       router.push("/recipes");
     });
   }

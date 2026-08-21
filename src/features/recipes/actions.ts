@@ -24,10 +24,11 @@ import {
   updateRecipeSchema,
 } from "./schema";
 
-// ページのmaxDuration(30秒)に収まるよう、URL経路のfetchとGeminiで共有する予算。
-const ANALYZE_DEADLINE_MS = 27_000;
-// 画像経路のページはmaxDuration=60秒。画像は入力トークンが多くテキストより
-// レイテンシが伸びる想定のため、テキスト経路より広く予算を取る。
+// URL/画像どちらの経路もページのmaxDurationは60秒（new/page.tsx, [id]/edit/page.tsx）。
+// URL経路のfetchとGeminiで共有する予算。
+const ANALYZE_DEADLINE_MS = 50_000;
+// 画像は入力トークンが多くテキストより レイテンシが伸びる想定のため、
+// テキスト経路と同じ予算を取る。
 const IMAGE_ANALYZE_DEADLINE_MS = 50_000;
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -129,7 +130,7 @@ export async function updateRecipe(input: {
 
   const { data: existingRows, error: existingError } = await supabase
     .from("recipe_ingredients")
-    .select("id")
+    .select("id, task_id")
     .eq("recipe_id", parsed.data.recipeId)
     .eq("family_id", member.familyId);
 
@@ -137,13 +138,17 @@ export async function updateRecipe(input: {
     return { ok: false, error: "材料の更新に失敗しました" };
   }
 
-  const existingIds = new Set((existingRows ?? []).map((row) => row.id));
+  const existingTaskIdById = new Map(
+    (existingRows ?? []).map((row) => [row.id, row.task_id]),
+  );
   const submittedIds = new Set(
     parsed.data.ingredients
       .map((ingredient) => ingredient.id)
       .filter((id): id is string => !!id),
   );
-  const idsToDelete = [...existingIds].filter((id) => !submittedIds.has(id));
+  const idsToDelete = [...existingTaskIdById.keys()].filter(
+    (id) => !submittedIds.has(id),
+  );
 
   if (idsToDelete.length > 0) {
     const { error } = await supabase
@@ -157,31 +162,27 @@ export async function updateRecipe(input: {
     }
   }
 
-  for (const [index, ingredient] of parsed.data.ingredients.entries()) {
-    const quantity = ingredient.quantity === "" ? null : ingredient.quantity;
+  if (parsed.data.ingredients.length > 0) {
+    // 行ごとにupdate/insertを直列に投げていたのを1回のupsertにまとめる
+    // （材料数だけ往復が伸びていたのを解消）。既存行はtask_idを引き継ぎ、
+    // 新規行はnullにする（upsertは行全体を置き換えるため、明示しないと
+    // 既存の「買うもの」への紐付けが消えてしまう）。
+    const rows = parsed.data.ingredients.map((ingredient, index) => ({
+      id: ingredient.id ?? crypto.randomUUID(),
+      recipe_id: parsed.data.recipeId,
+      family_id: member.familyId,
+      name: ingredient.name,
+      quantity: ingredient.quantity === "" ? null : ingredient.quantity,
+      sort_order: index,
+      task_id: ingredient.id
+        ? (existingTaskIdById.get(ingredient.id) ?? null)
+        : null,
+    }));
 
-    if (ingredient.id && existingIds.has(ingredient.id)) {
-      const { error } = await supabase
-        .from("recipe_ingredients")
-        .update({ name: ingredient.name, quantity, sort_order: index })
-        .eq("id", ingredient.id)
-        .eq("family_id", member.familyId);
+    const { error } = await supabase.from("recipe_ingredients").upsert(rows);
 
-      if (error) {
-        return { ok: false, error: "材料の更新に失敗しました" };
-      }
-    } else {
-      const { error } = await supabase.from("recipe_ingredients").insert({
-        recipe_id: parsed.data.recipeId,
-        family_id: member.familyId,
-        name: ingredient.name,
-        quantity,
-        sort_order: index,
-      });
-
-      if (error) {
-        return { ok: false, error: "材料の追加に失敗しました" };
-      }
+    if (error) {
+      return { ok: false, error: "材料の更新に失敗しました" };
     }
   }
 

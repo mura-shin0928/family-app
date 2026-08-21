@@ -2,18 +2,18 @@ import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import { redirect } from "next/navigation";
-import { getIsAppAdmin } from "@/features/auth/guard";
 import { createClient } from "@/lib/supabase/server";
 import { AccountMenu } from "./AccountMenu";
 
 type Props = {
   title: string;
   displayName: string;
+  isAppAdmin: boolean;
 };
 
-export async function AppHeader({ title, displayName }: Props) {
-  const isAppAdmin = await getIsAppAdmin();
-
+// isAppAdminは呼び出し元のページで他の初期データ取得と並行して解決させる
+// （このコンポーネント内でawaitすると、そのページの他のクエリと直列になってしまうため）。
+export function AppHeader({ title, displayName, isAppAdmin }: Props) {
   async function signOut() {
     "use server";
     const supabase = await createClient();
