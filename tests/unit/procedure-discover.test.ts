@@ -4,6 +4,8 @@ import {
   extractLinks,
   inferAreaCode,
   isLikelyExcluded,
+  matchesSelectedLabels,
+  PROCEDURE_LABELS,
 } from "@/features/procedures/discover";
 import {
   isPathAllowed,
@@ -82,6 +84,22 @@ describe("inferAreaCode", () => {
 
   it("does not guess codes for unmapped municipalities", () => {
     expect(inferAreaCode("www.city.mitaka.lg.jp", "13210")).toBe("13210");
+  });
+});
+
+describe("matchesSelectedLabels", () => {
+  it("treats selecting every label as no filter", () => {
+    expect(matchesSelectedLabels("審議会だより", [...PROCEDURE_LABELS])).toBe(
+      true,
+    );
+  });
+
+  it("matches when the title contains a selected label", () => {
+    expect(matchesSelectedLabels("児童手当のご案内", ["手当"])).toBe(true);
+  });
+
+  it("does not match when the title has no selected label", () => {
+    expect(matchesSelectedLabels("児童手当のご案内", ["健診"])).toBe(false);
   });
 });
 

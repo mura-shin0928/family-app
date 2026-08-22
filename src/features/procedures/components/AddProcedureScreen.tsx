@@ -19,6 +19,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRef, useState, useTransition } from "react";
 import { discoverProcedureLinks, ingestProcedure } from "../actions";
+import { matchesSelectedLabels, PROCEDURE_LABELS } from "../discover";
 import { AREA_CODE_OPTIONS, type DiscoverCandidate } from "../types";
 
 // 「一定の階層は時間がかかってもいいから最初から取得しておいてほしい」という
@@ -64,9 +65,23 @@ function areaCodeLabel(areaCode: string | null): string {
   );
 }
 
+// 候補が「後回しでよい」もの(=対象外?の印がある、または絞り込んだラベルに
+// 一致しない)かどうか。優先度の低い候補一覧の折りたたみに使う。
+function isDeprioritized(
+  candidate: DiscoverCandidate,
+  selectedLabels: string[],
+): boolean {
+  if (candidate.kind !== "procedure") return false;
+  if (candidate.likelyExcluded) return true;
+  return !matchesSelectedLabels(candidate.title, selectedLabels);
+}
+
 export function AddProcedureScreen() {
   const [url, setUrl] = useState("");
   const [areaCode, setAreaCode] = useState<string>("13210");
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([
+    ...PROCEDURE_LABELS,
+  ]);
   const [rootUrls, setRootUrls] = useState<string[]>([]);
   const [nodesByUrl, setNodesByUrl] = useState<Record<string, CandidateNode>>(
     {},
@@ -82,6 +97,17 @@ export function AddProcedureScreen() {
   // ページへリンクされることがあるため）。setStateの関数形の外で使うのでrefにする。
   const visitedRef = useRef<Set<string>>(new Set());
 
+  function toggleLabel(label: string) {
+    setSelectedLabels((current) => {
+      if (current.includes(label)) {
+        // 最後の1つは外せないようにする（全解除=絞り込み無しと区別が付かなくなるため）
+        if (current.length === 1) return current;
+        return current.filter((item) => item !== label);
+      }
+      return [...current, label];
+    });
+  }
+
   function applyDefaultChecks(candidates: DiscoverCandidate[]) {
     setChecked((current) => {
       const next = { ...current };
@@ -94,9 +120,10 @@ export function AddProcedureScreen() {
     });
   }
 
-  // 1階層分を取得し、まだ見ていないURLだけをツリーへ追加する。「対象外?」の
-  // 索引は自動で掘る対象から外す（明らかに関係なさそうな分岐にまで自動で
-  // 時間を使わないため。手動の「もっと掘る」では引き続き辿れる）。
+  // 1階層分を取得し、まだ見ていないURLだけをツリーへ追加する。索引のうち
+  // 選んだラベルに一致しないものは自動で掘る対象から外す(自動深掘りの
+  // 分岐を絞ることで所要時間と表示件数の両方を減らす)。「対象外?」の索引も
+  // 同様に対象から外す。どちらも手動の「もっと掘る」では引き続き辿れる。
   async function fetchLevel(
     seedUrl: string,
     depth: number,
@@ -118,7 +145,11 @@ export function AddProcedureScreen() {
         childrenStatus: "idle",
       };
       childUrls.push(candidate.url);
-      if (candidate.kind === "index" && !candidate.likelyExcluded) {
+      if (
+        candidate.kind === "index" &&
+        !candidate.likelyExcluded &&
+        matchesSelectedLabels(candidate.title, selectedLabels)
+      ) {
         newIndexUrls.push(candidate.url);
       }
     }
@@ -316,6 +347,28 @@ export function AddProcedureScreen() {
           ))}
         </TextField>
 
+        <Box>
+          <Typography variant="caption" color="text.secondary" gutterBottom>
+            取り込みたい情報（絞ると自動で掘る範囲と候補の表示が絞られます。すべて選ぶと絞り込みなし）
+          </Typography>
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{ flexWrap: "wrap", rowGap: 0.5 }}
+          >
+            {PROCEDURE_LABELS.map((label) => (
+              <Chip
+                key={label}
+                label={label}
+                size="small"
+                color={selectedLabels.includes(label) ? "primary" : "default"}
+                variant={selectedLabels.includes(label) ? "filled" : "outlined"}
+                onClick={() => toggleLabel(label)}
+              />
+            ))}
+          </Stack>
+        </Box>
+
         <Button
           variant="contained"
           onClick={handleSearch}
@@ -339,17 +392,15 @@ export function AddProcedureScreen() {
 
         {rootUrls.length > 0 && (
           <List dense disablePadding>
-            {rootUrls.map((rootUrl) => (
-              <CandidateRow
-                key={rootUrl}
-                nodeUrl={rootUrl}
-                nodesByUrl={nodesByUrl}
-                checked={checked}
-                isAutoExpanding={autoExpandRemaining > 0 || isDiscovering}
-                onToggle={toggleChecked}
-                onExpand={handleManualExpand}
-              />
-            ))}
+            <CandidateList
+              urls={rootUrls}
+              nodesByUrl={nodesByUrl}
+              checked={checked}
+              selectedLabels={selectedLabels}
+              isAutoExpanding={autoExpandRemaining > 0 || isDiscovering}
+              onToggle={toggleChecked}
+              onExpand={handleManualExpand}
+            />
           </List>
         )}
 
@@ -414,12 +465,90 @@ export function AddProcedureScreen() {
   );
 }
 
+// urlsを「優先度の高い候補」と「後回しでよい候補(対象外?/選んだラベルに
+// 不一致)」に分け、後者は既定で折りたたむ。件数だけ見せて必要な人だけ開く。
+function CandidateList({
+  urls,
+  nodesByUrl,
+  checked,
+  selectedLabels,
+  isAutoExpanding,
+  onToggle,
+  onExpand,
+}: {
+  urls: string[];
+  nodesByUrl: Record<string, CandidateNode>;
+  checked: Record<string, boolean>;
+  selectedLabels: string[];
+  isAutoExpanding: boolean;
+  onToggle: (url: string) => void;
+  onExpand: (url: string, depth: number) => void;
+}) {
+  const [showDeprioritized, setShowDeprioritized] = useState(false);
+
+  const primary: string[] = [];
+  const deprioritized: string[] = [];
+  for (const candidateUrl of urls) {
+    const node = nodesByUrl[candidateUrl];
+    if (!node) continue;
+    if (isDeprioritized(node.candidate, selectedLabels)) {
+      deprioritized.push(candidateUrl);
+    } else {
+      primary.push(candidateUrl);
+    }
+  }
+
+  return (
+    <>
+      {primary.map((candidateUrl) => (
+        <CandidateRow
+          key={candidateUrl}
+          nodeUrl={candidateUrl}
+          nodesByUrl={nodesByUrl}
+          checked={checked}
+          selectedLabels={selectedLabels}
+          isAutoExpanding={isAutoExpanding}
+          onToggle={onToggle}
+          onExpand={onExpand}
+        />
+      ))}
+      {deprioritized.length > 0 && (
+        <Box sx={{ pl: 2 }}>
+          <Button
+            size="small"
+            color="inherit"
+            onClick={() => setShowDeprioritized((current) => !current)}
+          >
+            {showDeprioritized
+              ? "隠す"
+              : `対象外?・絞り込み対象外の候補を表示 (${deprioritized.length}件)`}
+          </Button>
+          {showDeprioritized &&
+            deprioritized.map((candidateUrl) => (
+              <CandidateRow
+                key={candidateUrl}
+                nodeUrl={candidateUrl}
+                nodesByUrl={nodesByUrl}
+                checked={checked}
+                selectedLabels={selectedLabels}
+                isAutoExpanding={isAutoExpanding}
+                onToggle={onToggle}
+                onExpand={onExpand}
+              />
+            ))}
+        </Box>
+      )}
+    </>
+  );
+}
+
 // 索引ページを再帰的にネスト表示するための行。展開結果は末尾に追加する
 // セクションではなく、このノードの直下に差し込む(その場に増える見た目にするため)。
 function CandidateRow({
   nodeUrl,
   nodesByUrl,
   checked,
+  selectedLabels,
   isAutoExpanding,
   onToggle,
   onExpand,
@@ -427,6 +556,7 @@ function CandidateRow({
   nodeUrl: string;
   nodesByUrl: Record<string, CandidateNode>;
   checked: Record<string, boolean>;
+  selectedLabels: string[];
   isAutoExpanding: boolean;
   onToggle: (url: string) => void;
   onExpand: (url: string, depth: number) => void;
@@ -437,10 +567,15 @@ function CandidateRow({
   const { candidate } = node;
   const indent = (node.depth - 1) * 3;
 
-  // 深さ1・2の索引は自動展開キューが処理する。展開中(=isAutoExpanding)は
-  // それらへの手動操作を止めて、自動キューとの競合(同じノードへの二重fetch)
-  // を避ける。深さ3以降は自動展開の対象外なので常に手動で操作できる。
-  const isAutoManagedDepth = node.depth < AUTO_EXPAND_MAX_DEPTH;
+  // 深さ1・2の索引のうち、選んだラベルに一致し「対象外?」でもないものは
+  // 自動展開キューが処理する。展開中(=isAutoExpanding)はそれらへの手動操作を
+  // 止めて、自動キューとの競合(同じノードへの二重fetch)を避ける。
+  // ラベル不一致・対象外?の索引や深さ3以降は自動展開の対象外なので常に手動で操作できる。
+  const isAutoManagedDepth =
+    node.depth < AUTO_EXPAND_MAX_DEPTH &&
+    candidate.kind === "index" &&
+    !candidate.likelyExcluded &&
+    matchesSelectedLabels(candidate.title, selectedLabels);
   const showManualExpandButton =
     candidate.kind === "index" &&
     node.childUrls === null &&
@@ -542,17 +677,17 @@ function CandidateRow({
         </Box>
       )}
 
-      {node.childUrls?.map((childUrl) => (
-        <CandidateRow
-          key={childUrl}
-          nodeUrl={childUrl}
+      {node.childUrls && node.childUrls.length > 0 && (
+        <CandidateList
+          urls={node.childUrls}
           nodesByUrl={nodesByUrl}
           checked={checked}
+          selectedLabels={selectedLabels}
           isAutoExpanding={isAutoExpanding}
           onToggle={onToggle}
           onExpand={onExpand}
         />
-      ))}
+      )}
     </>
   );
 }

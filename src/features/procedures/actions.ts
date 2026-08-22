@@ -68,17 +68,25 @@ export async function discoverProcedureLinks(input: {
 
   const candidates: DiscoverCandidate[] = [];
   let truncated = false;
+  // 実際にfetchした回数だけレート制限の間隔を空ける。robots.txt/タイトルの
+  // 機械フィルタで弾いたリンクはfetch自体をしないため、間隔待ちも不要。
+  let fetchedCount = 0;
 
   for (let i = 0; i < links.length; i++) {
     if (Date.now() > deadlineAt) {
       truncated = true;
       break;
     }
-    if (i > 0) await sleep(REQUEST_INTERVAL_MS);
 
     const link = links[i];
     const linkUrl = new URL(link.url);
     if (!isPathAllowed(rules, linkUrl.pathname)) continue;
+    // リンク文言の時点で明らかにノイズ(審議会・計画等)と分かるものは、
+    // ページを取得すらせずに弾く(§対応: 取得前フィルタで所要時間を縮める)。
+    if (link.text !== "" && isLikelyExcluded(link.text)) continue;
+
+    if (fetchedCount > 0) await sleep(REQUEST_INTERVAL_MS);
+    fetchedCount++;
 
     const linkDeadline = Math.min(
       deadlineAt,

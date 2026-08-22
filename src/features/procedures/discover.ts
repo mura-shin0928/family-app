@@ -26,7 +26,9 @@ export function classifyCandidate(main: {
   return isIndex ? "index" : "procedure";
 }
 
-const INCLUDE_KEYWORDS = [
+// 「対象外?」の機械判定に使うキーワードであり、同時に画面の「取り込みたい情報」
+// ラベル選択の選択肢そのものでもある(二重管理を避けるため1つのリストを共有する)。
+export const PROCEDURE_LABELS = [
   "届",
   "手当",
   "助成",
@@ -36,7 +38,8 @@ const INCLUDE_KEYWORDS = [
   "検査",
   "医療費",
   "申請",
-];
+] as const;
+const INCLUDE_KEYWORDS: readonly string[] = PROCEDURE_LABELS;
 const EXCLUDE_KEYWORDS = [
   "審議会",
   "検討会",
@@ -45,6 +48,18 @@ const EXCLUDE_KEYWORDS = [
   "発掘",
   "報道発表",
 ];
+
+/**
+ * ユーザーが選んだラベルにtitleが1つでも一致するか。全ラベルを選んでいる
+ * (=絞り込んでいない)ときは常にtrueにする — 既定は今まで通り絞り込まない。
+ */
+export function matchesSelectedLabels(
+  title: string,
+  selectedLabels: readonly string[],
+): boolean {
+  if (selectedLabels.length >= PROCEDURE_LABELS.length) return true;
+  return selectedLabels.some((label) => title.includes(label));
+}
 
 /**
  * タイトルの機械フィルタで「対象外?」の印を付ける（§6.4）。
