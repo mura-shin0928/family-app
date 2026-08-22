@@ -531,7 +531,7 @@ function CandidateList({
           <Button
             size="small"
             variant="outlined"
-            color="warning"
+            color="info"
             endIcon={
               showDeprioritized ? <ExpandLessIcon /> : <ExpandMoreIcon />
             }

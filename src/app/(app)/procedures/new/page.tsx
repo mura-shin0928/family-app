@@ -32,7 +32,7 @@ export default async function NewProcedurePage() {
             <ArrowBackIcon fontSize="small" />
           </LinkIconButton>
           <Typography variant="h6" component="h1">
-            制度を追加
+            手続きを追加
           </Typography>
         </Toolbar>
       </AppBar>
