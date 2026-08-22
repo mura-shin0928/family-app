@@ -1,6 +1,8 @@
 "use client";
 
 import ArticleOutlinedIcon from "@mui/icons-material/ArticleOutlined";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import FolderOpenOutlinedIcon from "@mui/icons-material/FolderOpenOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -16,6 +18,7 @@ import ListItemText from "@mui/material/ListItemText";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useRef, useState, useTransition } from "react";
 import { discoverProcedureLinks, ingestProcedure } from "../actions";
@@ -32,6 +35,12 @@ import { AREA_CODE_OPTIONS, type DiscoverCandidate } from "../types";
 // 掘り進めている間もチェック・取り込みができる（バックグラウンドで進む体裁）。
 // これより深い階層は候補一覧の「もっと掘る」で手動になる。
 const AUTO_EXPAND_MAX_DEPTH = 3;
+
+// 「対象外?としてるのはなんだっけ?」への対応。タップ/ホバーで理由が分かるように
+// Tooltipで補足する。
+const EXCLUDED_TOOLTIP =
+  "「審議会」「計画」などの言葉があり、「届」「手当」「健診」など制度らしい言葉が" +
+  "見当たらないため、機械的に対象外の可能性ありとしています(誤判定のこともあります)";
 
 type ChildrenStatus = "idle" | "loading" | "loaded" | "error";
 
@@ -111,12 +120,14 @@ export function AddProcedureScreen() {
     });
   }
 
+  // 「対象外?・絞り込み対象外の候補を表示」に隠れている(=isDeprioritized)候補は、
+  // 見ていないのに取り込まれることが無いよう既定でチェックを入れない。
   function applyDefaultChecks(candidates: DiscoverCandidate[]) {
     setChecked((current) => {
       const next = { ...current };
       for (const candidate of candidates) {
         if (candidate.kind === "procedure" && !(candidate.url in next)) {
-          next[candidate.url] = !candidate.likelyExcluded;
+          next[candidate.url] = !isDeprioritized(candidate, selectedGroupIds);
         }
       }
       return next;
@@ -354,11 +365,7 @@ export function AddProcedureScreen() {
           <Typography variant="caption" color="text.secondary" gutterBottom>
             取り込みたい情報（絞ると自動で掘る範囲と候補の表示が絞られます。すべて選ぶと絞り込みなし）
           </Typography>
-          <Stack
-            direction="row"
-            spacing={0.5}
-            sx={{ flexWrap: "wrap", rowGap: 0.5 }}
-          >
+          <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 0.5 }}>
             {PROCEDURE_LABEL_GROUPS.map((group) => (
               <Chip
                 key={group.id}
@@ -520,10 +527,14 @@ function CandidateList({
         />
       ))}
       {deprioritized.length > 0 && (
-        <Box sx={{ pl: 2 }}>
+        <Box sx={{ pl: 2, my: 0.5 }}>
           <Button
             size="small"
-            color="inherit"
+            variant="outlined"
+            color="warning"
+            endIcon={
+              showDeprioritized ? <ExpandLessIcon /> : <ExpandMoreIcon />
+            }
             onClick={() => setShowDeprioritized((current) => !current)}
           >
             {showDeprioritized
@@ -622,18 +633,20 @@ function CandidateRow({
                 primary={
                   <Stack
                     direction="row"
-                    spacing={0.5}
-                    sx={{ alignItems: "center", flexWrap: "wrap" }}
+                    useFlexGap
+                    sx={{ alignItems: "center", flexWrap: "wrap", gap: 0.5 }}
                   >
                     <ArticleOutlinedIcon fontSize="small" color="action" />
                     <Typography variant="body2">{candidate.title}</Typography>
                     {candidate.likelyExcluded && (
-                      <Chip
-                        size="small"
-                        label="対象外?"
-                        color="warning"
-                        variant="outlined"
-                      />
+                      <Tooltip title={EXCLUDED_TOOLTIP}>
+                        <Chip
+                          size="small"
+                          label="対象外?"
+                          color="warning"
+                          variant="outlined"
+                        />
+                      </Tooltip>
                     )}
                   </Stack>
                 }
@@ -651,8 +664,8 @@ function CandidateRow({
             primary={
               <Stack
                 direction="row"
-                spacing={0.5}
-                sx={{ alignItems: "center", flexWrap: "wrap" }}
+                useFlexGap
+                sx={{ alignItems: "center", flexWrap: "wrap", gap: 0.5 }}
               >
                 <FolderOpenOutlinedIcon fontSize="small" color="action" />
                 <Typography variant="body2">{candidate.title}</Typography>
@@ -660,12 +673,14 @@ function CandidateRow({
                   <Chip size="small" label="取得失敗" variant="outlined" />
                 )}
                 {candidate.likelyExcluded && (
-                  <Chip
-                    size="small"
-                    label="対象外?"
-                    color="warning"
-                    variant="outlined"
-                  />
+                  <Tooltip title={EXCLUDED_TOOLTIP}>
+                    <Chip
+                      size="small"
+                      label="対象外?"
+                      color="warning"
+                      variant="outlined"
+                    />
+                  </Tooltip>
                 )}
                 {node.childrenTruncated && (
                   <Chip size="small" label="一部省略" variant="outlined" />
