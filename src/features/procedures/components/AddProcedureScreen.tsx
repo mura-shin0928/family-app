@@ -17,15 +17,27 @@ import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { useMemo, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { discoverProcedureLinks, ingestProcedure } from "../actions";
 import { AREA_CODE_OPTIONS, type DiscoverCandidate } from "../types";
 
-type Section = {
-  id: string;
-  seedLabel: string;
-  candidates: DiscoverCandidate[];
-  truncated: boolean;
+// 「一定の階層は時間がかかってもいいから最初から取得しておいてほしい」という
+// フィードバックへの対応。ユーザーの操作を待たずに深さ3(索引URL直下から3階層)
+// までは自動で掘り進める。1req/秒のレート制限はdiscoverProcedureLinks内で
+// 維持したまま行うため、実行には数十秒〜数分かかりうるが、既に取得できた候補は
+// 掘り進めている間もチェック・取り込みができる（バックグラウンドで進む体裁）。
+// これより深い階層は候補一覧の「もっと掘る」で手動になる。
+const AUTO_EXPAND_MAX_DEPTH = 3;
+
+type ChildrenStatus = "idle" | "loading" | "loaded" | "error";
+
+type CandidateNode = {
+  candidate: DiscoverCandidate;
+  depth: number;
+  childUrls: string[] | null;
+  childrenStatus: ChildrenStatus;
+  childrenError?: string;
+  childrenTruncated?: boolean;
 };
 
 type IngestItem = {
@@ -35,67 +47,181 @@ type IngestItem = {
   message?: string;
 };
 
+type FetchLevelResult =
+  | {
+      ok: true;
+      childUrls: string[];
+      newIndexUrls: string[];
+      truncated: boolean;
+    }
+  | { ok: false; error: string };
+
+function areaCodeLabel(areaCode: string | null): string {
+  if (areaCode === null) return "国（全国）";
+  return (
+    AREA_CODE_OPTIONS.find((option) => option.value === areaCode)?.label ??
+    areaCode
+  );
+}
+
 export function AddProcedureScreen() {
   const [url, setUrl] = useState("");
   const [areaCode, setAreaCode] = useState<string>("13210");
-  const [sections, setSections] = useState<Section[]>([]);
+  const [rootUrls, setRootUrls] = useState<string[]>([]);
+  const [nodesByUrl, setNodesByUrl] = useState<Record<string, CandidateNode>>(
+    {},
+  );
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [discoverError, setDiscoverError] = useState<string | null>(null);
-  const [pendingSeedLabel, setPendingSeedLabel] = useState<string | null>(null);
   const [isDiscovering, startDiscoverTransition] = useTransition();
+  const [autoExpandRemaining, setAutoExpandRemaining] = useState(0);
   const [ingestItems, setIngestItems] = useState<IngestItem[]>([]);
   const [isIngesting, startIngestTransition] = useTransition();
+  const [hasSearched, setHasSearched] = useState(false);
+  // 「見たことのあるURL」はツリー全体で一度だけ持つ（複数の索引ページから同じ
+  // ページへリンクされることがあるため）。setStateの関数形の外で使うのでrefにする。
+  const visitedRef = useRef<Set<string>>(new Set());
 
-  const candidateByUrl = useMemo(() => {
-    const map = new Map<string, DiscoverCandidate>();
-    for (const section of sections) {
-      for (const candidate of section.candidates) {
-        map.set(candidate.url, candidate);
+  function applyDefaultChecks(candidates: DiscoverCandidate[]) {
+    setChecked((current) => {
+      const next = { ...current };
+      for (const candidate of candidates) {
+        if (candidate.kind === "procedure" && !(candidate.url in next)) {
+          next[candidate.url] = !candidate.likelyExcluded;
+        }
+      }
+      return next;
+    });
+  }
+
+  // 1階層分を取得し、まだ見ていないURLだけをツリーへ追加する。「対象外?」の
+  // 索引は自動で掘る対象から外す（明らかに関係なさそうな分岐にまで自動で
+  // 時間を使わないため。手動の「もっと掘る」では引き続き辿れる）。
+  async function fetchLevel(
+    seedUrl: string,
+    depth: number,
+  ): Promise<FetchLevelResult> {
+    const result = await discoverProcedureLinks({ url: seedUrl, areaCode });
+    if (!result.ok) return { ok: false, error: result.error };
+
+    const added: Record<string, CandidateNode> = {};
+    const childUrls: string[] = [];
+    const newIndexUrls: string[] = [];
+
+    for (const candidate of result.candidates) {
+      if (visitedRef.current.has(candidate.url)) continue;
+      visitedRef.current.add(candidate.url);
+      added[candidate.url] = {
+        candidate,
+        depth,
+        childUrls: null,
+        childrenStatus: "idle",
+      };
+      childUrls.push(candidate.url);
+      if (candidate.kind === "index" && !candidate.likelyExcluded) {
+        newIndexUrls.push(candidate.url);
       }
     }
-    return map;
-  }, [sections]);
 
-  function runDiscover(seedUrl: string, seedLabel: string) {
-    setDiscoverError(null);
-    setPendingSeedLabel(seedLabel);
-    startDiscoverTransition(async () => {
-      const result = await discoverProcedureLinks({ url: seedUrl, areaCode });
-      setPendingSeedLabel(null);
+    setNodesByUrl((current) => ({ ...current, ...added }));
+    applyDefaultChecks(result.candidates);
 
-      if (!result.ok) {
-        setDiscoverError(result.error);
-        return;
+    return { ok: true, childUrls, newIndexUrls, truncated: result.truncated };
+  }
+
+  // 特定のノードを1階層だけ展開する。展開結果はそのノードの子として
+  // その場にネストする(sectionを末尾に追加していた旧実装からの変更点)。
+  async function expandNode(
+    parentUrl: string,
+    childDepth: number,
+  ): Promise<string[]> {
+    setNodesByUrl((current) => ({
+      ...current,
+      [parentUrl]: { ...current[parentUrl], childrenStatus: "loading" },
+    }));
+
+    const result = await fetchLevel(parentUrl, childDepth);
+
+    if (!result.ok) {
+      setNodesByUrl((current) => ({
+        ...current,
+        [parentUrl]: {
+          ...current[parentUrl],
+          childrenStatus: "error",
+          childrenError: result.error,
+        },
+      }));
+      return [];
+    }
+
+    setNodesByUrl((current) => ({
+      ...current,
+      [parentUrl]: {
+        ...current[parentUrl],
+        childUrls: result.childUrls,
+        childrenStatus: "loaded",
+        childrenTruncated: result.truncated,
+      },
+    }));
+
+    return result.newIndexUrls;
+  }
+
+  // 見つかった索引を深さ優先ではなく階層ごとに(幅優先で)自動的に展開する。
+  // AUTO_EXPAND_MAX_DEPTH に達したら止め、それ以上はユーザーの「もっと掘る」に委ねる。
+  async function runAutoExpandQueue(
+    initialQueue: { url: string; depth: number }[],
+  ) {
+    const queue = [...initialQueue];
+    setAutoExpandRemaining(queue.length);
+
+    while (queue.length > 0) {
+      const item = queue.shift();
+      if (!item) break;
+
+      const childDepth = item.depth + 1;
+      const newIndexUrls = await expandNode(item.url, childDepth);
+
+      if (childDepth < AUTO_EXPAND_MAX_DEPTH) {
+        for (const childUrl of newIndexUrls) {
+          queue.push({ url: childUrl, depth: childDepth });
+        }
       }
 
-      setSections((current) => [
-        ...current,
-        {
-          id: crypto.randomUUID(),
-          seedLabel,
-          candidates: result.candidates,
-          truncated: result.truncated,
-        },
-      ]);
-      setChecked((current) => {
-        const next = { ...current };
-        for (const candidate of result.candidates) {
-          if (candidate.kind === "procedure" && !(candidate.url in next)) {
-            next[candidate.url] = !candidate.likelyExcluded;
-          }
-        }
-        return next;
-      });
-    });
+      setAutoExpandRemaining(queue.length);
+    }
   }
 
   function handleSearch() {
     const trimmed = url.trim();
     if (!trimmed) return;
-    setSections([]);
+
+    visitedRef.current = new Set();
+    setNodesByUrl({});
+    setRootUrls([]);
     setChecked({});
     setIngestItems([]);
-    runDiscover(trimmed, trimmed);
+    setDiscoverError(null);
+    setAutoExpandRemaining(0);
+    setHasSearched(true);
+
+    startDiscoverTransition(async () => {
+      const result = await fetchLevel(trimmed, 1);
+      if (!result.ok) {
+        setDiscoverError(result.error);
+        return;
+      }
+
+      setRootUrls(result.childUrls);
+
+      await runAutoExpandQueue(
+        result.newIndexUrls.map((childUrl) => ({ url: childUrl, depth: 1 })),
+      );
+    });
+  }
+
+  function handleManualExpand(candidateUrl: string, depth: number) {
+    void expandNode(candidateUrl, depth + 1);
   }
 
   function toggleChecked(candidateUrl: string) {
@@ -114,7 +240,7 @@ export function AddProcedureScreen() {
 
     const items: IngestItem[] = checkedUrls.map((candidateUrl) => ({
       url: candidateUrl,
-      title: candidateByUrl.get(candidateUrl)?.title ?? candidateUrl,
+      title: nodesByUrl[candidateUrl]?.candidate.title ?? candidateUrl,
       status: "pending",
     }));
     setIngestItems(items);
@@ -163,7 +289,7 @@ export function AddProcedureScreen() {
       <Stack spacing={2}>
         <Typography variant="body2" color="text.secondary">
           制度が並んでいる索引ページのURLを貼ってください。索引でなく制度そのものの
-          ページを貼っても構いません。
+          ページを貼っても構いません。関連しそうな階層は自動でしばらく掘り進めます。
         </Typography>
 
         <TextField
@@ -195,7 +321,7 @@ export function AddProcedureScreen() {
           onClick={handleSearch}
           disabled={isDiscovering || url.trim() === ""}
         >
-          {isDiscovering && pendingSeedLabel === url.trim() ? (
+          {isDiscovering ? (
             <CircularProgress size={20} sx={{ color: "inherit" }} />
           ) : (
             "候補を取得"
@@ -204,140 +330,39 @@ export function AddProcedureScreen() {
 
         {discoverError && <Alert severity="warning">{discoverError}</Alert>}
 
-        {sections.map((section) => (
-          <Box key={section.id}>
-            <Divider sx={{ my: 1 }} />
-            <Typography
-              variant="subtitle2"
-              color="text.secondary"
-              gutterBottom
-              sx={{ wordBreak: "break-all" }}
-            >
-              {section.seedLabel}
-            </Typography>
-            {section.truncated && (
-              <Alert severity="info" sx={{ mb: 1 }}>
-                時間内に処理しきれなかったページがあります。必要なら再度お試しください。
-              </Alert>
-            )}
-            {section.candidates.length === 0 && (
-              <Typography variant="body2" color="text.secondary">
-                リンクが見つかりませんでした。
-              </Typography>
-            )}
-            <List dense disablePadding>
-              {section.candidates.map((candidate) => (
-                <ListItem
-                  key={candidate.url}
-                  disableGutters
-                  secondaryAction={
-                    candidate.kind === "index" ? (
-                      <Button
-                        size="small"
-                        startIcon={
-                          isDiscovering &&
-                          pendingSeedLabel === candidate.title ? undefined : (
-                            <FolderOpenOutlinedIcon />
-                          )
-                        }
-                        disabled={isDiscovering}
-                        onClick={() =>
-                          runDiscover(candidate.url, candidate.title)
-                        }
-                      >
-                        {isDiscovering &&
-                        pendingSeedLabel === candidate.title ? (
-                          <CircularProgress size={16} />
-                        ) : (
-                          "もう1階層掘る"
-                        )}
-                      </Button>
-                    ) : undefined
-                  }
-                >
-                  {candidate.kind === "procedure" ? (
-                    <FormControlLabel
-                      sx={{ width: "100%", mr: 0, alignItems: "flex-start" }}
-                      control={
-                        <Checkbox
-                          checked={!!checked[candidate.url]}
-                          onChange={() => toggleChecked(candidate.url)}
-                        />
-                      }
-                      label={
-                        <ListItemText
-                          primary={
-                            <Stack
-                              direction="row"
-                              spacing={0.5}
-                              sx={{ alignItems: "center", flexWrap: "wrap" }}
-                            >
-                              <ArticleOutlinedIcon
-                                fontSize="small"
-                                color="action"
-                              />
-                              <Typography variant="body2">
-                                {candidate.title}
-                              </Typography>
-                              {candidate.likelyExcluded && (
-                                <Chip
-                                  size="small"
-                                  label="対象外?"
-                                  color="warning"
-                                  variant="outlined"
-                                />
-                              )}
-                            </Stack>
-                          }
-                          secondary={[
-                            candidate.updatedOn
-                              ? `更新日: ${candidate.updatedOn}`
-                              : null,
-                            candidate.areaCode
-                              ? (AREA_CODE_OPTIONS.find(
-                                  (option) =>
-                                    option.value === candidate.areaCode,
-                                )?.label ?? candidate.areaCode)
-                              : "国（全国）",
-                          ]
-                            .filter(Boolean)
-                            .join(" / ")}
-                        />
-                      }
-                    />
-                  ) : (
-                    <ListItemText
-                      primary={
-                        <Stack
-                          direction="row"
-                          spacing={0.5}
-                          sx={{ alignItems: "center", flexWrap: "wrap" }}
-                        >
-                          <FolderOpenOutlinedIcon
-                            fontSize="small"
-                            color="action"
-                          />
-                          <Typography variant="body2">
-                            {candidate.title}
-                          </Typography>
-                          {candidate.fetchFailed && (
-                            <Chip
-                              size="small"
-                              label="取得失敗"
-                              variant="outlined"
-                            />
-                          )}
-                        </Stack>
-                      }
-                    />
-                  )}
-                </ListItem>
-              ))}
-            </List>
-          </Box>
-        ))}
+        {autoExpandRemaining > 0 && (
+          <Alert severity="info" icon={<CircularProgress size={16} />}>
+            関連しそうな階層を裏側で確認しています（残り{autoExpandRemaining}
+            件）。 見つかった候補から先にチェックできます。
+          </Alert>
+        )}
 
-        {sections.length > 0 && (
+        {rootUrls.length > 0 && (
+          <List dense disablePadding>
+            {rootUrls.map((rootUrl) => (
+              <CandidateRow
+                key={rootUrl}
+                nodeUrl={rootUrl}
+                nodesByUrl={nodesByUrl}
+                checked={checked}
+                isAutoExpanding={autoExpandRemaining > 0 || isDiscovering}
+                onToggle={toggleChecked}
+                onExpand={handleManualExpand}
+              />
+            ))}
+          </List>
+        )}
+
+        {hasSearched &&
+          rootUrls.length === 0 &&
+          !isDiscovering &&
+          !discoverError && (
+            <Typography variant="body2" color="text.secondary">
+              リンクが見つかりませんでした。
+            </Typography>
+          )}
+
+        {rootUrls.length > 0 && (
           <>
             <Divider sx={{ my: 1 }} />
             <Button
@@ -386,5 +411,148 @@ export function AddProcedureScreen() {
         )}
       </Stack>
     </Box>
+  );
+}
+
+// 索引ページを再帰的にネスト表示するための行。展開結果は末尾に追加する
+// セクションではなく、このノードの直下に差し込む(その場に増える見た目にするため)。
+function CandidateRow({
+  nodeUrl,
+  nodesByUrl,
+  checked,
+  isAutoExpanding,
+  onToggle,
+  onExpand,
+}: {
+  nodeUrl: string;
+  nodesByUrl: Record<string, CandidateNode>;
+  checked: Record<string, boolean>;
+  isAutoExpanding: boolean;
+  onToggle: (url: string) => void;
+  onExpand: (url: string, depth: number) => void;
+}) {
+  const node = nodesByUrl[nodeUrl];
+  if (!node) return null;
+
+  const { candidate } = node;
+  const indent = (node.depth - 1) * 3;
+
+  // 深さ1・2の索引は自動展開キューが処理する。展開中(=isAutoExpanding)は
+  // それらへの手動操作を止めて、自動キューとの競合(同じノードへの二重fetch)
+  // を避ける。深さ3以降は自動展開の対象外なので常に手動で操作できる。
+  const isAutoManagedDepth = node.depth < AUTO_EXPAND_MAX_DEPTH;
+  const showManualExpandButton =
+    candidate.kind === "index" &&
+    node.childUrls === null &&
+    node.childrenStatus !== "loading" &&
+    (!isAutoManagedDepth || !isAutoExpanding);
+
+  return (
+    <>
+      <ListItem
+        disableGutters
+        sx={{ pl: indent }}
+        secondaryAction={
+          node.childrenStatus === "loading" ? (
+            <CircularProgress size={16} sx={{ mr: 1 }} />
+          ) : showManualExpandButton ? (
+            <Button
+              size="small"
+              startIcon={<FolderOpenOutlinedIcon />}
+              onClick={() => onExpand(candidate.url, node.depth)}
+            >
+              もっと掘る
+            </Button>
+          ) : undefined
+        }
+      >
+        {candidate.kind === "procedure" ? (
+          <FormControlLabel
+            sx={{ width: "100%", mr: 0, alignItems: "flex-start" }}
+            control={
+              <Checkbox
+                checked={!!checked[candidate.url]}
+                onChange={() => onToggle(candidate.url)}
+              />
+            }
+            label={
+              <ListItemText
+                primary={
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    sx={{ alignItems: "center", flexWrap: "wrap" }}
+                  >
+                    <ArticleOutlinedIcon fontSize="small" color="action" />
+                    <Typography variant="body2">{candidate.title}</Typography>
+                    {candidate.likelyExcluded && (
+                      <Chip
+                        size="small"
+                        label="対象外?"
+                        color="warning"
+                        variant="outlined"
+                      />
+                    )}
+                  </Stack>
+                }
+                secondary={[
+                  candidate.updatedOn ? `更新日: ${candidate.updatedOn}` : null,
+                  areaCodeLabel(candidate.areaCode),
+                ]
+                  .filter(Boolean)
+                  .join(" / ")}
+              />
+            }
+          />
+        ) : (
+          <ListItemText
+            primary={
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{ alignItems: "center", flexWrap: "wrap" }}
+              >
+                <FolderOpenOutlinedIcon fontSize="small" color="action" />
+                <Typography variant="body2">{candidate.title}</Typography>
+                {candidate.fetchFailed && (
+                  <Chip size="small" label="取得失敗" variant="outlined" />
+                )}
+                {candidate.likelyExcluded && (
+                  <Chip
+                    size="small"
+                    label="対象外?"
+                    color="warning"
+                    variant="outlined"
+                  />
+                )}
+                {node.childrenTruncated && (
+                  <Chip size="small" label="一部省略" variant="outlined" />
+                )}
+              </Stack>
+            }
+          />
+        )}
+      </ListItem>
+
+      {node.childrenStatus === "error" && (
+        <Box sx={{ pl: indent + 2 }}>
+          <Alert severity="warning" sx={{ mb: 1 }}>
+            {node.childrenError}
+          </Alert>
+        </Box>
+      )}
+
+      {node.childUrls?.map((childUrl) => (
+        <CandidateRow
+          key={childUrl}
+          nodeUrl={childUrl}
+          nodesByUrl={nodesByUrl}
+          checked={checked}
+          isAutoExpanding={isAutoExpanding}
+          onToggle={onToggle}
+          onExpand={onExpand}
+        />
+      ))}
+    </>
   );
 }
