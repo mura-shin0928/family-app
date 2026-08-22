@@ -26,20 +26,37 @@ export function classifyCandidate(main: {
   return isIndex ? "index" : "procedure";
 }
 
-// 「対象外?」の機械判定に使うキーワードであり、同時に画面の「取り込みたい情報」
-// ラベル選択の選択肢そのものでもある(二重管理を避けるため1つのリストを共有する)。
-export const PROCEDURE_LABELS = [
-  "届",
-  "手当",
-  "助成",
-  "補助",
-  "給付",
-  "健診",
-  "検査",
-  "医療費",
-  "申請",
+// 「対象外?」の機械判定に使う個々のキーワード。「届」と「申請」、「補助」と
+// 「手当」のように、行政の用語としては別物でも家族にとっての意味は同じ
+// （役所に出す書類 / お金がもらえる）ため、ユーザー向けの選択肢はこの生の
+// キーワードではなく、意味でまとめたグループ(PROCEDURE_LABEL_GROUPS)で出す。
+export type ProcedureLabelGroup = {
+  id: string;
+  title: string;
+  keywords: readonly string[];
+};
+
+export const PROCEDURE_LABEL_GROUPS: readonly ProcedureLabelGroup[] = [
+  {
+    id: "money",
+    title: "お金(手当・助成など)",
+    keywords: ["手当", "助成", "補助", "給付"],
+  },
+  {
+    id: "paperwork",
+    title: "役所への届出・申請",
+    keywords: ["届", "申請"],
+  },
+  {
+    id: "health",
+    title: "健診・検査・医療費",
+    keywords: ["健診", "検査", "医療費"],
+  },
 ] as const;
-const INCLUDE_KEYWORDS: readonly string[] = PROCEDURE_LABELS;
+
+const INCLUDE_KEYWORDS: readonly string[] = PROCEDURE_LABEL_GROUPS.flatMap(
+  (group) => group.keywords,
+);
 const EXCLUDE_KEYWORDS = [
   "審議会",
   "検討会",
@@ -50,15 +67,19 @@ const EXCLUDE_KEYWORDS = [
 ];
 
 /**
- * ユーザーが選んだラベルにtitleが1つでも一致するか。全ラベルを選んでいる
- * (=絞り込んでいない)ときは常にtrueにする — 既定は今まで通り絞り込まない。
+ * ユーザーが選んだグループのキーワードにtitleが1つでも一致するか。
+ * 全グループを選んでいる(=絞り込んでいない)ときは常にtrueにする
+ * — 既定は今まで通り絞り込まない。
  */
-export function matchesSelectedLabels(
+export function matchesSelectedLabelGroups(
   title: string,
-  selectedLabels: readonly string[],
+  selectedGroupIds: readonly string[],
 ): boolean {
-  if (selectedLabels.length >= PROCEDURE_LABELS.length) return true;
-  return selectedLabels.some((label) => title.includes(label));
+  if (selectedGroupIds.length >= PROCEDURE_LABEL_GROUPS.length) return true;
+  const keywords = PROCEDURE_LABEL_GROUPS.filter((group) =>
+    selectedGroupIds.includes(group.id),
+  ).flatMap((group) => group.keywords);
+  return keywords.some((keyword) => title.includes(keyword));
 }
 
 /**

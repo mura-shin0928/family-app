@@ -19,7 +19,10 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRef, useState, useTransition } from "react";
 import { discoverProcedureLinks, ingestProcedure } from "../actions";
-import { matchesSelectedLabels, PROCEDURE_LABELS } from "../discover";
+import {
+  matchesSelectedLabelGroups,
+  PROCEDURE_LABEL_GROUPS,
+} from "../discover";
 import { AREA_CODE_OPTIONS, type DiscoverCandidate } from "../types";
 
 // 「一定の階層は時間がかかってもいいから最初から取得しておいてほしい」という
@@ -69,19 +72,19 @@ function areaCodeLabel(areaCode: string | null): string {
 // 一致しない)かどうか。優先度の低い候補一覧の折りたたみに使う。
 function isDeprioritized(
   candidate: DiscoverCandidate,
-  selectedLabels: string[],
+  selectedGroupIds: string[],
 ): boolean {
   if (candidate.kind !== "procedure") return false;
   if (candidate.likelyExcluded) return true;
-  return !matchesSelectedLabels(candidate.title, selectedLabels);
+  return !matchesSelectedLabelGroups(candidate.title, selectedGroupIds);
 }
 
 export function AddProcedureScreen() {
   const [url, setUrl] = useState("");
   const [areaCode, setAreaCode] = useState<string>("13210");
-  const [selectedLabels, setSelectedLabels] = useState<string[]>([
-    ...PROCEDURE_LABELS,
-  ]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(
+    PROCEDURE_LABEL_GROUPS.map((group) => group.id),
+  );
   const [rootUrls, setRootUrls] = useState<string[]>([]);
   const [nodesByUrl, setNodesByUrl] = useState<Record<string, CandidateNode>>(
     {},
@@ -97,14 +100,14 @@ export function AddProcedureScreen() {
   // ページへリンクされることがあるため）。setStateの関数形の外で使うのでrefにする。
   const visitedRef = useRef<Set<string>>(new Set());
 
-  function toggleLabel(label: string) {
-    setSelectedLabels((current) => {
-      if (current.includes(label)) {
+  function toggleLabelGroup(groupId: string) {
+    setSelectedGroupIds((current) => {
+      if (current.includes(groupId)) {
         // 最後の1つは外せないようにする（全解除=絞り込み無しと区別が付かなくなるため）
         if (current.length === 1) return current;
-        return current.filter((item) => item !== label);
+        return current.filter((item) => item !== groupId);
       }
-      return [...current, label];
+      return [...current, groupId];
     });
   }
 
@@ -148,7 +151,7 @@ export function AddProcedureScreen() {
       if (
         candidate.kind === "index" &&
         !candidate.likelyExcluded &&
-        matchesSelectedLabels(candidate.title, selectedLabels)
+        matchesSelectedLabelGroups(candidate.title, selectedGroupIds)
       ) {
         newIndexUrls.push(candidate.url);
       }
@@ -356,14 +359,18 @@ export function AddProcedureScreen() {
             spacing={0.5}
             sx={{ flexWrap: "wrap", rowGap: 0.5 }}
           >
-            {PROCEDURE_LABELS.map((label) => (
+            {PROCEDURE_LABEL_GROUPS.map((group) => (
               <Chip
-                key={label}
-                label={label}
+                key={group.id}
+                label={group.title}
                 size="small"
-                color={selectedLabels.includes(label) ? "primary" : "default"}
-                variant={selectedLabels.includes(label) ? "filled" : "outlined"}
-                onClick={() => toggleLabel(label)}
+                color={
+                  selectedGroupIds.includes(group.id) ? "primary" : "default"
+                }
+                variant={
+                  selectedGroupIds.includes(group.id) ? "filled" : "outlined"
+                }
+                onClick={() => toggleLabelGroup(group.id)}
               />
             ))}
           </Stack>
@@ -396,7 +403,7 @@ export function AddProcedureScreen() {
               urls={rootUrls}
               nodesByUrl={nodesByUrl}
               checked={checked}
-              selectedLabels={selectedLabels}
+              selectedGroupIds={selectedGroupIds}
               isAutoExpanding={autoExpandRemaining > 0 || isDiscovering}
               onToggle={toggleChecked}
               onExpand={handleManualExpand}
@@ -471,7 +478,7 @@ function CandidateList({
   urls,
   nodesByUrl,
   checked,
-  selectedLabels,
+  selectedGroupIds,
   isAutoExpanding,
   onToggle,
   onExpand,
@@ -479,7 +486,7 @@ function CandidateList({
   urls: string[];
   nodesByUrl: Record<string, CandidateNode>;
   checked: Record<string, boolean>;
-  selectedLabels: string[];
+  selectedGroupIds: string[];
   isAutoExpanding: boolean;
   onToggle: (url: string) => void;
   onExpand: (url: string, depth: number) => void;
@@ -491,7 +498,7 @@ function CandidateList({
   for (const candidateUrl of urls) {
     const node = nodesByUrl[candidateUrl];
     if (!node) continue;
-    if (isDeprioritized(node.candidate, selectedLabels)) {
+    if (isDeprioritized(node.candidate, selectedGroupIds)) {
       deprioritized.push(candidateUrl);
     } else {
       primary.push(candidateUrl);
@@ -506,7 +513,7 @@ function CandidateList({
           nodeUrl={candidateUrl}
           nodesByUrl={nodesByUrl}
           checked={checked}
-          selectedLabels={selectedLabels}
+          selectedGroupIds={selectedGroupIds}
           isAutoExpanding={isAutoExpanding}
           onToggle={onToggle}
           onExpand={onExpand}
@@ -530,7 +537,7 @@ function CandidateList({
                 nodeUrl={candidateUrl}
                 nodesByUrl={nodesByUrl}
                 checked={checked}
-                selectedLabels={selectedLabels}
+                selectedGroupIds={selectedGroupIds}
                 isAutoExpanding={isAutoExpanding}
                 onToggle={onToggle}
                 onExpand={onExpand}
@@ -548,7 +555,7 @@ function CandidateRow({
   nodeUrl,
   nodesByUrl,
   checked,
-  selectedLabels,
+  selectedGroupIds,
   isAutoExpanding,
   onToggle,
   onExpand,
@@ -556,7 +563,7 @@ function CandidateRow({
   nodeUrl: string;
   nodesByUrl: Record<string, CandidateNode>;
   checked: Record<string, boolean>;
-  selectedLabels: string[];
+  selectedGroupIds: string[];
   isAutoExpanding: boolean;
   onToggle: (url: string) => void;
   onExpand: (url: string, depth: number) => void;
@@ -575,7 +582,7 @@ function CandidateRow({
     node.depth < AUTO_EXPAND_MAX_DEPTH &&
     candidate.kind === "index" &&
     !candidate.likelyExcluded &&
-    matchesSelectedLabels(candidate.title, selectedLabels);
+    matchesSelectedLabelGroups(candidate.title, selectedGroupIds);
   const showManualExpandButton =
     candidate.kind === "index" &&
     node.childUrls === null &&
@@ -682,7 +689,7 @@ function CandidateRow({
           urls={node.childUrls}
           nodesByUrl={nodesByUrl}
           checked={checked}
-          selectedLabels={selectedLabels}
+          selectedGroupIds={selectedGroupIds}
           isAutoExpanding={isAutoExpanding}
           onToggle={onToggle}
           onExpand={onExpand}
