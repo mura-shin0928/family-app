@@ -22,7 +22,9 @@ function extractOgTitle(html: string): string {
 // <main> があればその中だけを本文にする（無ければ全体にフォールバック）。実測で、
 // 小金井市サイトは全体の6割、東京都サイトは95%以上がグローバルナビだった。
 // <main> 限定にすることで、引用照合の母集合がナビを含まず本文に閉じる。
-function extractMainHtml(html: string): string {
+// discoverのリンク列挙（discover.ts）でも同じ「本文はmain内に閉じる」判断を
+// 使うため、ここでのみ使う前提だった内部関数をexportする。
+export function extractMainHtml(html: string): string {
   const match = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
   return match?.[1] ?? html;
 }
