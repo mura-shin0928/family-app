@@ -15,7 +15,9 @@ export async function getTasks(familyId: string): Promise<TaskDTO[]> {
 
   const { data, error } = await supabase
     .from("tasks")
-    .select("id, title, due_on, is_purchase, status, completed_at, sort_order")
+    .select(
+      "id, title, due_on, is_purchase, status, completed_at, sort_order, url, note",
+    )
     .eq("family_id", familyId)
     .is("deleted_at", null)
     .or(`status.eq.open,and(status.eq.done,completed_at.gte.${cutoff})`)
@@ -35,6 +37,8 @@ export async function getTasks(familyId: string): Promise<TaskDTO[]> {
       status: row.status as TaskDTO["status"],
       completedAt: row.completed_at,
       sortOrder: row.sort_order,
+      url: row.url,
+      note: row.note,
     }),
   );
 }

@@ -12,4 +12,6 @@ export type TaskDTO = {
   status: TaskStatus;
   completedAt: string | null;
   sortOrder: number;
+  url: string | null;
+  note: string | null;
 };

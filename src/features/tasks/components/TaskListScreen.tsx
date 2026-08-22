@@ -27,7 +27,9 @@ import {
   setTaskDone,
   setTaskPurchase,
   updateTaskDueDate,
+  updateTaskNote,
   updateTaskTitle,
+  updateTaskUrl,
 } from "../actions";
 import {
   bucketOpenTasks,
@@ -60,6 +62,8 @@ type Action =
   | { type: "dueDate"; id: string; dueOn: string | null }
   | { type: "purchase"; id: string; isPurchase: boolean }
   | { type: "title"; id: string; title: string }
+  | { type: "url"; id: string; url: string | null }
+  | { type: "note"; id: string; note: string | null }
   | { type: "remove"; id: string };
 
 function applyAction(tasks: TaskDTO[], action: Action): TaskDTO[] {
@@ -89,6 +93,14 @@ function applyAction(tasks: TaskDTO[], action: Action): TaskDTO[] {
     case "title":
       return tasks.map((task) =>
         task.id === action.id ? { ...task, title: action.title } : task,
+      );
+    case "url":
+      return tasks.map((task) =>
+        task.id === action.id ? { ...task, url: action.url } : task,
+      );
+    case "note":
+      return tasks.map((task) =>
+        task.id === action.id ? { ...task, note: action.note } : task,
       );
     case "remove":
       return tasks.filter((task) => task.id !== action.id);
@@ -344,6 +356,8 @@ export function TaskListScreen({
         status: "open",
         completedAt: null,
         sortOrder: Number.MAX_SAFE_INTEGER,
+        url: null,
+        note: null,
       },
     }),
     { onFail: (error) => showToast({ message: error }) },
@@ -387,6 +401,26 @@ export function TaskListScreen({
       type: "title",
       id: input.taskId,
       title: input.title,
+    }),
+    { onFail: (error) => showToast({ message: error }) },
+  );
+
+  const urlMutation = useOptimisticTasksMutation(
+    updateTaskUrl,
+    (input: { taskId: string; url: string }): Action => ({
+      type: "url",
+      id: input.taskId,
+      url: input.url === "" ? null : input.url,
+    }),
+    { onFail: (error) => showToast({ message: error }) },
+  );
+
+  const noteMutation = useOptimisticTasksMutation(
+    updateTaskNote,
+    (input: { taskId: string; note: string }): Action => ({
+      type: "note",
+      id: input.taskId,
+      note: input.note === "" ? null : input.note,
     }),
     { onFail: (error) => showToast({ message: error }) },
   );
@@ -449,6 +483,16 @@ export function TaskListScreen({
     titleMutation.mutate({ taskId: task.id, title });
   }
 
+  function handleUrlChange(task: TaskDTO, url: string) {
+    if (url === (task.url ?? "")) return;
+    urlMutation.mutate({ taskId: task.id, url });
+  }
+
+  function handleNoteChange(task: TaskDTO, note: string) {
+    if (note === (task.note ?? "")) return;
+    noteMutation.mutate({ taskId: task.id, note });
+  }
+
   function handlePurchaseToggle(task: TaskDTO) {
     purchaseMutation.mutate({
       taskId: task.id,
@@ -468,6 +512,8 @@ export function TaskListScreen({
     onToggle: handleToggle,
     onDueDateChange: handleDueDateChange,
     onTitleChange: handleTitleChange,
+    onUrlChange: handleUrlChange,
+    onNoteChange: handleNoteChange,
     onPurchaseToggle: handlePurchaseToggle,
     onDelete: setTaskPendingDelete,
   };

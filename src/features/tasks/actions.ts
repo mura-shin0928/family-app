@@ -8,7 +8,9 @@ import {
   toggleDoneSchema,
   togglePurchaseSchema,
   updateDueDateSchema,
+  updateNoteSchema,
   updateTitleSchema,
+  updateUrlSchema,
 } from "./schema";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -166,6 +168,62 @@ export async function updateTaskTitle(input: {
 
   if (error) {
     return { ok: false, error: "タイトルの更新に失敗しました" };
+  }
+
+  return { ok: true };
+}
+
+export async function updateTaskUrl(input: {
+  taskId: string;
+  url: string;
+}): Promise<ActionResult> {
+  const parsed = updateUrlSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "URLの形式が正しくありません",
+    };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({ url: parsed.data.url === "" ? null : parsed.data.url })
+    .eq("id", parsed.data.taskId)
+    .eq("family_id", member.familyId);
+
+  if (error) {
+    return { ok: false, error: "URLの更新に失敗しました" };
+  }
+
+  return { ok: true };
+}
+
+export async function updateTaskNote(input: {
+  taskId: string;
+  note: string;
+}): Promise<ActionResult> {
+  const parsed = updateNoteSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({ note: parsed.data.note === "" ? null : parsed.data.note })
+    .eq("id", parsed.data.taskId)
+    .eq("family_id", member.familyId);
+
+  if (error) {
+    return { ok: false, error: "メモの更新に失敗しました" };
   }
 
   return { ok: true };
