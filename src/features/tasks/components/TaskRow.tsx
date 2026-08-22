@@ -119,25 +119,25 @@ export function TaskRow({
           <ClickAwayListener onClickAway={() => setEditingDue(false)}>
             <Box>
               {editingDue ? (
-                <Box
-                  sx={{
-                    mt: 0.5,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                  }}
-                >
+                <Box sx={{ mt: 0.5 }}>
+                  {/*
+                    autoFocusは付けない。iOSでは空のdate inputに自動フォーカス
+                    すると、ユーザーが何も操作していないのに「今日」でchangeが
+                    発火してしまう不具合があるため（QuickCaptureBarの期限パネル
+                    も同じ理由でautoFocusなし）。
+                  */}
                   <TextField
                     type="date"
                     size="small"
                     variant="standard"
-                    autoFocus
                     defaultValue={task.dueOn ?? ""}
                     onChange={(event) => {
                       onDueDateChange(task, event.target.value || null);
                       setEditingDue(false);
                     }}
                     slotProps={{
+                      // 16px未満だとiOSでフォーカス時に画面全体がズームされる。
+                      // 16pxにする分、ボタンは横に並べず下に積んで幅の競合を避ける。
                       htmlInput: { style: { fontSize: "1rem" } },
                     }}
                   />
@@ -145,10 +145,13 @@ export function TaskRow({
                     <Button
                       size="small"
                       sx={{
+                        display: "block",
+                        mt: 0.5,
                         p: 0,
                         minWidth: 0,
                         textTransform: "none",
                         fontSize: "0.75rem",
+                        whiteSpace: "nowrap",
                       }}
                       onClick={() => {
                         onDueDateChange(task, null);
