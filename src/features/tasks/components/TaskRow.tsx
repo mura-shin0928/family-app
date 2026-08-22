@@ -93,7 +93,7 @@ export function TaskRow({
                   setEditingTitle(false);
                 }
               }}
-              slotProps={{ htmlInput: { style: { fontSize: "0.875rem" } } }}
+              slotProps={{ htmlInput: { style: { fontSize: "1rem" } } }}
             />
           ) : (
             <Typography
@@ -258,7 +258,7 @@ export function TaskRow({
                   </IconButton>
                 ) : undefined,
               },
-              htmlInput: { style: { fontSize: "0.8125rem" } },
+              htmlInput: { style: { fontSize: "1rem" } },
             }}
           />
           <TextField
@@ -269,7 +269,7 @@ export function TaskRow({
             placeholder="メモ"
             defaultValue={task.note ?? ""}
             onBlur={(event) => onNoteChange(task, event.target.value)}
-            slotProps={{ htmlInput: { style: { fontSize: "0.8125rem" } } }}
+            slotProps={{ htmlInput: { style: { fontSize: "1rem" } } }}
           />
         </Stack>
       </Collapse>
