@@ -30,5 +30,16 @@ export const theme = createTheme({
         size: "small",
       },
     },
+    // iOS Safariはフォーム要素のフォントサイズが16px未満だとフォーカス時に
+    // 自動ズームする。size="small"等でも入力中の文字は16px以上を保つため、
+    // 個々のTextField側ではなくここで下限を固定する（表示用テキストの
+    // 14px運用には影響しない）。
+    MuiInputBase: {
+      styleOverrides: {
+        input: {
+          fontSize: "1rem",
+        },
+      },
+    },
   },
 });
