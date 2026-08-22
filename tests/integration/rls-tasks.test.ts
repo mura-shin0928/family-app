@@ -214,6 +214,54 @@ describe("tasks RLS", () => {
       .eq("id", taskF1);
   });
 
+  it("a member can set and clear url/note on their own family's task (T1)", async () => {
+    const clientA = await signInAsClient(userA.email, PASSWORD);
+
+    const { error: setError } = await clientA
+      .from("tasks")
+      .update({
+        url: "https://www.city.koganei.lg.jp/kosodatekyoiku/433/index.html",
+        note: "母子手帳を持っていく",
+      })
+      .eq("id", taskF1);
+    expect(setError).toBeNull();
+
+    const { data: set } = await admin
+      .from("tasks")
+      .select("url, note")
+      .eq("id", taskF1)
+      .single();
+    expect(set?.url).toBe(
+      "https://www.city.koganei.lg.jp/kosodatekyoiku/433/index.html",
+    );
+    expect(set?.note).toBe("母子手帳を持っていく");
+
+    const { error: clearError } = await clientA
+      .from("tasks")
+      .update({ url: null, note: null })
+      .eq("id", taskF1);
+    expect(clearError).toBeNull();
+
+    const { data: cleared } = await admin
+      .from("tasks")
+      .select("url, note")
+      .eq("id", taskF1)
+      .single();
+    expect(cleared?.url).toBeNull();
+    expect(cleared?.note).toBeNull();
+  });
+
+  it("rejects a url longer than 2000 characters (DB check constraint)", async () => {
+    const tooLong = `https://example.test/${"a".repeat(2000)}`;
+
+    const { error } = await admin
+      .from("tasks")
+      .update({ url: tooLong })
+      .eq("id", taskF1);
+
+    expect(error).not.toBeNull();
+  });
+
   it("cannot update another family's task", async () => {
     const clientA = await signInAsClient(userA.email, PASSWORD);
 
