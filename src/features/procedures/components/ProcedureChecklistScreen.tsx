@@ -116,7 +116,7 @@ export function ProcedureChecklistScreen({
             startIcon={<EditOutlinedIcon fontSize="small" />}
             onClick={() => setEditMode((current) => !current)}
           >
-            {editMode ? "保存" : "編集"}
+            {editMode ? "編集終了" : "編集"}
           </Button>
         </Toolbar>
       </AppBar>
@@ -317,10 +317,6 @@ function ProcedureChecklistItem({
           ) : drafts.length > 0 ? (
             <Alert severity="info">
               自治体・国の情報を取り込み済みですが、まだ内容の確認待ちです。
-            </Alert>
-          ) : item.category ? (
-            <Alert severity="warning" variant="outlined">
-              この項目の自治体・国の制度情報はまだ登録されていません。
             </Alert>
           ) : null}
 
