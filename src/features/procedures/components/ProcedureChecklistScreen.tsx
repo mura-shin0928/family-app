@@ -5,7 +5,6 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import SearchIcon from "@mui/icons-material/Search";
 import Accordion from "@mui/material/Accordion";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
@@ -42,11 +41,9 @@ import {
 import type { MatchedProcedure } from "../queries";
 import {
   PROCEDURE_CATEGORIES,
-  type ProcedureCategory,
   type Template,
   type TemplateItem,
 } from "../types";
-import { ItemProcedureSearch } from "./ItemProcedureSearch";
 
 function formatDate(dateString: string): string {
   const [year, month, day] = dateString.split("-");
@@ -60,7 +57,6 @@ export function ProcedureChecklistScreen({
   procedures,
   linkedTaskIdByKey,
   municipalityCode,
-  areaCode,
 }: {
   template: Template;
   items: TemplateItem[];
@@ -68,7 +64,6 @@ export function ProcedureChecklistScreen({
   procedures: MatchedProcedure[];
   linkedTaskIdByKey: Record<string, string>;
   municipalityCode: string | null;
-  areaCode: string;
 }) {
   const router = useRouter();
   const [selectedChildId, setSelectedChildId] = useState<string | null>(
@@ -165,7 +160,6 @@ export function ProcedureChecklistScreen({
                 )}
                 childAnchor={childAnchor}
                 childId={selectedChild?.id ?? null}
-                areaCode={areaCode}
                 linkedTaskId={
                   linkedTaskIdByKey[`${item.id}:${selectedChild?.id ?? ""}`]
                 }
@@ -256,7 +250,6 @@ function ProcedureChecklistItem({
   matches,
   childAnchor,
   childId,
-  areaCode,
   linkedTaskId,
   editMode,
   onChanged,
@@ -265,7 +258,6 @@ function ProcedureChecklistItem({
   matches: MatchedProcedure[];
   childAnchor: { birthDate: string | null; expectedBirthDate: string | null };
   childId: string | null;
-  areaCode: string;
   linkedTaskId: string | undefined;
   editMode: boolean;
   onChanged: () => void;
@@ -349,14 +341,6 @@ function ProcedureChecklistItem({
                 officialDeadline?.on ?? officialDeadline?.windowTo ?? estimateOn
               }
               alreadyAdded={!!linkedTaskId}
-            />
-          )}
-
-          {item.category && best === null && (
-            <ItemSearchToggle
-              category={item.category}
-              areaCode={areaCode}
-              onIngested={onChanged}
             />
           )}
 
@@ -529,40 +513,6 @@ function AddToTaskButton({
       </Button>
       {error && <Alert severity="error">{error}</Alert>}
     </Stack>
-  );
-}
-
-function ItemSearchToggle({
-  category,
-  areaCode,
-  onIngested,
-}: {
-  category: ProcedureCategory;
-  areaCode: string;
-  onIngested: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-
-  if (!open) {
-    return (
-      <Button
-        size="small"
-        variant="outlined"
-        startIcon={<SearchIcon fontSize="small" />}
-        onClick={() => setOpen(true)}
-        sx={{ alignSelf: "flex-start" }}
-      >
-        この項目の制度情報を探す
-      </Button>
-    );
-  }
-
-  return (
-    <ItemProcedureSearch
-      category={category}
-      areaCode={areaCode}
-      onIngested={onIngested}
-    />
   );
 }
 

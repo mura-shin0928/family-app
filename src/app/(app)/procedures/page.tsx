@@ -12,10 +12,6 @@ import {
 import type { ProcedureCategory } from "@/features/procedures/types";
 import { AppHeader } from "../AppHeader";
 
-// ItemProcedureSearch経由のdiscover/ingestはここから起動されるため、
-// AddProcedureScreen時代と同じ予算(60秒)を確保する。
-export const maxDuration = 60;
-
 export default async function ProceduresPage() {
   const { member } = await requireFamilyMember();
 
@@ -73,7 +69,6 @@ export default async function ProceduresPage() {
         procedures={procedures}
         linkedTaskIdByKey={linkedTaskIdByKey}
         municipalityCode={municipalityCode}
-        areaCode={municipalityCode ?? ""}
       />
     </Box>
   );
