@@ -1,8 +1,8 @@
 "use client";
 
 import ChecklistOutlinedIcon from "@mui/icons-material/ChecklistOutlined";
+import ChildCareIcon from "@mui/icons-material/ChildCare";
 import DiningOutlinedIcon from "@mui/icons-material/DiningOutlined";
-import StarIcon from "@mui/icons-material/Star";
 import BottomNavigation from "@mui/material/BottomNavigation";
 import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import Paper from "@mui/material/Paper";
@@ -54,7 +54,7 @@ export function BottomNav() {
           href="/procedures"
           value="/procedures"
           aria-label="手続き"
-          icon={<StarIcon />}
+          icon={<ChildCareIcon />}
         />
       </BottomNavigation>
     </Paper>
