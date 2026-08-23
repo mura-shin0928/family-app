@@ -45,6 +45,7 @@ export function TaskRow({
   onDelete,
 }: Props) {
   const [editingDue, setEditingDue] = useState(false);
+  const [draftDue, setDraftDue] = useState("");
   const [editingTitle, setEditingTitle] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const done = task.status === "done";
@@ -56,6 +57,16 @@ export function TaskRow({
     if (trimmed && trimmed !== task.title) {
       onTitleChange(task, trimmed);
     }
+  }
+
+  function openDueEditor() {
+    setDraftDue(task.dueOn ?? "");
+    setEditingDue(true);
+  }
+
+  function commitDue(value: string | null) {
+    onDueDateChange(task, value);
+    setEditingDue(false);
   }
 
   return (
@@ -126,21 +137,43 @@ export function TaskRow({
                     発火してしまう不具合があるため（QuickCaptureBarの期限パネル
                     も同じ理由でautoFocusなし）。
                   */}
+                  {/*
+                    onChangeでは確定しない。iOSでは自動フォーカスでなく手動タップ
+                    でも、空のdate inputを開いた時点でピッカーが「今日」を仮表示し
+                    changeが発火することがある。ここで即確定・即クローズしていると、
+                    そのタップだけで期限が無言で「今日」になり、パネルも同時に閉じる
+                    ため「タップしても何も起きない（が期限は変わっている）」ように
+                    見えてしまっていた。値はdraftDueに留め、下のボタンでの明示的な
+                    確定操作でのみonDueDateChangeを呼ぶ。
+                  */}
                   <TextField
                     type="date"
                     size="small"
                     variant="standard"
-                    defaultValue={task.dueOn ?? ""}
-                    onChange={(event) => {
-                      onDueDateChange(task, event.target.value || null);
-                      setEditingDue(false);
-                    }}
+                    value={draftDue}
+                    onChange={(event) => setDraftDue(event.target.value)}
                     slotProps={{
                       // 16px未満だとiOSでフォーカス時に画面全体がズームされる。
                       // 16pxにする分、ボタンは横に並べず下に積んで幅の競合を避ける。
                       htmlInput: { style: { fontSize: "1rem" } },
                     }}
                   />
+                  <Button
+                    size="small"
+                    disabled={!draftDue}
+                    sx={{
+                      display: "block",
+                      mt: 0.5,
+                      p: 0,
+                      minWidth: 0,
+                      textTransform: "none",
+                      fontSize: "0.75rem",
+                      whiteSpace: "nowrap",
+                    }}
+                    onClick={() => commitDue(draftDue || null)}
+                  >
+                    設定
+                  </Button>
                   {task.dueOn && (
                     <Button
                       size="small"
@@ -153,10 +186,7 @@ export function TaskRow({
                         fontSize: "0.75rem",
                         whiteSpace: "nowrap",
                       }}
-                      onClick={() => {
-                        onDueDateChange(task, null);
-                        setEditingDue(false);
-                      }}
+                      onClick={() => commitDue(null)}
                     >
                       期限なしにする
                     </Button>
@@ -165,7 +195,7 @@ export function TaskRow({
               ) : (
                 <Button
                   size="small"
-                  onClick={() => setEditingDue(true)}
+                  onClick={openDueEditor}
                   sx={{
                     mt: 0.25,
                     p: 0,
