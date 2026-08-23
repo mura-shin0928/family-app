@@ -2,6 +2,7 @@
 
 import ChecklistOutlinedIcon from "@mui/icons-material/ChecklistOutlined";
 import DiningOutlinedIcon from "@mui/icons-material/DiningOutlined";
+import StarIcon from "@mui/icons-material/Star";
 import BottomNavigation from "@mui/material/BottomNavigation";
 import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import Paper from "@mui/material/Paper";
@@ -10,12 +11,14 @@ import { usePathname } from "next/navigation";
 
 export function BottomNav() {
   const pathname = usePathname();
-  // タブに属さないページ（/family等）では、どちらのタブも選択状態にしない。
+  // タブに属さないページ（/family等）では、どのタブも選択状態にしない。
   const value = pathname.startsWith("/recipes")
     ? "/recipes"
-    : pathname === "/"
-      ? "/"
-      : false;
+    : pathname.startsWith("/procedures")
+      ? "/procedures"
+      : pathname === "/"
+        ? "/"
+        : false;
 
   return (
     <Paper
@@ -45,6 +48,13 @@ export function BottomNav() {
           value="/recipes"
           aria-label="レシピ"
           icon={<DiningOutlinedIcon />}
+        />
+        <BottomNavigationAction
+          component={Link}
+          href="/procedures"
+          value="/procedures"
+          aria-label="手続き"
+          icon={<StarIcon />}
         />
       </BottomNavigation>
     </Paper>

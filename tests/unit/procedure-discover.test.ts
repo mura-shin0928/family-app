@@ -4,8 +4,6 @@ import {
   extractLinks,
   inferAreaCode,
   isLikelyExcluded,
-  matchesSelectedLabelGroups,
-  PROCEDURE_LABEL_GROUPS,
 } from "@/features/procedures/discover";
 import {
   isPathAllowed,
@@ -84,42 +82,6 @@ describe("inferAreaCode", () => {
 
   it("does not guess codes for unmapped municipalities", () => {
     expect(inferAreaCode("www.city.mitaka.lg.jp", "13210")).toBe("13210");
-  });
-});
-
-describe("matchesSelectedLabelGroups", () => {
-  it("treats selecting every group as no filter", () => {
-    expect(
-      matchesSelectedLabelGroups(
-        "審議会だより",
-        PROCEDURE_LABEL_GROUPS.map((group) => group.id),
-      ),
-    ).toBe(true);
-  });
-
-  it("matches when the title contains a keyword from a selected group", () => {
-    // 「手当」は money グループ
-    expect(matchesSelectedLabelGroups("児童手当のご案内", ["money"])).toBe(
-      true,
-    );
-  });
-
-  it("does not match when the title has no keyword from a selected group", () => {
-    expect(matchesSelectedLabelGroups("児童手当のご案内", ["health"])).toBe(
-      false,
-    );
-  });
-
-  it("groups synonymous keywords together (届/申請, 補助/手当)", () => {
-    expect(matchesSelectedLabelGroups("出生届の手続き", ["paperwork"])).toBe(
-      true,
-    );
-    expect(
-      matchesSelectedLabelGroups("〇〇の申請について", ["paperwork"]),
-    ).toBe(true);
-    expect(matchesSelectedLabelGroups("〇〇費の補助制度", ["money"])).toBe(
-      true,
-    );
   });
 });
 

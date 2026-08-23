@@ -15,29 +15,19 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
-import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useRef, useState, useTransition } from "react";
 import { discoverProcedureLinks, ingestProcedure } from "../actions";
-import {
-  matchesSelectedLabelGroups,
-  PROCEDURE_LABEL_GROUPS,
-} from "../discover";
-import { AREA_CODE_OPTIONS, type DiscoverCandidate } from "../types";
+import type { DiscoverCandidate, ProcedureCategory } from "../types";
 
 // 「一定の階層は時間がかかってもいいから最初から取得しておいてほしい」という
-// フィードバックへの対応。ユーザーの操作を待たずに深さ3(索引URL直下から3階層)
-// までは自動で掘り進める。1req/秒のレート制限はdiscoverProcedureLinks内で
-// 維持したまま行うため、実行には数十秒〜数分かかりうるが、既に取得できた候補は
-// 掘り進めている間もチェック・取り込みができる（バックグラウンドで進む体裁）。
-// これより深い階層は候補一覧の「もっと掘る」で手動になる。
+// フィードバックへの対応（AddProcedureScreen由来）。索引URL直下から3階層までは
+// 自動で掘り進める。
 const AUTO_EXPAND_MAX_DEPTH = 3;
 
-// 「対象外?としてるのはなんだっけ?」への対応。タップ/ホバーで理由が分かるように
-// Tooltipで補足する。
 const EXCLUDED_TOOLTIP =
   "「審議会」「計画」などの言葉があり、「届」「手当」「健診」など制度らしい言葉が" +
   "見当たらないため、機械的に対象外の可能性ありとしています(誤判定のこともあります)";
@@ -69,31 +59,23 @@ type FetchLevelResult =
     }
   | { ok: false; error: string };
 
-function areaCodeLabel(areaCode: string | null): string {
-  if (areaCode === null) return "国（全国）";
-  return (
-    AREA_CODE_OPTIONS.find((option) => option.value === areaCode)?.label ??
-    areaCode
-  );
-}
-
-// 候補が「後回しでよい」もの(=対象外?の印がある、または絞り込んだラベルに
-// 一致しない)かどうか。優先度の低い候補一覧の折りたたみに使う。
-function isDeprioritized(
-  candidate: DiscoverCandidate,
-  selectedGroupIds: string[],
-): boolean {
-  if (candidate.kind !== "procedure") return false;
-  if (candidate.likelyExcluded) return true;
-  return !matchesSelectedLabelGroups(candidate.title, selectedGroupIds);
-}
-
-export function AddProcedureScreen() {
+/**
+ * テンプレート項目の詳細から「この項目の制度情報を探す」で開く縮小版フォーム。
+ * AddProcedureScreen(旧P1のトップレベル探索画面)から、探しているカテゴリと
+ * 対象地域は既に項目の文脈で決まっているという前提でラベル絞り込み・地域選択を
+ * 取り除いたもの。索引URLを貼って階層を自動で掘る挙動自体は引き継ぐ
+ * （URLだけで正しい制度ページに辿り着けるとは限らないため）。
+ */
+export function ItemProcedureSearch({
+  category,
+  areaCode,
+  onIngested,
+}: {
+  category: ProcedureCategory;
+  areaCode: string;
+  onIngested: () => void;
+}) {
   const [url, setUrl] = useState("");
-  const [areaCode, setAreaCode] = useState<string>("13210");
-  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>(
-    PROCEDURE_LABEL_GROUPS.map((group) => group.id),
-  );
   const [rootUrls, setRootUrls] = useState<string[]>([]);
   const [nodesByUrl, setNodesByUrl] = useState<Record<string, CandidateNode>>(
     {},
@@ -105,39 +87,20 @@ export function AddProcedureScreen() {
   const [ingestItems, setIngestItems] = useState<IngestItem[]>([]);
   const [isIngesting, startIngestTransition] = useTransition();
   const [hasSearched, setHasSearched] = useState(false);
-  // 「見たことのあるURL」はツリー全体で一度だけ持つ（複数の索引ページから同じ
-  // ページへリンクされることがあるため）。setStateの関数形の外で使うのでrefにする。
   const visitedRef = useRef<Set<string>>(new Set());
 
-  function toggleLabelGroup(groupId: string) {
-    setSelectedGroupIds((current) => {
-      if (current.includes(groupId)) {
-        // 最後の1つは外せないようにする（全解除=絞り込み無しと区別が付かなくなるため）
-        if (current.length === 1) return current;
-        return current.filter((item) => item !== groupId);
-      }
-      return [...current, groupId];
-    });
-  }
-
-  // 「対象外?・絞り込み対象外の候補を表示」に隠れている(=isDeprioritized)候補は、
-  // 見ていないのに取り込まれることが無いよう既定でチェックを入れない。
   function applyDefaultChecks(candidates: DiscoverCandidate[]) {
     setChecked((current) => {
       const next = { ...current };
       for (const candidate of candidates) {
         if (candidate.kind === "procedure" && !(candidate.url in next)) {
-          next[candidate.url] = !isDeprioritized(candidate, selectedGroupIds);
+          next[candidate.url] = !candidate.likelyExcluded;
         }
       }
       return next;
     });
   }
 
-  // 1階層分を取得し、まだ見ていないURLだけをツリーへ追加する。索引のうち
-  // 選んだラベルに一致しないものは自動で掘る対象から外す(自動深掘りの
-  // 分岐を絞ることで所要時間と表示件数の両方を減らす)。「対象外?」の索引も
-  // 同様に対象から外す。どちらも手動の「もっと掘る」では引き続き辿れる。
   async function fetchLevel(
     seedUrl: string,
     depth: number,
@@ -159,11 +122,7 @@ export function AddProcedureScreen() {
         childrenStatus: "idle",
       };
       childUrls.push(candidate.url);
-      if (
-        candidate.kind === "index" &&
-        !candidate.likelyExcluded &&
-        matchesSelectedLabelGroups(candidate.title, selectedGroupIds)
-      ) {
+      if (candidate.kind === "index" && !candidate.likelyExcluded) {
         newIndexUrls.push(candidate.url);
       }
     }
@@ -174,8 +133,6 @@ export function AddProcedureScreen() {
     return { ok: true, childUrls, newIndexUrls, truncated: result.truncated };
   }
 
-  // 特定のノードを1階層だけ展開する。展開結果はそのノードの子として
-  // その場にネストする(sectionを末尾に追加していた旧実装からの変更点)。
   async function expandNode(
     parentUrl: string,
     childDepth: number,
@@ -212,8 +169,6 @@ export function AddProcedureScreen() {
     return result.newIndexUrls;
   }
 
-  // 見つかった索引を深さ優先ではなく階層ごとに(幅優先で)自動的に展開する。
-  // AUTO_EXPAND_MAX_DEPTH に達したら止め、それ以上はユーザーの「もっと掘る」に委ねる。
   async function runAutoExpandQueue(
     initialQueue: { url: string; depth: number }[],
   ) {
@@ -291,8 +246,13 @@ export function AddProcedureScreen() {
     setIngestItems(items);
 
     startIngestTransition(async () => {
+      let hasSuccess = false;
       for (const item of items) {
-        const result = await ingestProcedure({ url: item.url, areaCode });
+        const result = await ingestProcedure({
+          url: item.url,
+          areaCode,
+          category,
+        });
 
         setIngestItems((current) =>
           current.map((currentItem) => {
@@ -321,7 +281,11 @@ export function AddProcedureScreen() {
             };
           }),
         );
+
+        if (result.ok && result.status === "inserted") hasSuccess = true;
       }
+
+      if (hasSuccess) onIngested();
     });
   }
 
@@ -330,58 +294,21 @@ export function AddProcedureScreen() {
   ).length;
 
   return (
-    <Box sx={{ p: 2, pb: 10 }}>
-      <Stack spacing={2}>
+    <Box sx={{ pt: 1 }}>
+      <Stack spacing={1.5}>
         <Typography variant="body2" color="text.secondary">
-          制度が並んでいる索引ページのURLを貼ってください。索引でなく制度そのものの
-          ページを貼っても構いません。関連しそうな階層は自動でしばらく掘り進めます。
+          自治体・国のページのURLを貼ってください。索引ページでも制度そのものの
+          ページでも構いません。関連しそうな階層は自動でしばらく掘り進めます。
         </Typography>
 
         <TextField
-          label="索引ページのURL"
+          label="URL"
           placeholder="https://..."
           value={url}
           onChange={(event) => setUrl(event.target.value)}
           fullWidth
           size="small"
         />
-
-        <TextField
-          select
-          label="対象地域（ページの管轄が判定できない場合に使う値）"
-          value={areaCode}
-          onChange={(event) => setAreaCode(event.target.value)}
-          size="small"
-          fullWidth
-        >
-          {AREA_CODE_OPTIONS.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              {option.label}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <Box>
-          <Typography variant="caption" color="text.secondary" gutterBottom>
-            取り込みたい情報（絞ると自動で掘る範囲と候補の表示が絞られます。すべて選ぶと絞り込みなし）
-          </Typography>
-          <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 0.5 }}>
-            {PROCEDURE_LABEL_GROUPS.map((group) => (
-              <Chip
-                key={group.id}
-                label={group.title}
-                size="small"
-                color={
-                  selectedGroupIds.includes(group.id) ? "primary" : "default"
-                }
-                variant={
-                  selectedGroupIds.includes(group.id) ? "filled" : "outlined"
-                }
-                onClick={() => toggleLabelGroup(group.id)}
-              />
-            ))}
-          </Stack>
-        </Box>
 
         <Button
           variant="contained"
@@ -400,7 +327,7 @@ export function AddProcedureScreen() {
         {autoExpandRemaining > 0 && (
           <Alert severity="info" icon={<CircularProgress size={16} />}>
             関連しそうな階層を裏側で確認しています（残り{autoExpandRemaining}
-            件）。 見つかった候補から先にチェックできます。
+            件）。見つかった候補から先にチェックできます。
           </Alert>
         )}
 
@@ -410,7 +337,6 @@ export function AddProcedureScreen() {
               urls={rootUrls}
               nodesByUrl={nodesByUrl}
               checked={checked}
-              selectedGroupIds={selectedGroupIds}
               isAutoExpanding={autoExpandRemaining > 0 || isDiscovering}
               onToggle={toggleChecked}
               onExpand={handleManualExpand}
@@ -429,7 +355,7 @@ export function AddProcedureScreen() {
 
         {rootUrls.length > 0 && (
           <>
-            <Divider sx={{ my: 1 }} />
+            <Divider sx={{ my: 0.5 }} />
             <Button
               variant="contained"
               color="primary"
@@ -479,13 +405,10 @@ export function AddProcedureScreen() {
   );
 }
 
-// urlsを「優先度の高い候補」と「後回しでよい候補(対象外?/選んだラベルに
-// 不一致)」に分け、後者は既定で折りたたむ。件数だけ見せて必要な人だけ開く。
 function CandidateList({
   urls,
   nodesByUrl,
   checked,
-  selectedGroupIds,
   isAutoExpanding,
   onToggle,
   onExpand,
@@ -493,7 +416,6 @@ function CandidateList({
   urls: string[];
   nodesByUrl: Record<string, CandidateNode>;
   checked: Record<string, boolean>;
-  selectedGroupIds: string[];
   isAutoExpanding: boolean;
   onToggle: (url: string) => void;
   onExpand: (url: string, depth: number) => void;
@@ -505,7 +427,7 @@ function CandidateList({
   for (const candidateUrl of urls) {
     const node = nodesByUrl[candidateUrl];
     if (!node) continue;
-    if (isDeprioritized(node.candidate, selectedGroupIds)) {
+    if (node.candidate.kind === "procedure" && node.candidate.likelyExcluded) {
       deprioritized.push(candidateUrl);
     } else {
       primary.push(candidateUrl);
@@ -520,7 +442,6 @@ function CandidateList({
           nodeUrl={candidateUrl}
           nodesByUrl={nodesByUrl}
           checked={checked}
-          selectedGroupIds={selectedGroupIds}
           isAutoExpanding={isAutoExpanding}
           onToggle={onToggle}
           onExpand={onExpand}
@@ -539,7 +460,7 @@ function CandidateList({
           >
             {showDeprioritized
               ? "隠す"
-              : `対象外?・絞り込み対象外の候補を表示 (${deprioritized.length}件)`}
+              : `対象外?の候補を表示 (${deprioritized.length}件)`}
           </Button>
           {showDeprioritized &&
             deprioritized.map((candidateUrl) => (
@@ -548,7 +469,6 @@ function CandidateList({
                 nodeUrl={candidateUrl}
                 nodesByUrl={nodesByUrl}
                 checked={checked}
-                selectedGroupIds={selectedGroupIds}
                 isAutoExpanding={isAutoExpanding}
                 onToggle={onToggle}
                 onExpand={onExpand}
@@ -560,13 +480,10 @@ function CandidateList({
   );
 }
 
-// 索引ページを再帰的にネスト表示するための行。展開結果は末尾に追加する
-// セクションではなく、このノードの直下に差し込む(その場に増える見た目にするため)。
 function CandidateRow({
   nodeUrl,
   nodesByUrl,
   checked,
-  selectedGroupIds,
   isAutoExpanding,
   onToggle,
   onExpand,
@@ -574,7 +491,6 @@ function CandidateRow({
   nodeUrl: string;
   nodesByUrl: Record<string, CandidateNode>;
   checked: Record<string, boolean>;
-  selectedGroupIds: string[];
   isAutoExpanding: boolean;
   onToggle: (url: string) => void;
   onExpand: (url: string, depth: number) => void;
@@ -585,15 +501,10 @@ function CandidateRow({
   const { candidate } = node;
   const indent = (node.depth - 1) * 3;
 
-  // 深さ1・2の索引のうち、選んだラベルに一致し「対象外?」でもないものは
-  // 自動展開キューが処理する。展開中(=isAutoExpanding)はそれらへの手動操作を
-  // 止めて、自動キューとの競合(同じノードへの二重fetch)を避ける。
-  // ラベル不一致・対象外?の索引や深さ3以降は自動展開の対象外なので常に手動で操作できる。
   const isAutoManagedDepth =
     node.depth < AUTO_EXPAND_MAX_DEPTH &&
     candidate.kind === "index" &&
-    !candidate.likelyExcluded &&
-    matchesSelectedLabelGroups(candidate.title, selectedGroupIds);
+    !candidate.likelyExcluded;
   const showManualExpandButton =
     candidate.kind === "index" &&
     node.childUrls === null &&
@@ -650,12 +561,11 @@ function CandidateRow({
                     )}
                   </Stack>
                 }
-                secondary={[
-                  candidate.updatedOn ? `更新日: ${candidate.updatedOn}` : null,
-                  areaCodeLabel(candidate.areaCode),
-                ]
-                  .filter(Boolean)
-                  .join(" / ")}
+                secondary={
+                  candidate.updatedOn
+                    ? `更新日: ${candidate.updatedOn}`
+                    : undefined
+                }
               />
             }
           />
@@ -704,7 +614,6 @@ function CandidateRow({
           urls={node.childUrls}
           nodesByUrl={nodesByUrl}
           checked={checked}
-          selectedGroupIds={selectedGroupIds}
           isAutoExpanding={isAutoExpanding}
           onToggle={onToggle}
           onExpand={onExpand}

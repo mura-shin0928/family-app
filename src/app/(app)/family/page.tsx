@@ -1,9 +1,12 @@
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
+import Divider from "@mui/material/Divider";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import { BackButton } from "@/components/BackButton";
 import { requireFamilyMember } from "@/features/auth/guard";
+import { ChildrenSection } from "@/features/children/components/ChildrenSection";
+import { getChildren } from "@/features/children/queries";
 import {
   createInvitation,
   deleteInvitation,
@@ -19,10 +22,11 @@ import {
 
 export default async function FamilyPage() {
   const { member } = await requireFamilyMember();
-  const [family, members, invitations] = await Promise.all([
+  const [family, members, invitations, familyChildren] = await Promise.all([
     getFamily(member.familyId),
     getFamilyMembers(member.familyId),
     getInvitations(member.familyId),
+    getChildren(member.familyId),
   ]);
 
   return (
@@ -39,6 +43,10 @@ export default async function FamilyPage() {
         </Toolbar>
       </AppBar>
       <Toolbar />
+      <Box sx={{ px: 2, pt: 2 }}>
+        <ChildrenSection familyChildren={familyChildren} />
+      </Box>
+      <Divider sx={{ mt: 2 }} />
       <InvitationsScreen
         members={members}
         invitations={invitations}
