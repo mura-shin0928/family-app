@@ -22,7 +22,7 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import type { Child } from "@/features/children/types";
 import { addDaysToDateString, daysUntil } from "@/lib/date";
 import {
@@ -70,6 +70,23 @@ export function ProcedureChecklistScreen({
     familyChildren[0]?.id ?? null,
   );
   const [editMode, setEditMode] = useState(false);
+  // 項目編集フォームは保存ボタンを押すまでローカルstateのまま
+  // （テンプレート名のonBlur自動保存とは違う）。編集終了ボタンはeditModeの
+  // 切り替えでしかなく保存はしないため、未保存のまま抜けようとしたら止める。
+  const [dirtyItemIds, setDirtyItemIds] = useState<Set<string>>(new Set());
+
+  const handleItemDirtyChange = useCallback(
+    (itemId: string, isDirty: boolean) => {
+      setDirtyItemIds((current) => {
+        if (isDirty === current.has(itemId)) return current;
+        const next = new Set(current);
+        if (isDirty) next.add(itemId);
+        else next.delete(itemId);
+        return next;
+      });
+    },
+    [],
+  );
 
   const selectedChild =
     familyChildren.find((c) => c.id === selectedChildId) ?? null;
@@ -81,6 +98,19 @@ export function ProcedureChecklistScreen({
 
   function refresh() {
     router.refresh();
+  }
+
+  function handleToggleEditMode() {
+    if (
+      editMode &&
+      dirtyItemIds.size > 0 &&
+      !window.confirm(
+        "保存していない変更があります。編集を終了すると変更は失われます。よろしいですか？",
+      )
+    ) {
+      return;
+    }
+    setEditMode((current) => !current);
   }
 
   return (
@@ -114,7 +144,7 @@ export function ProcedureChecklistScreen({
             size="small"
             variant={editMode ? "contained" : "outlined"}
             startIcon={<EditOutlinedIcon fontSize="small" />}
-            onClick={() => setEditMode((current) => !current)}
+            onClick={handleToggleEditMode}
           >
             {editMode ? "編集終了" : "編集"}
           </Button>
@@ -165,6 +195,7 @@ export function ProcedureChecklistScreen({
                 }
                 editMode={editMode}
                 onChanged={refresh}
+                onItemDirtyChange={handleItemDirtyChange}
               />
             ))}
           </Stack>
@@ -253,6 +284,7 @@ function ProcedureChecklistItem({
   linkedTaskId,
   editMode,
   onChanged,
+  onItemDirtyChange,
 }: {
   item: TemplateItem;
   matches: MatchedProcedure[];
@@ -261,6 +293,7 @@ function ProcedureChecklistItem({
   linkedTaskId: string | undefined;
   editMode: boolean;
   onChanged: () => void;
+  onItemDirtyChange: (itemId: string, isDirty: boolean) => void;
 }) {
   const published = matches.filter((m) => m.status === "published");
   const drafts = matches.filter((m) => m.status === "draft");
@@ -345,6 +378,7 @@ function ProcedureChecklistItem({
               item={item}
               childAnchor={childAnchor}
               onChanged={onChanged}
+              onDirtyChange={onItemDirtyChange}
             />
           )}
         </Stack>
@@ -516,10 +550,12 @@ function EditItemForm({
   item,
   childAnchor,
   onChanged,
+  onDirtyChange,
 }: {
   item: TemplateItem;
   childAnchor: { birthDate: string | null; expectedBirthDate: string | null };
   onChanged: () => void;
+  onDirtyChange: (itemId: string, isDirty: boolean) => void;
 }) {
   const [title, setTitle] = useState(item.title);
   const [note, setNote] = useState(item.note ?? "");
@@ -531,6 +567,21 @@ function EditItemForm({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  const isDirty =
+    title !== item.title ||
+    note !== (item.note ?? "") ||
+    category !== (item.category ?? "") ||
+    anchorEvent !== (item.anchorEvent ?? "") ||
+    offsetDays !== (item.offsetDays === null ? "" : String(item.offsetDays));
+
+  // 保存ボタンを押すまでここはローカルstateのまま。未保存かどうかを親に
+  // 知らせておき、編集終了ボタンで気付かず変更を失わないようにする。
+  // アンマウント時（削除・編集終了）はクリーンアップで必ずfalseに戻す。
+  useEffect(() => {
+    onDirtyChange(item.id, isDirty);
+    return () => onDirtyChange(item.id, false);
+  }, [item.id, isDirty, onDirtyChange]);
 
   // 日数だけの入力は分かりにくいため、選択中の子供の基準日が分かればカレンダーでも
   // 指定できるようにする（相互に同期する。保存されるのは常にoffsetDays）。
