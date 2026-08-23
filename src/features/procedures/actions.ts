@@ -3,6 +3,7 @@
 import { requireFamilyMember } from "@/features/auth/guard";
 import { fetchHtml } from "@/features/recipes/extraction/fetch-html";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_TEMPLATES_BY_KIND } from "./default-templates";
 import {
   classifyCandidate,
   extractLinks,
@@ -13,8 +14,17 @@ import { extractMainText } from "./extraction/extract-main";
 import type { ProcedureDraft } from "./extraction/types";
 import { prepareProcedureDraft } from "./ingest";
 import { fetchDisallowRules, isPathAllowed } from "./robots";
-import { discoverProcedureLinksSchema, ingestProcedureSchema } from "./schema";
-import type { DiscoverCandidate } from "./types";
+import {
+  addTemplateItemSchema,
+  addTemplateItemToTaskSchema,
+  deleteTemplateItemSchema,
+  discoverProcedureLinksSchema,
+  ingestProcedureSchema,
+  updateTemplateItemSchema,
+  updateTemplateTitleSchema,
+  verifyProcedureSchema,
+} from "./schema";
+import type { DiscoverCandidate, ProcedureCategory } from "./types";
 
 // discoverは候補ページを1req/秒で最大MAX_LINKS件フェッチする（§6.4）。
 // ページ側 maxDuration=60秒に収まるよう余裕を持たせる。
@@ -165,6 +175,7 @@ export type IngestProcedureResult =
 export async function ingestProcedure(input: {
   url: string;
   areaCode: string;
+  category: ProcedureCategory;
 }): Promise<IngestProcedureResult> {
   const parsed = ingestProcedureSchema.safeParse(input);
   if (!parsed.success) {
@@ -215,6 +226,7 @@ export async function ingestProcedure(input: {
   const { error } = await supabase.from("procedures").insert({
     ...toDbRow(draft),
     area_code: areaCode,
+    category: parsed.data.category,
     source_url: parsed.data.url,
     source_title: sourceTitle.slice(0, 200),
     fetched_at: new Date().toISOString(),
@@ -226,4 +238,287 @@ export async function ingestProcedure(input: {
   }
 
   return { ok: true, status: "inserted", droppedCount: droppedReasons.length };
+}
+
+export type ActionResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * 家族が初めてこのライフイベントを開いたとき、既定テンプレートを複製してinsertする。
+ * 既にあればそれをそのまま返す（家族が編集済みでも上書きしない）。
+ */
+export async function ensureBirthTemplate(): Promise<
+  { ok: true; templateId: string } | { ok: false; error: string }
+> {
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { data: existing } = await supabase
+    .from("procedure_templates")
+    .select("id")
+    .eq("family_id", member.familyId)
+    .eq("life_event_kind", "birth")
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (existing) return { ok: true, templateId: existing.id };
+
+  const def = DEFAULT_TEMPLATES_BY_KIND.birth;
+
+  const { data: template, error: templateError } = await supabase
+    .from("procedure_templates")
+    .insert({
+      family_id: member.familyId,
+      life_event_kind: def.lifeEventKind,
+      title: def.title,
+      created_by: member.id,
+    })
+    .select("id")
+    .single();
+
+  if (templateError || !template) {
+    return { ok: false, error: "テンプレートの作成に失敗しました" };
+  }
+
+  const { error: itemsError } = await supabase
+    .from("procedure_template_items")
+    .insert(
+      def.items.map((item, index) => ({
+        template_id: template.id,
+        sort_order: index + 1,
+        title: item.title,
+        note: item.note,
+        category: item.category,
+        anchor_event: item.anchorEvent,
+        offset_days: item.offsetDays,
+      })),
+    );
+
+  if (itemsError) {
+    return { ok: false, error: "テンプレートの作成に失敗しました" };
+  }
+
+  return { ok: true, templateId: template.id };
+}
+
+export async function updateTemplateTitle(input: {
+  templateId: string;
+  title: string;
+}): Promise<ActionResult> {
+  const parsed = updateTemplateTitleSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("procedure_templates")
+    .update({ title: parsed.data.title })
+    .eq("id", parsed.data.templateId);
+
+  if (error) return { ok: false, error: "更新に失敗しました" };
+  return { ok: true };
+}
+
+export async function addTemplateItem(input: {
+  templateId: string;
+  title: string;
+  note: string;
+  category: string;
+  anchorEvent: string;
+  offsetDays: number | "";
+}): Promise<ActionResult> {
+  const parsed = addTemplateItemSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { data: last } = await supabase
+    .from("procedure_template_items")
+    .select("sort_order")
+    .eq("template_id", parsed.data.templateId)
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { error } = await supabase.from("procedure_template_items").insert({
+    template_id: parsed.data.templateId,
+    sort_order: (last?.sort_order ?? 0) + 1,
+    title: parsed.data.title,
+    note: parsed.data.note === "" ? null : parsed.data.note,
+    category: parsed.data.category === "" ? null : parsed.data.category,
+    anchor_event:
+      parsed.data.anchorEvent === "" ? null : parsed.data.anchorEvent,
+    offset_days: parsed.data.offsetDays === "" ? null : parsed.data.offsetDays,
+  });
+
+  if (error) return { ok: false, error: "追加に失敗しました" };
+  return { ok: true };
+}
+
+export async function updateTemplateItem(input: {
+  itemId: string;
+  title: string;
+  note: string;
+  category: string;
+  anchorEvent: string;
+  offsetDays: number | "";
+}): Promise<ActionResult> {
+  const parsed = updateTemplateItemSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("procedure_template_items")
+    .update({
+      title: parsed.data.title,
+      note: parsed.data.note === "" ? null : parsed.data.note,
+      category: parsed.data.category === "" ? null : parsed.data.category,
+      anchor_event:
+        parsed.data.anchorEvent === "" ? null : parsed.data.anchorEvent,
+      offset_days:
+        parsed.data.offsetDays === "" ? null : parsed.data.offsetDays,
+    })
+    .eq("id", parsed.data.itemId);
+
+  if (error) return { ok: false, error: "更新に失敗しました" };
+  return { ok: true };
+}
+
+export async function deleteTemplateItem(input: {
+  itemId: string;
+}): Promise<ActionResult> {
+  const parsed = deleteTemplateItemSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "不正な操作です" };
+
+  await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("procedure_template_items")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", parsed.data.itemId);
+
+  if (error) return { ok: false, error: "削除に失敗しました" };
+  return { ok: true };
+}
+
+/**
+ * draftのprocedureを内容を確認したうえでpublishedにする（既存の確認操作、
+ * §procedures_verify）。列単位GRANTでstatus/verified_at/verified_byしか
+ * 更新できないため、本文を書き換えて公開する経路は無い。
+ */
+export async function verifyProcedure(input: {
+  procedureId: string;
+}): Promise<ActionResult> {
+  const parsed = verifyProcedureSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "不正な操作です" };
+
+  const { userId } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("procedures")
+    .update({
+      status: "published",
+      verified_at: new Date().toISOString(),
+      verified_by: userId,
+    })
+    .eq("id", parsed.data.procedureId);
+
+  if (error) return { ok: false, error: "確認に失敗しました" };
+  return { ok: true };
+}
+
+/**
+ * テンプレート項目を「やることに追加」する。recipe_ingredients.task_id と同じ
+ * コピー方式（[[project-recipe-stock-replan]]）: title/due_on/url/noteをtasksへ
+ * コピーし、family_procedures はどの項目をTask化したかのリンクだけを持つ。
+ * procedureIdが無くても(=まだ制度情報が未登録でも)追加できる。
+ */
+export async function addTemplateItemToTask(input: {
+  templateItemId: string;
+  childId: string;
+  title: string;
+  dueOn: string;
+  url: string;
+  note: string;
+  procedureId: string;
+}): Promise<ActionResult> {
+  const parsed = addTemplateItemToTaskSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { data: lastTask } = await supabase
+    .from("tasks")
+    .select("sort_order")
+    .eq("family_id", member.familyId)
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nextSortOrder = (lastTask?.sort_order ?? 0) + 1;
+
+  const { data: task, error: taskError } = await supabase
+    .from("tasks")
+    .insert({
+      family_id: member.familyId,
+      title: parsed.data.title,
+      due_on: parsed.data.dueOn === "" ? null : parsed.data.dueOn,
+      url: parsed.data.url === "" ? null : parsed.data.url,
+      note: parsed.data.note === "" ? null : parsed.data.note,
+      sort_order: nextSortOrder,
+      created_by: member.id,
+    })
+    .select("id")
+    .single();
+
+  if (taskError || !task) {
+    return { ok: false, error: "やることへの追加に失敗しました" };
+  }
+
+  const { error: linkError } = await supabase.from("family_procedures").upsert(
+    {
+      family_id: member.familyId,
+      template_item_id: parsed.data.templateItemId,
+      child_id: parsed.data.childId === "" ? null : parsed.data.childId,
+      procedure_id:
+        parsed.data.procedureId === "" ? null : parsed.data.procedureId,
+      task_id: task.id,
+      added_by: member.id,
+    },
+    { onConflict: "family_id,template_item_id,child_id" },
+  );
+
+  if (linkError) {
+    return { ok: false, error: "やることへの追加に失敗しました" };
+  }
+
+  return { ok: true };
 }

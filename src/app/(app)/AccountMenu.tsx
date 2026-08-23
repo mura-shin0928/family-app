@@ -76,7 +76,7 @@ export function AccountMenu({ displayName, isAppAdmin, signOut }: Props) {
           <ListItemIcon>
             <GroupOutlinedIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>メンバー</ListItemText>
+          <ListItemText>家族</ListItemText>
         </MenuItem>
         {isAppAdmin && (
           <MenuItem onClick={handleAdmin}>
