@@ -317,7 +317,7 @@ export function TaskRow({
               // ピンは glyph の右側に透明な余白があるので mr を負にして詰める。
               "& .MuiButton-startIcon": {
                 mx: 0,
-                mr: selectedLocation ? "-2px" : 0,
+                mr: selectedLocation ? "-1px" : 0,
                 flexShrink: 0,
               },
             }}
