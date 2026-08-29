@@ -16,6 +16,9 @@ const noteSchema = z.union([
   z.literal(""),
 ]);
 
+// 空文字列 = 未設定（tasks.dueOn と同じ規約）。所有チェックは Server Action 側で行う。
+const purchaseLocationIdSchema = z.union([z.string().uuid(), z.literal("")]);
+
 export const createTaskSchema = z.object({
   id: z.string().uuid(),
   title: z
@@ -26,6 +29,7 @@ export const createTaskSchema = z.object({
   // 空文字列 = 期限なし（updateDueDateSchema と同じ規約）。
   dueOn: z.union([dateStringSchema, z.literal("")]),
   isPurchase: z.boolean(),
+  purchaseLocationId: purchaseLocationIdSchema,
 });
 
 export const taskIdSchema = z.object({
@@ -64,4 +68,9 @@ export const updateUrlSchema = z.object({
 export const updateNoteSchema = z.object({
   taskId: z.string().uuid(),
   note: noteSchema,
+});
+
+export const updateTaskPurchaseLocationSchema = z.object({
+  taskId: z.string().uuid(),
+  purchaseLocationId: purchaseLocationIdSchema,
 });

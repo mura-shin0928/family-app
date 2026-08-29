@@ -2,6 +2,7 @@
 
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import Box from "@mui/material/Box";
@@ -12,12 +13,15 @@ import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import IconButton from "@mui/material/IconButton";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { type ReactNode, useRef, useState } from "react";
+import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { SOON_DAYS } from "@/lib/constants";
 import { todayInJst } from "@/lib/date";
 import {
@@ -28,6 +32,7 @@ import {
   setTaskPurchase,
   updateTaskDueDate,
   updateTaskNote,
+  updateTaskPurchaseLocation,
   updateTaskTitle,
   updateTaskUrl,
 } from "../actions";
@@ -37,6 +42,10 @@ import {
   TASK_BUCKET_ORDER,
   type TaskBucketKey,
 } from "../buckets";
+import {
+  filterByPurchaseLocation,
+  type PurchaseLocationSelection,
+} from "../purchase-filter";
 import { fetchTasks } from "../query-actions";
 import { TASKS_QUERY_KEY, type TaskDTO } from "../types";
 import { QuickCaptureBar } from "./QuickCaptureBar";
@@ -64,6 +73,7 @@ type Action =
   | { type: "title"; id: string; title: string }
   | { type: "url"; id: string; url: string | null }
   | { type: "note"; id: string; note: string | null }
+  | { type: "purchaseLocation"; id: string; purchaseLocationId: string | null }
   | { type: "remove"; id: string };
 
 function applyAction(tasks: TaskDTO[], action: Action): TaskDTO[] {
@@ -101,6 +111,12 @@ function applyAction(tasks: TaskDTO[], action: Action): TaskDTO[] {
     case "note":
       return tasks.map((task) =>
         task.id === action.id ? { ...task, note: action.note } : task,
+      );
+    case "purchaseLocation":
+      return tasks.map((task) =>
+        task.id === action.id
+          ? { ...task, purchaseLocationId: action.purchaseLocationId }
+          : task,
       );
     case "remove":
       return tasks.filter((task) => task.id !== action.id);
@@ -314,9 +330,12 @@ function CompletedSection({
 export function TaskListScreen({
   initialTasks,
   familyId,
+  locations,
 }: {
   initialTasks: TaskDTO[];
   familyId: string;
+  // 買う場所の候補。RSC の props で受け取るだけ（TanStack Query も Realtime も使わない）。
+  locations: PurchaseLocation[];
 }) {
   const { data: tasks = [] } = useQuery({
     queryKey: TASKS_QUERY_KEY,
@@ -332,6 +351,16 @@ export function TaskListScreen({
     null,
   );
   const [showPurchaseOnly, setShowPurchaseOnly] = useState(false);
+  const [locationSelection, setLocationSelection] =
+    useState<PurchaseLocationSelection>("all");
+
+  function togglePurchaseOnly() {
+    setShowPurchaseOnly((current) => {
+      // 閉じるときは場所フィルタもリセットする（隠れた状態を残さない）。
+      if (current) setLocationSelection("all");
+      return !current;
+    });
+  }
 
   function showToast(next: Toast) {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -346,6 +375,7 @@ export function TaskListScreen({
       title: string;
       dueOn: string;
       isPurchase: boolean;
+      purchaseLocationId: string;
     }): Action => ({
       type: "add",
       task: {
@@ -358,6 +388,8 @@ export function TaskListScreen({
         sortOrder: Number.MAX_SAFE_INTEGER,
         url: null,
         note: null,
+        purchaseLocationId:
+          input.purchaseLocationId === "" ? null : input.purchaseLocationId,
       },
     }),
     { onFail: (error) => showToast({ message: error }) },
@@ -435,6 +467,17 @@ export function TaskListScreen({
     { onFail: (error) => showToast({ message: error }) },
   );
 
+  const purchaseLocationMutation = useOptimisticTasksMutation(
+    updateTaskPurchaseLocation,
+    (input: { taskId: string; purchaseLocationId: string }): Action => ({
+      type: "purchaseLocation",
+      id: input.taskId,
+      purchaseLocationId:
+        input.purchaseLocationId === "" ? null : input.purchaseLocationId,
+    }),
+    { onFail: (error) => showToast({ message: error }) },
+  );
+
   const deleteMutation = useOptimisticTasksMutation(
     deleteTask,
     (input: { taskId: string }): Action => ({
@@ -457,16 +500,37 @@ export function TaskListScreen({
     (task) => task.isPurchase,
   );
 
+  const knownLocationIds = new Set(locations.map((location) => location.id));
+  // 選択中の場所idが削除済みなら「すべて」に戻す（行き止まりの空表示を避ける）。
+  const effectiveSelection: PurchaseLocationSelection =
+    locationSelection === "all" ||
+    locationSelection === "none" ||
+    knownLocationIds.has(locationSelection)
+      ? locationSelection
+      : "all";
+  const filteredPurchaseOpen = filterByPurchaseLocation(
+    purchaseOpen,
+    effectiveSelection,
+    knownLocationIds,
+  );
+  const filteredPurchaseCompletedToday = filterByPurchaseLocation(
+    purchaseCompletedToday,
+    effectiveSelection,
+    knownLocationIds,
+  );
+
   function handleCreate(input: {
     title: string;
     dueOn: string | null;
     isPurchase: boolean;
+    purchaseLocationId: string | null;
   }) {
     createMutation.mutate({
       id: crypto.randomUUID(),
       title: input.title,
       dueOn: input.dueOn ?? "",
       isPurchase: input.isPurchase,
+      purchaseLocationId: input.purchaseLocationId ?? "",
     });
   }
 
@@ -500,6 +564,17 @@ export function TaskListScreen({
     });
   }
 
+  function handlePurchaseLocationChange(
+    task: TaskDTO,
+    locationId: string | null,
+  ) {
+    if (locationId === task.purchaseLocationId) return;
+    purchaseLocationMutation.mutate({
+      taskId: task.id,
+      purchaseLocationId: locationId ?? "",
+    });
+  }
+
   function performDelete(task: TaskDTO) {
     deleteMutation.mutate({ taskId: task.id });
   }
@@ -508,20 +583,31 @@ export function TaskListScreen({
     (key) => !COLLAPSIBLE_BUCKETS.includes(key),
   );
 
-  const rowHandlers = {
+  const rowProps = {
+    locations,
     onToggle: handleToggle,
     onDueDateChange: handleDueDateChange,
     onTitleChange: handleTitleChange,
     onUrlChange: handleUrlChange,
     onNoteChange: handleNoteChange,
     onPurchaseToggle: handlePurchaseToggle,
+    onPurchaseLocationChange: handlePurchaseLocationChange,
     onDelete: setTaskPendingDelete,
   };
 
   return (
     <Box sx={{ flex: 1, display: "flex", flexDirection: "column", pb: 27 }}>
       <Stack spacing={2} sx={{ flex: 1, px: 2, py: 2 }}>
-        <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+          <IconButton
+            component={Link}
+            href="/tasks/settings"
+            size="small"
+            aria-label="一覧の設定"
+            sx={{ color: "text.secondary" }}
+          >
+            <SettingsOutlinedIcon fontSize="small" />
+          </IconButton>
           <Chip
             icon={
               showPurchaseOnly ? (
@@ -534,47 +620,88 @@ export function TaskListScreen({
             clickable
             color={showPurchaseOnly ? "primary" : "default"}
             variant={showPurchaseOnly ? "filled" : "outlined"}
-            onClick={() => setShowPurchaseOnly((current) => !current)}
+            onClick={togglePurchaseOnly}
           />
         </Box>
 
+        {showPurchaseOnly && locations.length > 0 && (
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+            <Chip
+              label="すべて"
+              size="small"
+              clickable
+              color={effectiveSelection === "all" ? "primary" : "default"}
+              variant={effectiveSelection === "all" ? "filled" : "outlined"}
+              onClick={() => setLocationSelection("all")}
+            />
+            {locations.map((location) => (
+              <Chip
+                key={location.id}
+                label={location.name}
+                size="small"
+                clickable
+                color={
+                  effectiveSelection === location.id ? "primary" : "default"
+                }
+                variant={
+                  effectiveSelection === location.id ? "filled" : "outlined"
+                }
+                onClick={() => setLocationSelection(location.id)}
+              />
+            ))}
+            <Chip
+              label="未設定"
+              size="small"
+              clickable
+              color={effectiveSelection === "none" ? "primary" : "default"}
+              variant={effectiveSelection === "none" ? "filled" : "outlined"}
+              onClick={() => setLocationSelection("none")}
+            />
+          </Box>
+        )}
+
         {showPurchaseOnly ? (
           <>
-            {purchaseOpen.length > 0 && (
-              <BucketSection label="買うもの" count={purchaseOpen.length}>
-                {purchaseOpen.map((task) => (
+            {filteredPurchaseOpen.length > 0 && (
+              <BucketSection
+                label="買うもの"
+                count={filteredPurchaseOpen.length}
+              >
+                {filteredPurchaseOpen.map((task) => (
                   <TaskRow
                     key={task.id}
                     task={task}
                     today={today}
-                    {...rowHandlers}
+                    {...rowProps}
                   />
                 ))}
               </BucketSection>
             )}
 
-            {purchaseCompletedToday.length > 0 && (
-              <CompletedSection count={purchaseCompletedToday.length}>
-                {purchaseCompletedToday.map((task) => (
+            {filteredPurchaseCompletedToday.length > 0 && (
+              <CompletedSection count={filteredPurchaseCompletedToday.length}>
+                {filteredPurchaseCompletedToday.map((task) => (
                   <TaskRow
                     key={task.id}
                     task={task}
                     today={today}
-                    {...rowHandlers}
+                    {...rowProps}
                   />
                 ))}
               </CompletedSection>
             )}
 
-            {purchaseOpen.length === 0 &&
-              purchaseCompletedToday.length === 0 && (
+            {filteredPurchaseOpen.length === 0 &&
+              filteredPurchaseCompletedToday.length === 0 && (
                 <Typography
                   variant="body2"
                   color="text.secondary"
                   align="center"
                   sx={{ py: 8 }}
                 >
-                  買うものはありません。
+                  {effectiveSelection === "all"
+                    ? "買うものはありません。"
+                    : "この場所の買うものはありません。"}
                 </Typography>
               )}
           </>
@@ -592,7 +719,7 @@ export function TaskListScreen({
                       key={task.id}
                       task={task}
                       today={today}
-                      {...rowHandlers}
+                      {...rowProps}
                     />
                   ))}
                 </BucketSection>
@@ -612,7 +739,7 @@ export function TaskListScreen({
                       key={task.id}
                       task={task}
                       today={today}
-                      {...rowHandlers}
+                      {...rowProps}
                     />
                   ))}
                 </CollapsibleSection>
@@ -626,7 +753,7 @@ export function TaskListScreen({
                     key={task.id}
                     task={task}
                     today={today}
-                    {...rowHandlers}
+                    {...rowProps}
                   />
                 ))}
               </CompletedSection>
@@ -646,7 +773,7 @@ export function TaskListScreen({
         )}
       </Stack>
 
-      <QuickCaptureBar onSubmit={handleCreate} />
+      <QuickCaptureBar locations={locations} onSubmit={handleCreate} />
 
       <Snackbar
         open={!!toast}
