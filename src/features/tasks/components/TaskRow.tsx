@@ -136,153 +136,7 @@ export function TaskRow({
               {task.title}
             </Typography>
           )}
-
-          {/*
-            iOSではネイティブdateピッカー操作時に、他ボタンへのタップより先に
-            onBlurが発火しeditingDueがfalseになってボタンごと消えてしまう
-            （「期限なしにする」が反応しない不具合の原因だった）。QuickCaptureBar
-            の期限パネルと同様、blurではなくClickAwayListenerで閉じる。
-          */}
-          <Box
-            sx={{
-              display: "flex",
-              gap: 0.5,
-              alignItems: "center",
-              flexWrap: "wrap",
-              mt: 0.25,
-            }}
-          >
-            <ClickAwayListener onClickAway={() => setEditingDue(false)}>
-              <Box sx={{ display: "flex", alignItems: "center" }}>
-                {editingDue ? (
-                  <Box sx={{ mt: 0.5 }}>
-                    {/*
-                    autoFocusは付けない。iOSでは空のdate inputに自動フォーカス
-                    すると、ユーザーが何も操作していないのに「今日」でchangeが
-                    発火してしまう不具合があるため（QuickCaptureBarの期限パネル
-                    も同じ理由でautoFocusなし）。
-                  */}
-                    {/*
-                    onChangeでは確定しない。iOSでは自動フォーカスでなく手動タップ
-                    でも、空のdate inputを開いた時点でピッカーが「今日」を仮表示し
-                    changeが発火することがある。ここで即確定・即クローズしていると、
-                    そのタップだけで期限が無言で「今日」になり、パネルも同時に閉じる
-                    ため「タップしても何も起きない（が期限は変わっている）」ように
-                    見えてしまっていた。値はdraftDueに留め、下のボタンでの明示的な
-                    確定操作でのみonDueDateChangeを呼ぶ。
-                  */}
-                    <TextField
-                      type="date"
-                      size="small"
-                      variant="standard"
-                      value={draftDue}
-                      onChange={(event) => setDraftDue(event.target.value)}
-                      slotProps={{
-                        // 16px未満だとiOSでフォーカス時に画面全体がズームされる。
-                        // 16pxにする分、ボタンは横に並べず下に積んで幅の競合を避ける。
-                        htmlInput: { style: { fontSize: "1rem" } },
-                      }}
-                    />
-                    <Button
-                      size="small"
-                      disabled={!draftDue}
-                      sx={{
-                        display: "block",
-                        mt: 0.5,
-                        p: 0,
-                        minWidth: 0,
-                        textTransform: "none",
-                        fontSize: "0.75rem",
-                        whiteSpace: "nowrap",
-                      }}
-                      onClick={() => commitDue(draftDue || null)}
-                    >
-                      設定
-                    </Button>
-                    {task.dueOn && (
-                      <Button
-                        size="small"
-                        sx={{
-                          display: "block",
-                          mt: 0.5,
-                          p: 0,
-                          minWidth: 0,
-                          textTransform: "none",
-                          fontSize: "0.75rem",
-                          whiteSpace: "nowrap",
-                        }}
-                        onClick={() => commitDue(null)}
-                      >
-                        期限なしにする
-                      </Button>
-                    )}
-                  </Box>
-                ) : (
-                  <Button
-                    size="small"
-                    onClick={openDueEditor}
-                    aria-label={task.dueOn ? undefined : "期限を設定"}
-                    startIcon={
-                      <CalendarTodayOutlinedIcon sx={{ fontSize: 16 }} />
-                    }
-                    sx={{
-                      p: 0.5,
-                      minWidth: 0,
-                      textTransform: "none",
-                      fontSize: "0.75rem",
-                      color: "text.secondary",
-                      "& .MuiButton-startIcon": {
-                        mx: 0,
-                        mr: task.dueOn ? 0.5 : 0,
-                      },
-                    }}
-                  >
-                    {task.dueOn ? formatRelativeDue(task.dueOn, today) : ""}
-                  </Button>
-                )}
-              </Box>
-            </ClickAwayListener>
-
-            {task.isPurchase && (
-              <Button
-                size="small"
-                onClick={(event) => setLocationAnchor(event.currentTarget)}
-                aria-label={selectedLocation ? undefined : "買う場所を選ぶ"}
-                startIcon={<PlaceOutlinedIcon sx={{ fontSize: 16 }} />}
-                sx={{
-                  p: 0.5,
-                  minWidth: 0,
-                  textTransform: "none",
-                  fontSize: "0.75rem",
-                  color: selectedLocation ? "primary.main" : "text.secondary",
-                  "& .MuiButton-startIcon": {
-                    mx: 0,
-                    mr: selectedLocation ? 0.5 : 0,
-                  },
-                }}
-              >
-                {selectedLocation ? selectedLocation.name : ""}
-              </Button>
-            )}
-          </Box>
         </Box>
-
-        {task.isPurchase && (
-          <Menu
-            anchorEl={locationAnchor}
-            open={!!locationAnchor}
-            onClose={() => setLocationAnchor(null)}
-          >
-            <PurchaseLocationOptions
-              locations={locations}
-              selectedId={selectedLocation?.id ?? null}
-              onSelect={(id) => {
-                onPurchaseLocationChange(task, id);
-                setLocationAnchor(null);
-              }}
-            />
-          </Menu>
-        )}
 
         <IconButton
           onClick={() => setDetailsOpen((current) => !current)}
@@ -321,6 +175,176 @@ export function TaskRow({
           <DeleteOutlineIcon fontSize="small" />
         </IconButton>
       </Box>
+
+      {/*
+        メタ行（期限 · 場所）はタイトル行から出して右アイコンの下に全幅で置く。
+        iPhone 375px 幅ではタイトル行の残り幅（約178px）に「あと32日 · 場所名」が
+        入らないため。インデントは下の Collapse と同じ値でタイトル左端に揃える。
+        折り返さず1行固定にし、はみ出す場所名は省略する（カード高さを揃える）。
+      */}
+      <Box
+        sx={{
+          display: "flex",
+          gap: 0.5,
+          alignItems: editingDue ? "flex-start" : "center",
+          mt: 0.25,
+          pl: "calc(42px + 12px)",
+          pr: 1,
+          // 編集中の期限エディタは縦積みの背の高いパネル。overflow: hidden を
+          // 当てるとボタンが切れて操作不能になるので、非編集時だけ省略する。
+          ...(editingDue ? {} : { overflow: "hidden" }),
+        }}
+      >
+        {/*
+          iOSではネイティブdateピッカー操作時に、他ボタンへのタップより先に
+          onBlurが発火しeditingDueがfalseになってボタンごと消えてしまう
+          （「期限なしにする」が反応しない不具合の原因だった）。QuickCaptureBar
+          の期限パネルと同様、blurではなくClickAwayListenerで閉じる。
+        */}
+        <ClickAwayListener onClickAway={() => setEditingDue(false)}>
+          <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+            {editingDue ? (
+              <Box sx={{ mt: 0.5 }}>
+                {/*
+                  autoFocusは付けない。iOSでは空のdate inputに自動フォーカス
+                  すると、ユーザーが何も操作していないのに「今日」でchangeが
+                  発火してしまう不具合があるため（QuickCaptureBarの期限パネル
+                  も同じ理由でautoFocusなし）。
+                */}
+                {/*
+                  onChangeでは確定しない。iOSでは自動フォーカスでなく手動タップ
+                  でも、空のdate inputを開いた時点でピッカーが「今日」を仮表示し
+                  changeが発火することがある。ここで即確定・即クローズしていると、
+                  そのタップだけで期限が無言で「今日」になり、パネルも同時に閉じる
+                  ため「タップしても何も起きない（が期限は変わっている）」ように
+                  見えてしまっていた。値はdraftDueに留め、下のボタンでの明示的な
+                  確定操作でのみonDueDateChangeを呼ぶ。
+                */}
+                <TextField
+                  type="date"
+                  size="small"
+                  variant="standard"
+                  value={draftDue}
+                  onChange={(event) => setDraftDue(event.target.value)}
+                  slotProps={{
+                    // 16px未満だとiOSでフォーカス時に画面全体がズームされる。
+                    // 16pxにする分、ボタンは横に並べず下に積んで幅の競合を避ける。
+                    htmlInput: { style: { fontSize: "1rem" } },
+                  }}
+                />
+                <Button
+                  size="small"
+                  disabled={!draftDue}
+                  sx={{
+                    display: "block",
+                    mt: 0.5,
+                    p: 0,
+                    minWidth: 0,
+                    textTransform: "none",
+                    fontSize: "0.75rem",
+                    whiteSpace: "nowrap",
+                  }}
+                  onClick={() => commitDue(draftDue || null)}
+                >
+                  設定
+                </Button>
+                {task.dueOn && (
+                  <Button
+                    size="small"
+                    sx={{
+                      display: "block",
+                      mt: 0.5,
+                      p: 0,
+                      minWidth: 0,
+                      textTransform: "none",
+                      fontSize: "0.75rem",
+                      whiteSpace: "nowrap",
+                    }}
+                    onClick={() => commitDue(null)}
+                  >
+                    期限なしにする
+                  </Button>
+                )}
+              </Box>
+            ) : (
+              <Button
+                size="small"
+                onClick={openDueEditor}
+                aria-label={task.dueOn ? undefined : "期限を設定"}
+                startIcon={<CalendarTodayOutlinedIcon sx={{ fontSize: 16 }} />}
+                sx={{
+                  flexShrink: 0,
+                  p: 0.5,
+                  minWidth: 0,
+                  textTransform: "none",
+                  fontSize: "0.75rem",
+                  color: "text.secondary",
+                  "& .MuiButton-startIcon": {
+                    mx: 0,
+                    mr: task.dueOn ? 0.5 : 0,
+                  },
+                }}
+              >
+                {task.dueOn ? formatRelativeDue(task.dueOn, today) : ""}
+              </Button>
+            )}
+          </Box>
+        </ClickAwayListener>
+
+        {task.isPurchase && (
+          <Button
+            size="small"
+            onClick={(event) => setLocationAnchor(event.currentTarget)}
+            aria-label={selectedLocation ? undefined : "買う場所を選ぶ"}
+            startIcon={<PlaceOutlinedIcon sx={{ fontSize: 16 }} />}
+            sx={{
+              minWidth: 0,
+              p: 0.5,
+              overflow: "hidden",
+              textTransform: "none",
+              fontSize: "0.75rem",
+              // 設定済みかどうかはラベルの有無で分かるので色は常に text.secondary。
+              color: "text.secondary",
+              "& .MuiButton-startIcon": {
+                mx: 0,
+                mr: selectedLocation ? 0.5 : 0,
+                flexShrink: 0,
+              },
+            }}
+          >
+            {selectedLocation && (
+              <Box
+                component="span"
+                sx={{
+                  minWidth: 0,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {selectedLocation.name}
+              </Box>
+            )}
+          </Button>
+        )}
+      </Box>
+
+      {task.isPurchase && (
+        <Menu
+          anchorEl={locationAnchor}
+          open={!!locationAnchor}
+          onClose={() => setLocationAnchor(null)}
+        >
+          <PurchaseLocationOptions
+            locations={locations}
+            selectedId={selectedLocation?.id ?? null}
+            onSelect={(id) => {
+              onPurchaseLocationChange(task, id);
+              setLocationAnchor(null);
+            }}
+          />
+        </Menu>
+      )}
 
       {/*
         mountOnEnter/unmountOnExit: 中のTextFieldはdefaultValueの
