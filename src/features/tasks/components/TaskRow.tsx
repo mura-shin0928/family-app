@@ -287,9 +287,10 @@ export function TaskRow({
                   fontSize: "0.75rem",
                   color: "text.secondary",
                   // startIcon の既定の負マージンを消し、アイコンをメタ行の pl に揃える。
+                  // カレンダーは glyph が枠いっぱいなので mr を少し広めに取る。
                   "& .MuiButton-startIcon": {
                     ml: 0,
-                    mr: task.dueOn ? "1px" : 0,
+                    mr: task.dueOn ? "4px" : 0,
                   },
                 }}
               >
@@ -313,9 +314,10 @@ export function TaskRow({
               fontSize: "0.75rem",
               // 設定済みかどうかはラベルの有無で分かるので色は常に text.secondary。
               color: "text.secondary",
+              // ピンは glyph の右側に透明な余白があるので mr を負にして詰める。
               "& .MuiButton-startIcon": {
                 mx: 0,
-                mr: selectedLocation ? "1px" : 0,
+                mr: selectedLocation ? "-2px" : 0,
                 flexShrink: 0,
               },
             }}
