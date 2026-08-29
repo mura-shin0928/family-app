@@ -1,28 +1,11 @@
-import Box from "@mui/material/Box";
-import { getIsAppAdmin, requireFamilyMember } from "@/features/auth/guard";
-import { TaskListScreen } from "@/features/tasks/components/TaskListScreen";
-import { getTasks } from "@/features/tasks/queries";
-import { AppHeader } from "./AppHeader";
+import { redirect } from "next/navigation";
 
-export default async function HomePage() {
-  const { member } = await requireFamilyMember();
-  // 互いに依存しないため並行して取得し、往復レイテンシを重ねない。
-  const [tasks, isAppAdmin] = await Promise.all([
-    getTasks(member.familyId),
-    getIsAppAdmin(),
-  ]);
-
-  return (
-    <Box
-      component="main"
-      sx={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}
-    >
-      <AppHeader
-        title="一覧"
-        displayName={member.displayName}
-        isAppAdmin={isAppAdmin}
-      />
-      <TaskListScreen initialTasks={tasks} familyId={member.familyId} />
-    </Box>
-  );
+/**
+ * 一覧は /tasks に移した（/tasks/settings を配下に持たせるため）。
+ * ここは消せない — ホーム画面に追加済みのPWAショートカットは manifest を
+ * 書き換えても start_url: "/" を持ち続けるため、その入口を生かしておく。
+ * 恒久リダイレクト(308)にはしない（ブラウザにキャッシュされて後戻りできなくなる）。
+ */
+export default function HomePage() {
+  redirect("/tasks");
 }

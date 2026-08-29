@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Family App",
     short_name: "やることリスト",
     description: "家族のこれからやることを共有するアプリ",
-    start_url: "/",
+    start_url: "/tasks",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#4f46e5",

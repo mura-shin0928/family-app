@@ -273,5 +273,5 @@ export async function acceptInvitation(input: {
     return { ok: false, error: mapAcceptErrorMessage(error.message) };
   }
 
-  redirect("/");
+  redirect("/tasks");
 }

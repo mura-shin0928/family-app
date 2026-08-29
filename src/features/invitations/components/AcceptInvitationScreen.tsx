@@ -32,7 +32,7 @@ export function AcceptInvitationScreen({
   function handleAccept() {
     setError(null);
     startTransition(async () => {
-      // 成功時は acceptInvitation 内の redirect("/") がここへの復帰を防ぐ。
+      // 成功時は acceptInvitation 内の redirect("/tasks") がここへの復帰を防ぐ。
       const result = await acceptInvitation({ token });
       if (!result.ok) {
         setError(result.error);

@@ -8,7 +8,11 @@ import { useRouter } from "next/navigation";
  * ブラウザ履歴を1つ戻る。履歴が無い（直接URLを開いた等）場合だけ
  * fallbackHref に遷移する。
  */
-export function BackButton({ fallbackHref = "/" }: { fallbackHref?: string }) {
+export function BackButton({
+  fallbackHref = "/tasks",
+}: {
+  fallbackHref?: string;
+}) {
   const router = useRouter();
 
   function handleClick() {

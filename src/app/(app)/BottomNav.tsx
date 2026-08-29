@@ -12,12 +12,14 @@ import { usePathname } from "next/navigation";
 export function BottomNav() {
   const pathname = usePathname();
   // タブに属さないページ（/family等）では、どのタブも選択状態にしない。
-  const value = pathname.startsWith("/recipes")
-    ? "/recipes"
-    : pathname.startsWith("/procedures")
-      ? "/procedures"
-      : pathname === "/"
-        ? "/"
+  // 前方一致にしているのは、タブ配下のページ（/tasks/settings 等）でも
+  // その親タブを点灯させたままにするため。
+  const value = pathname.startsWith("/tasks")
+    ? "/tasks"
+    : pathname.startsWith("/recipes")
+      ? "/recipes"
+      : pathname.startsWith("/procedures")
+        ? "/procedures"
         : false;
 
   return (
@@ -37,8 +39,8 @@ export function BottomNav() {
       <BottomNavigation value={value}>
         <BottomNavigationAction
           component={Link}
-          href="/"
-          value="/"
+          href="/tasks"
+          value="/tasks"
           aria-label="一覧"
           icon={<ChecklistOutlinedIcon />}
         />
