@@ -14,4 +14,6 @@ export type TaskDTO = {
   sortOrder: number;
   url: string | null;
   note: string | null;
+  // 場所の論理削除後もidは残る。UI側で「登録済みの場所に無いid = 未設定」として描画する。
+  purchaseLocationId: string | null;
 };

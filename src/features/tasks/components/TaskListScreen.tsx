@@ -18,6 +18,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useRef, useState } from "react";
+import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { SOON_DAYS } from "@/lib/constants";
 import { todayInJst } from "@/lib/date";
 import {
@@ -317,6 +318,9 @@ export function TaskListScreen({
 }: {
   initialTasks: TaskDTO[];
   familyId: string;
+  // 買う場所の候補。RSC の props で受け取るだけ（TanStack Query も Realtime も使わない）。
+  // 行の場所ピッカーとフィルタチップで使う（ステップ4・5で参照する）。
+  locations: PurchaseLocation[];
 }) {
   const { data: tasks = [] } = useQuery({
     queryKey: TASKS_QUERY_KEY,
@@ -346,6 +350,7 @@ export function TaskListScreen({
       title: string;
       dueOn: string;
       isPurchase: boolean;
+      purchaseLocationId: string;
     }): Action => ({
       type: "add",
       task: {
@@ -358,6 +363,8 @@ export function TaskListScreen({
         sortOrder: Number.MAX_SAFE_INTEGER,
         url: null,
         note: null,
+        purchaseLocationId:
+          input.purchaseLocationId === "" ? null : input.purchaseLocationId,
       },
     }),
     { onFail: (error) => showToast({ message: error }) },
@@ -467,6 +474,8 @@ export function TaskListScreen({
       title: input.title,
       dueOn: input.dueOn ?? "",
       isPurchase: input.isPurchase,
+      // 作成時の場所指定はスコープ外。作成後に行の場所ピッカーから設定する（ステップ4）。
+      purchaseLocationId: "",
     });
   }
 
