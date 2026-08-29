@@ -1,6 +1,6 @@
 import Box from "@mui/material/Box";
 import CircularProgress from "@mui/material/CircularProgress";
-import { AppHeaderSkeleton } from "./AppHeaderSkeleton";
+import { AppHeaderSkeleton } from "../AppHeaderSkeleton";
 
 export default function Loading() {
   return (

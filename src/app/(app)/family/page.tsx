@@ -36,7 +36,7 @@ export default async function FamilyPage() {
     >
       <AppBar position="fixed" color="default" elevation={1}>
         <Toolbar>
-          <BackButton fallbackHref="/" />
+          <BackButton fallbackHref="/tasks" />
           <Typography variant="h6" component="h1">
             {family.name}
           </Typography>

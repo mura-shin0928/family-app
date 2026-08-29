@@ -85,7 +85,7 @@ export const requireAppAdmin = cache(async (): Promise<CurrentAppAdmin> => {
 
   const isAdmin = await getIsAppAdmin();
   if (!isAdmin) {
-    redirect("/");
+    redirect("/tasks");
   }
 
   return { userId: user.id };

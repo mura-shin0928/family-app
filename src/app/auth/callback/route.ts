@@ -38,7 +38,9 @@ export async function GET(request: Request) {
           .eq("user_id", user.id)
           .maybeSingle();
 
-        return NextResponse.redirect(`${origin}${member ? "/" : "/no-access"}`);
+        return NextResponse.redirect(
+          `${origin}${member ? "/tasks" : "/no-access"}`,
+        );
       }
     }
   }
