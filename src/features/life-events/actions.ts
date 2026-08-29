@@ -3,7 +3,14 @@
 import { requireFamilyMember } from "@/features/auth/guard";
 import { createClient } from "@/lib/supabase/server";
 import { findLifeEventTemplate } from "./default-templates";
-import { addLifeEventSchema } from "./schema";
+import {
+  addLifeEventProcedureSchema,
+  addLifeEventSchema,
+  lifeEventProcedureIdSchema,
+  reorderLifeEventProceduresSchema,
+  updateLifeEventProcedureNoteSchema,
+  updateLifeEventProcedureTitleSchema,
+} from "./schema";
 import type { LifeEventKind } from "./types";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -89,6 +96,205 @@ export async function addLifeEvent(input: {
       .update({ deleted_at: new Date().toISOString() })
       .eq("id", event.id);
     return { ok: false, error: "ライフイベントの追加に失敗しました" };
+  }
+
+  return { ok: true };
+}
+
+/**
+ * 手続きリストに項目を1つ足す。どのライフイベント由来かは基準日を引くために要る
+ * （FKが not null）ので lifeEventId を受け取るが、「誰が決めたか / 時期の硬さ」は
+ * 選ばせず既定（自分たち・〜ごろ）で入れる。並び順はリストの末尾。
+ */
+export async function addLifeEventProcedure(input: {
+  lifeEventId: string;
+  title: string;
+}): Promise<ActionResult> {
+  const parsed = addLifeEventProcedureSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  // RLS でも弾かれるが、他家族／削除済みイベントを指したときに分かりやすい
+  // エラーを返すため明示的に確認する。
+  const { data: event } = await supabase
+    .from("life_events")
+    .select("id")
+    .eq("id", parsed.data.lifeEventId)
+    .eq("family_id", member.familyId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (!event) {
+    return { ok: false, error: "ライフイベントが見つかりません" };
+  }
+
+  const { data: last } = await supabase
+    .from("life_event_procedures")
+    .select("sort_order")
+    .eq("family_id", member.familyId)
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { error } = await supabase.from("life_event_procedures").insert({
+    family_id: member.familyId,
+    life_event_id: parsed.data.lifeEventId,
+    sort_order: (last?.sort_order ?? 0) + 1,
+    title: parsed.data.title,
+    decided_by: "family",
+    timing_kind: "around",
+  });
+
+  if (error) {
+    return { ok: false, error: "項目の追加に失敗しました" };
+  }
+
+  return { ok: true };
+}
+
+export async function updateLifeEventProcedureTitle(input: {
+  id: string;
+  title: string;
+}): Promise<ActionResult> {
+  const parsed = updateLifeEventProcedureTitleSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("life_event_procedures")
+    .update({ title: parsed.data.title })
+    .eq("id", parsed.data.id)
+    .eq("family_id", member.familyId);
+
+  if (error) {
+    return { ok: false, error: "項目名の更新に失敗しました" };
+  }
+
+  return { ok: true };
+}
+
+export async function updateLifeEventProcedureNote(input: {
+  id: string;
+  note: string;
+}): Promise<ActionResult> {
+  const parsed = updateLifeEventProcedureNoteSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("life_event_procedures")
+    .update({ note: parsed.data.note === "" ? null : parsed.data.note })
+    .eq("id", parsed.data.id)
+    .eq("family_id", member.familyId);
+
+  if (error) {
+    return { ok: false, error: "メモの更新に失敗しました" };
+  }
+
+  return { ok: true };
+}
+
+export async function deleteLifeEventProcedure(input: {
+  id: string;
+}): Promise<ActionResult> {
+  const parsed = lifeEventProcedureIdSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "不正な操作です" };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("life_event_procedures")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", parsed.data.id)
+    .eq("family_id", member.familyId);
+
+  if (error) {
+    return { ok: false, error: "削除に失敗しました" };
+  }
+
+  return { ok: true };
+}
+
+/**
+ * ドラッグ&ドロップで並べ替えた結果を保存する。orderedIds を新しい順とみなして
+ * sort_order を 1..N に振り直す（隙間や同値があっても自己修復する）。実際に
+ * 書き換わるのは動いた分だけ。
+ *
+ * orderedIds が現在の非削除項目の集合とちょうど一致しないときは弾く
+ * （送信中に別の家族が項目を足した／消したケース）。呼び出し側で取り直させる。
+ */
+export async function reorderLifeEventProcedures(input: {
+  orderedIds: string[];
+}): Promise<ActionResult> {
+  const parsed = reorderLifeEventProceduresSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "不正な操作です" };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { data: rows, error: loadError } = await supabase
+    .from("life_event_procedures")
+    .select("id, sort_order")
+    .eq("family_id", member.familyId)
+    .is("deleted_at", null);
+
+  if (loadError || !rows) {
+    return { ok: false, error: "並べ替えに失敗しました" };
+  }
+
+  const currentIds = new Set(rows.map((row) => row.id));
+  const nextIds = new Set(parsed.data.orderedIds);
+  const sameSet =
+    currentIds.size === nextIds.size &&
+    [...nextIds].every((id) => currentIds.has(id));
+  if (!sameSet) {
+    return {
+      ok: false,
+      error: "リストが変わっています。画面を更新してからやり直してください",
+    };
+  }
+
+  const sortOrderById = new Map(rows.map((row) => [row.id, row.sort_order]));
+  const updates = parsed.data.orderedIds
+    .map((id, index) => ({ id, sortOrder: index + 1 }))
+    .filter(({ id, sortOrder }) => sortOrderById.get(id) !== sortOrder);
+
+  for (const update of updates) {
+    const { error } = await supabase
+      .from("life_event_procedures")
+      .update({ sort_order: update.sortOrder })
+      .eq("id", update.id)
+      .eq("family_id", member.familyId);
+    if (error) {
+      return { ok: false, error: "並べ替えに失敗しました" };
+    }
   }
 
   return { ok: true };
