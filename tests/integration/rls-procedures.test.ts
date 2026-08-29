@@ -10,7 +10,7 @@ import {
 
 const PASSWORD = "Test-Password-123!";
 
-describe("procedures / children / family_procedures RLS", () => {
+describe("procedures / children RLS", () => {
   const admin = createAdminClient();
   const runId = randomUUID().slice(0, 8);
 
@@ -18,9 +18,6 @@ describe("procedures / children / family_procedures RLS", () => {
   let familyF2: string;
   let memberAId: string;
   let memberBId: string;
-  let memberCId: string;
-  let taskF1: string;
-  let taskF2: string;
   let procDraft: string;
   let procPublished: string;
   let procArchived: string;
@@ -90,35 +87,6 @@ describe("procedures / children / family_procedures RLS", () => {
     };
     memberAId = findMemberId(userIds[userA.email]);
     memberBId = findMemberId(userIds[userB.email]);
-    memberCId = findMemberId(userIds[userC.email]);
-
-    const { data: t1, error: t1Error } = await admin
-      .from("tasks")
-      .insert({
-        family_id: familyF1,
-        title: "F1のタスク",
-        sort_order: 1,
-        created_by: memberAId,
-      })
-      .select("id")
-      .single();
-    if (t1Error || !t1)
-      throw new Error(`failed to seed F1 task: ${t1Error?.message}`);
-    taskF1 = t1.id;
-
-    const { data: t2, error: t2Error } = await admin
-      .from("tasks")
-      .insert({
-        family_id: familyF2,
-        title: "F2のタスク",
-        sort_order: 1,
-        created_by: memberCId,
-      })
-      .select("id")
-      .single();
-    if (t2Error || !t2)
-      throw new Error(`failed to seed F2 task: ${t2Error?.message}`);
-    taskF2 = t2.id;
 
     const { data: pd, error: pdError } = await admin
       .from("procedures")
@@ -195,16 +163,11 @@ describe("procedures / children / family_procedures RLS", () => {
   });
 
   afterAll(async () => {
-    await admin
-      .from("family_procedures")
-      .delete()
-      .in("family_id", [familyF1, familyF2]);
     await admin.from("children").delete().in("family_id", [familyF1, familyF2]);
     await admin
       .from("procedures")
       .delete()
       .in("id", [procDraft, procPublished, procArchived]);
-    await admin.from("tasks").delete().in("family_id", [familyF1, familyF2]);
     await Promise.all(
       Object.values(userIds).map((id) => deleteUser(admin, id)),
     );
@@ -482,152 +445,6 @@ describe("procedures / children / family_procedures RLS", () => {
         .update({ deleted_at: new Date().toISOString() })
         .eq("id", created.id);
       expect(error).toBeNull();
-    });
-  });
-
-  describe("family_procedures", () => {
-    it("a member can link a procedure to their own family, procedure and task", async () => {
-      const clientA = await signInAsClient(userA.email, PASSWORD);
-
-      const { data, error } = await clientA
-        .from("family_procedures")
-        .insert({
-          family_id: familyF1,
-          procedure_id: procPublished,
-          child_id: childF1,
-          task_id: taskF1,
-          added_by: memberAId,
-        })
-        .select("id")
-        .single();
-
-      expect(error).toBeNull();
-      expect(data?.id).toBeTruthy();
-
-      await admin
-        .from("family_procedures")
-        .delete()
-        .eq("id", data?.id ?? "");
-    });
-
-    it("can link without a child (family-wide procedure)", async () => {
-      const clientA = await signInAsClient(userA.email, PASSWORD);
-
-      const { data, error } = await clientA
-        .from("family_procedures")
-        .insert({
-          family_id: familyF1,
-          procedure_id: procDraft,
-          added_by: memberAId,
-        })
-        .select("id")
-        .single();
-
-      expect(error).toBeNull();
-      await admin
-        .from("family_procedures")
-        .delete()
-        .eq("id", data?.id ?? "");
-    });
-
-    it("cannot link a procedure using another family's task_id", async () => {
-      const clientA = await signInAsClient(userA.email, PASSWORD);
-
-      const { error } = await clientA.from("family_procedures").insert({
-        family_id: familyF1,
-        procedure_id: procPublished,
-        task_id: taskF2,
-        added_by: memberAId,
-      });
-
-      expect(error).not.toBeNull();
-    });
-
-    it("cannot link a procedure using another family's child_id", async () => {
-      const clientC = await signInAsClient(userC.email, PASSWORD);
-
-      const { error } = await clientC.from("family_procedures").insert({
-        family_id: familyF2,
-        procedure_id: procPublished,
-        child_id: childF1,
-        added_by: memberCId,
-      });
-
-      expect(error).not.toBeNull();
-    });
-
-    it("cannot link with family_id spoofed to another family", async () => {
-      const clientA = await signInAsClient(userA.email, PASSWORD);
-
-      const { error } = await clientA.from("family_procedures").insert({
-        family_id: familyF2,
-        procedure_id: procPublished,
-        added_by: memberAId,
-      });
-
-      expect(error).not.toBeNull();
-    });
-
-    it("an added link can later be updated to attach a task_id in the same family (upsert path)", async () => {
-      const clientA = await signInAsClient(userA.email, PASSWORD);
-
-      const { data: seeded, error: seedError } = await admin
-        .from("family_procedures")
-        .insert({
-          family_id: familyF1,
-          procedure_id: procPublished,
-          added_by: memberAId,
-        })
-        .select("id")
-        .single();
-      if (seedError || !seeded)
-        throw new Error(`failed to seed: ${seedError?.message}`);
-
-      const { error } = await clientA
-        .from("family_procedures")
-        .update({ task_id: taskF1 })
-        .eq("id", seeded.id);
-      expect(error).toBeNull();
-
-      const { data: check } = await admin
-        .from("family_procedures")
-        .select("task_id")
-        .eq("id", seeded.id)
-        .single();
-      expect(check?.task_id).toBe(taskF1);
-
-      await admin.from("family_procedures").delete().eq("id", seeded.id);
-    });
-
-    it("a member can select their own family's links but not another family's", async () => {
-      const { data: seeded, error: seedError } = await admin
-        .from("family_procedures")
-        .insert({
-          family_id: familyF1,
-          procedure_id: procPublished,
-          added_by: memberAId,
-        })
-        .select("id")
-        .single();
-      if (seedError || !seeded)
-        throw new Error(`failed to seed: ${seedError?.message}`);
-
-      const clientA = await signInAsClient(userA.email, PASSWORD);
-      const { data: own } = await clientA
-        .from("family_procedures")
-        .select("id")
-        .eq("id", seeded.id);
-      expect(own?.map((f) => f.id)).toContain(seeded.id);
-
-      const clientC = await signInAsClient(userC.email, PASSWORD);
-      const { data: other, error: otherError } = await clientC
-        .from("family_procedures")
-        .select("id")
-        .eq("id", seeded.id);
-      expect(otherError).toBeNull();
-      expect(other).toHaveLength(0);
-
-      await admin.from("family_procedures").delete().eq("id", seeded.id);
     });
   });
 });

@@ -5,12 +5,7 @@ import type {
   DeadlineKind,
   OffsetCounting,
 } from "./extraction/types";
-import type {
-  ProcedureCategory,
-  Template,
-  TemplateAnchorEvent,
-  TemplateItem,
-} from "./types";
+import type { ProcedureCategory } from "./types";
 
 export async function getFamilyMunicipalityCode(
   familyId: string,
@@ -28,57 +23,6 @@ export async function getFamilyMunicipalityCode(
   }
 
   return data.municipality_code;
-}
-
-export async function getBirthTemplateWithItems(
-  familyId: string,
-): Promise<{ template: Template; items: TemplateItem[] } | null> {
-  const supabase = await createClient();
-
-  const { data: templateRow, error: templateError } = await supabase
-    .from("procedure_templates")
-    .select("id, family_id, life_event_kind, title")
-    .eq("family_id", familyId)
-    .eq("life_event_kind", "birth")
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  if (templateError) {
-    throw new Error(`failed to load template: ${templateError.message}`);
-  }
-  if (!templateRow) return null;
-
-  const { data: itemRows, error: itemsError } = await supabase
-    .from("procedure_template_items")
-    .select(
-      "id, template_id, sort_order, title, note, category, anchor_event, offset_days",
-    )
-    .eq("template_id", templateRow.id)
-    .is("deleted_at", null)
-    .order("sort_order", { ascending: true });
-
-  if (itemsError) {
-    throw new Error(`failed to load template items: ${itemsError.message}`);
-  }
-
-  return {
-    template: {
-      id: templateRow.id,
-      familyId: templateRow.family_id,
-      lifeEventKind: templateRow.life_event_kind as "birth",
-      title: templateRow.title,
-    },
-    items: (itemRows ?? []).map((row) => ({
-      id: row.id,
-      templateId: row.template_id,
-      sortOrder: row.sort_order,
-      title: row.title,
-      note: row.note,
-      category: row.category as ProcedureCategory | null,
-      anchorEvent: row.anchor_event as TemplateAnchorEvent | null,
-      offsetDays: row.offset_days,
-    })),
-  };
 }
 
 export type MatchedProcedure = {
@@ -144,34 +88,4 @@ export async function getProceduresByCategories(
     documents: row.documents,
     sourceUrl: row.source_url,
   }));
-}
-
-export type FamilyProcedureLink = {
-  templateItemId: string;
-  childId: string | null;
-  taskId: string | null;
-};
-
-export async function getFamilyProcedureLinks(
-  familyId: string,
-): Promise<FamilyProcedureLink[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("family_procedures")
-    .select("template_item_id, child_id, task_id")
-    .eq("family_id", familyId)
-    .not("template_item_id", "is", null);
-
-  if (error) {
-    throw new Error(`failed to load family_procedures: ${error.message}`);
-  }
-
-  return (data ?? [])
-    .filter((row) => row.template_item_id !== null)
-    .map((row) => ({
-      templateItemId: row.template_item_id as string,
-      childId: row.child_id,
-      taskId: row.task_id,
-    }));
 }
