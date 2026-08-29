@@ -13,43 +13,57 @@ import Checkbox from "@mui/material/Checkbox";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
+import Menu from "@mui/material/Menu";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
+import { PurchaseLocationOptions } from "@/features/purchase-locations/components/PurchaseLocationOptions";
+import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { formatRelativeDue } from "@/lib/date";
 import type { TaskDTO } from "../types";
 
 type Props = {
   task: TaskDTO;
   today: string;
+  locations: PurchaseLocation[];
   onToggle: (task: TaskDTO) => void;
   onDueDateChange: (task: TaskDTO, dueOn: string | null) => void;
   onTitleChange: (task: TaskDTO, title: string) => void;
   onUrlChange: (task: TaskDTO, url: string) => void;
   onNoteChange: (task: TaskDTO, note: string) => void;
   onPurchaseToggle: (task: TaskDTO) => void;
+  onPurchaseLocationChange: (task: TaskDTO, locationId: string | null) => void;
   onDelete: (task: TaskDTO) => void;
 };
 
 export function TaskRow({
   task,
   today,
+  locations,
   onToggle,
   onDueDateChange,
   onTitleChange,
   onUrlChange,
   onNoteChange,
   onPurchaseToggle,
+  onPurchaseLocationChange,
   onDelete,
 }: Props) {
   const [editingDue, setEditingDue] = useState(false);
   const [draftDue, setDraftDue] = useState("");
   const [editingTitle, setEditingTitle] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [locationAnchor, setLocationAnchor] = useState<HTMLElement | null>(
+    null,
+  );
   const done = task.status === "done";
   const hasDetails = !!(task.url || task.note);
+  // 論理削除済みの場所idは「登録済みに無い = 未設定」として扱う。
+  const selectedLocation =
+    locations.find((location) => location.id === task.purchaseLocationId) ??
+    null;
 
   function commitTitle(value: string) {
     const trimmed = value.trim();
@@ -127,17 +141,25 @@ export function TaskRow({
             （「期限なしにする」が反応しない不具合の原因だった）。QuickCaptureBar
             の期限パネルと同様、blurではなくClickAwayListenerで閉じる。
           */}
-          <ClickAwayListener onClickAway={() => setEditingDue(false)}>
-            <Box>
-              {editingDue ? (
-                <Box sx={{ mt: 0.5 }}>
-                  {/*
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1,
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+            }}
+          >
+            <ClickAwayListener onClickAway={() => setEditingDue(false)}>
+              <Box>
+                {editingDue ? (
+                  <Box sx={{ mt: 0.5 }}>
+                    {/*
                     autoFocusは付けない。iOSでは空のdate inputに自動フォーカス
                     すると、ユーザーが何も操作していないのに「今日」でchangeが
                     発火してしまう不具合があるため（QuickCaptureBarの期限パネル
                     も同じ理由でautoFocusなし）。
                   */}
-                  {/*
+                    {/*
                     onChangeでは確定しない。iOSでは自動フォーカスでなく手動タップ
                     でも、空のdate inputを開いた時点でピッカーが「今日」を仮表示し
                     changeが発火することがある。ここで即確定・即クローズしていると、
@@ -146,37 +168,21 @@ export function TaskRow({
                     見えてしまっていた。値はdraftDueに留め、下のボタンでの明示的な
                     確定操作でのみonDueDateChangeを呼ぶ。
                   */}
-                  <TextField
-                    type="date"
-                    size="small"
-                    variant="standard"
-                    value={draftDue}
-                    onChange={(event) => setDraftDue(event.target.value)}
-                    slotProps={{
-                      // 16px未満だとiOSでフォーカス時に画面全体がズームされる。
-                      // 16pxにする分、ボタンは横に並べず下に積んで幅の競合を避ける。
-                      htmlInput: { style: { fontSize: "1rem" } },
-                    }}
-                  />
-                  <Button
-                    size="small"
-                    disabled={!draftDue}
-                    sx={{
-                      display: "block",
-                      mt: 0.5,
-                      p: 0,
-                      minWidth: 0,
-                      textTransform: "none",
-                      fontSize: "0.75rem",
-                      whiteSpace: "nowrap",
-                    }}
-                    onClick={() => commitDue(draftDue || null)}
-                  >
-                    設定
-                  </Button>
-                  {task.dueOn && (
+                    <TextField
+                      type="date"
+                      size="small"
+                      variant="standard"
+                      value={draftDue}
+                      onChange={(event) => setDraftDue(event.target.value)}
+                      slotProps={{
+                        // 16px未満だとiOSでフォーカス時に画面全体がズームされる。
+                        // 16pxにする分、ボタンは横に並べず下に積んで幅の競合を避ける。
+                        htmlInput: { style: { fontSize: "1rem" } },
+                      }}
+                    />
                     <Button
                       size="small"
+                      disabled={!draftDue}
                       sx={{
                         display: "block",
                         mt: 0.5,
@@ -186,33 +192,84 @@ export function TaskRow({
                         fontSize: "0.75rem",
                         whiteSpace: "nowrap",
                       }}
-                      onClick={() => commitDue(null)}
+                      onClick={() => commitDue(draftDue || null)}
                     >
-                      期限なしにする
+                      設定
                     </Button>
-                  )}
-                </Box>
-              ) : (
-                <Button
-                  size="small"
-                  onClick={openDueEditor}
-                  sx={{
-                    mt: 0.25,
-                    p: 0,
-                    minWidth: 0,
-                    textTransform: "none",
-                    fontSize: "0.75rem",
-                    color: "text.secondary",
-                  }}
-                >
-                  {task.dueOn
-                    ? formatRelativeDue(task.dueOn, today)
-                    : "期限を設定"}
-                </Button>
-              )}
-            </Box>
-          </ClickAwayListener>
+                    {task.dueOn && (
+                      <Button
+                        size="small"
+                        sx={{
+                          display: "block",
+                          mt: 0.5,
+                          p: 0,
+                          minWidth: 0,
+                          textTransform: "none",
+                          fontSize: "0.75rem",
+                          whiteSpace: "nowrap",
+                        }}
+                        onClick={() => commitDue(null)}
+                      >
+                        期限なしにする
+                      </Button>
+                    )}
+                  </Box>
+                ) : (
+                  <Button
+                    size="small"
+                    onClick={openDueEditor}
+                    sx={{
+                      mt: 0.25,
+                      p: 0,
+                      minWidth: 0,
+                      textTransform: "none",
+                      fontSize: "0.75rem",
+                      color: "text.secondary",
+                    }}
+                  >
+                    {task.dueOn
+                      ? formatRelativeDue(task.dueOn, today)
+                      : "期限を設定"}
+                  </Button>
+                )}
+              </Box>
+            </ClickAwayListener>
+
+            {task.isPurchase && (
+              <Button
+                size="small"
+                onClick={(event) => setLocationAnchor(event.currentTarget)}
+                sx={{
+                  mt: 0.25,
+                  p: 0,
+                  minWidth: 0,
+                  textTransform: "none",
+                  fontSize: "0.75rem",
+                  color: selectedLocation ? "primary.main" : "text.secondary",
+                }}
+              >
+                {selectedLocation ? selectedLocation.name : "場所"}
+              </Button>
+            )}
+          </Box>
         </Box>
+
+        {task.isPurchase && (
+          <Menu
+            anchorEl={locationAnchor}
+            open={!!locationAnchor}
+            onClose={() => setLocationAnchor(null)}
+          >
+            <PurchaseLocationOptions
+              locations={locations}
+              selectedId={selectedLocation?.id ?? null}
+              onSelect={(id) => {
+                onPurchaseLocationChange(task, id);
+                setLocationAnchor(null);
+              }}
+            />
+          </Menu>
+        )}
 
         <IconButton
           onClick={() => setDetailsOpen((current) => !current)}

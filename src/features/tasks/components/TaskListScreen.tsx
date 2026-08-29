@@ -29,6 +29,7 @@ import {
   setTaskPurchase,
   updateTaskDueDate,
   updateTaskNote,
+  updateTaskPurchaseLocation,
   updateTaskTitle,
   updateTaskUrl,
 } from "../actions";
@@ -65,6 +66,7 @@ type Action =
   | { type: "title"; id: string; title: string }
   | { type: "url"; id: string; url: string | null }
   | { type: "note"; id: string; note: string | null }
+  | { type: "purchaseLocation"; id: string; purchaseLocationId: string | null }
   | { type: "remove"; id: string };
 
 function applyAction(tasks: TaskDTO[], action: Action): TaskDTO[] {
@@ -102,6 +104,12 @@ function applyAction(tasks: TaskDTO[], action: Action): TaskDTO[] {
     case "note":
       return tasks.map((task) =>
         task.id === action.id ? { ...task, note: action.note } : task,
+      );
+    case "purchaseLocation":
+      return tasks.map((task) =>
+        task.id === action.id
+          ? { ...task, purchaseLocationId: action.purchaseLocationId }
+          : task,
       );
     case "remove":
       return tasks.filter((task) => task.id !== action.id);
@@ -315,11 +323,11 @@ function CompletedSection({
 export function TaskListScreen({
   initialTasks,
   familyId,
+  locations,
 }: {
   initialTasks: TaskDTO[];
   familyId: string;
   // 買う場所の候補。RSC の props で受け取るだけ（TanStack Query も Realtime も使わない）。
-  // 行の場所ピッカーとフィルタチップで使う（ステップ4・5で参照する）。
   locations: PurchaseLocation[];
 }) {
   const { data: tasks = [] } = useQuery({
@@ -442,6 +450,17 @@ export function TaskListScreen({
     { onFail: (error) => showToast({ message: error }) },
   );
 
+  const purchaseLocationMutation = useOptimisticTasksMutation(
+    updateTaskPurchaseLocation,
+    (input: { taskId: string; purchaseLocationId: string }): Action => ({
+      type: "purchaseLocation",
+      id: input.taskId,
+      purchaseLocationId:
+        input.purchaseLocationId === "" ? null : input.purchaseLocationId,
+    }),
+    { onFail: (error) => showToast({ message: error }) },
+  );
+
   const deleteMutation = useOptimisticTasksMutation(
     deleteTask,
     (input: { taskId: string }): Action => ({
@@ -468,14 +487,14 @@ export function TaskListScreen({
     title: string;
     dueOn: string | null;
     isPurchase: boolean;
+    purchaseLocationId: string | null;
   }) {
     createMutation.mutate({
       id: crypto.randomUUID(),
       title: input.title,
       dueOn: input.dueOn ?? "",
       isPurchase: input.isPurchase,
-      // 作成時の場所指定はスコープ外。作成後に行の場所ピッカーから設定する（ステップ4）。
-      purchaseLocationId: "",
+      purchaseLocationId: input.purchaseLocationId ?? "",
     });
   }
 
@@ -509,6 +528,17 @@ export function TaskListScreen({
     });
   }
 
+  function handlePurchaseLocationChange(
+    task: TaskDTO,
+    locationId: string | null,
+  ) {
+    if (locationId === task.purchaseLocationId) return;
+    purchaseLocationMutation.mutate({
+      taskId: task.id,
+      purchaseLocationId: locationId ?? "",
+    });
+  }
+
   function performDelete(task: TaskDTO) {
     deleteMutation.mutate({ taskId: task.id });
   }
@@ -517,13 +547,15 @@ export function TaskListScreen({
     (key) => !COLLAPSIBLE_BUCKETS.includes(key),
   );
 
-  const rowHandlers = {
+  const rowProps = {
+    locations,
     onToggle: handleToggle,
     onDueDateChange: handleDueDateChange,
     onTitleChange: handleTitleChange,
     onUrlChange: handleUrlChange,
     onNoteChange: handleNoteChange,
     onPurchaseToggle: handlePurchaseToggle,
+    onPurchaseLocationChange: handlePurchaseLocationChange,
     onDelete: setTaskPendingDelete,
   };
 
@@ -556,7 +588,7 @@ export function TaskListScreen({
                     key={task.id}
                     task={task}
                     today={today}
-                    {...rowHandlers}
+                    {...rowProps}
                   />
                 ))}
               </BucketSection>
@@ -569,7 +601,7 @@ export function TaskListScreen({
                     key={task.id}
                     task={task}
                     today={today}
-                    {...rowHandlers}
+                    {...rowProps}
                   />
                 ))}
               </CompletedSection>
@@ -601,7 +633,7 @@ export function TaskListScreen({
                       key={task.id}
                       task={task}
                       today={today}
-                      {...rowHandlers}
+                      {...rowProps}
                     />
                   ))}
                 </BucketSection>
@@ -621,7 +653,7 @@ export function TaskListScreen({
                       key={task.id}
                       task={task}
                       today={today}
-                      {...rowHandlers}
+                      {...rowProps}
                     />
                   ))}
                 </CollapsibleSection>
@@ -635,7 +667,7 @@ export function TaskListScreen({
                     key={task.id}
                     task={task}
                     today={today}
-                    {...rowHandlers}
+                    {...rowProps}
                   />
                 ))}
               </CompletedSection>
@@ -655,7 +687,7 @@ export function TaskListScreen({
         )}
       </Stack>
 
-      <QuickCaptureBar onSubmit={handleCreate} />
+      <QuickCaptureBar locations={locations} onSubmit={handleCreate} />
 
       <Snackbar
         open={!!toast}
