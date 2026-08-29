@@ -15,7 +15,7 @@ export type ProcedureCategory =
   | "elementary_school_enrollment";
 
 // DBのcheck制約と同じ語彙。表示名はここに集約する（procedures.category /
-// procedure_template_items.category の両方がこの語彙を共有する）。
+// life_event_procedures.category の両方がこの語彙を共有する）。
 // 出産直後だけでなく就学前(6歳ごろ)までをカバーする。
 export const PROCEDURE_CATEGORIES: readonly {
   value: ProcedureCategory;
@@ -44,27 +44,9 @@ export function categoryLabel(category: ProcedureCategory | null): string {
   );
 }
 
-export type LifeEventKind = "birth";
-
+// 目安時期の基準日（life_event_procedures.anchor_event と同じ語彙のうち、
+// 子供の日付を基準にする2つ）。deadline.ts の目安計算が使う。
 export type TemplateAnchorEvent = "birth" | "expected_birth";
-
-export type TemplateItem = {
-  id: string;
-  templateId: string;
-  sortOrder: number;
-  title: string;
-  note: string | null;
-  category: ProcedureCategory | null;
-  anchorEvent: TemplateAnchorEvent | null;
-  offsetDays: number | null;
-};
-
-export type Template = {
-  id: string;
-  familyId: string;
-  lifeEventKind: LifeEventKind;
-  title: string;
-};
 
 export type DiscoverCandidateKind = "index" | "procedure" | "unknown";
 
