@@ -90,15 +90,19 @@ export function TaskRow({
       variant="outlined"
       sx={{
         px: 1,
-        py: 0.5,
+        py: 0.25,
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         <Checkbox
           checked={done}
           onChange={() => onToggle(task)}
           color="success"
+          size="small"
           aria-label={done ? "未完了に戻す" : "完了にする"}
+          // 行の高さを詰めるため既定の padding: 9px を 4px に。
+          // メタ行の pl（下記）はこの幅（20 + 8 = 28px）に合わせている。
+          sx={{ p: 0.5 }}
         />
 
         <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -179,7 +183,8 @@ export function TaskRow({
       {/*
         メタ行（期限 · 場所）はタイトル行から出して右アイコンの下に全幅で置く。
         iPhone 375px 幅ではタイトル行の残り幅（約178px）に「あと32日 · 場所名」が
-        入らないため。インデントは下の Collapse と同じ値でタイトル左端に揃える。
+        入らないため。pl はタイトル左端に合わせる: Checkbox(20 + p:0.5*2 = 28px)
+        ＋ 行の gap(8px) = 36px。先頭ボタンは pl:0 なのでアイコンがこの位置に来る。
         折り返さず1行固定にし、はみ出す場所名は省略する（カード高さを揃える）。
       */}
       <Box
@@ -188,7 +193,7 @@ export function TaskRow({
           gap: 0.5,
           alignItems: editingDue ? "flex-start" : "center",
           mt: 0.25,
-          pl: "calc(42px + 12px)",
+          pl: "36px",
           pr: 1,
           // 編集中の期限エディタは縦積みの背の高いパネル。overflow: hidden を
           // 当てるとボタンが切れて操作不能になるので、非編集時だけ省略する。
@@ -274,13 +279,16 @@ export function TaskRow({
                 startIcon={<CalendarTodayOutlinedIcon sx={{ fontSize: 16 }} />}
                 sx={{
                   flexShrink: 0,
-                  p: 0.5,
+                  py: 0.5,
+                  pl: 0,
+                  pr: 0.5,
                   minWidth: 0,
                   textTransform: "none",
                   fontSize: "0.75rem",
                   color: "text.secondary",
+                  // startIcon の既定の負マージンを消し、アイコンをメタ行の pl に揃える。
                   "& .MuiButton-startIcon": {
-                    mx: 0,
+                    ml: 0,
                     mr: task.dueOn ? 0.5 : 0,
                   },
                 }}
@@ -353,7 +361,7 @@ export function TaskRow({
         defaultValueを最新化する。
       */}
       <Collapse in={detailsOpen} mountOnEnter unmountOnExit>
-        <Stack spacing={1} sx={{ pt: 1, pl: "calc(42px + 12px)", pr: 1 }}>
+        <Stack spacing={1} sx={{ pt: 1, pl: "36px", pr: 1 }}>
           <TextField
             type="url"
             size="small"
