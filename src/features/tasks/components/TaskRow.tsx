@@ -289,7 +289,7 @@ export function TaskRow({
                   // startIcon の既定の負マージンを消し、アイコンをメタ行の pl に揃える。
                   "& .MuiButton-startIcon": {
                     ml: 0,
-                    mr: task.dueOn ? 0.25 : 0,
+                    mr: task.dueOn ? "1px" : 0,
                   },
                 }}
               >
@@ -315,7 +315,7 @@ export function TaskRow({
               color: "text.secondary",
               "& .MuiButton-startIcon": {
                 mx: 0,
-                mr: selectedLocation ? 0.25 : 0,
+                mr: selectedLocation ? "1px" : 0,
                 flexShrink: 0,
               },
             }}
