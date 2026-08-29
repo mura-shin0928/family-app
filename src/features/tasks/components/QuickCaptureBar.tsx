@@ -53,7 +53,14 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
   const today = todayInJst();
   const tomorrow = addDaysToDateString(today, 1);
   const dueLabel =
-    dueOn === today ? "今日" : dueOn === tomorrow ? "明日" : (dueOn ?? "期限");
+    dueOn === today
+      ? "今日"
+      : dueOn === tomorrow
+        ? "明日"
+        : dueOn
+          ? // "2026-09-30" → "9/30"（チップが横に伸びて3つ目が折り返すのを防ぐ）
+            `${Number(dueOn.slice(5, 7))}/${Number(dueOn.slice(8, 10))}`
+          : "期限";
   const selectedLocation =
     locations.find((location) => location.id === locationId) ?? null;
 
@@ -154,7 +161,7 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
         </Button>
 
         {/*
-          TextFieldと同じグリッド列に入れて、その列内で右揃えにする。
+          入力欄と追加ボタンの下に、グリッド全幅で左揃えに並べる。
           「期限」チップと期限パネルの両方をClickAwayListenerの内側に
           含めることで、チップの外側クリック判定にチップ自身を含めないための
           ref/除外ロジックなしで「開いてる時に再タップしたら閉じる」を実現する
@@ -169,16 +176,18 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
         >
           <Stack
             direction="row"
-            spacing={1}
+            spacing={0.75}
+            useFlexGap
             sx={{
               position: "relative",
-              justifyContent: "flex-end",
+              gridColumn: "1 / -1",
               flexWrap: "wrap",
             }}
           >
             <Chip
+              size="small"
               icon={
-                <CalendarTodayOutlinedIcon sx={{ width: 16, height: 16 }} />
+                <CalendarTodayOutlinedIcon sx={{ width: 15, height: 15 }} />
               }
               label={dueLabel}
               clickable
@@ -191,7 +200,8 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
               }}
             />
             <Chip
-              icon={<ShoppingCartOutlinedIcon sx={{ width: 16, height: 16 }} />}
+              size="small"
+              icon={<ShoppingCartOutlinedIcon sx={{ width: 15, height: 15 }} />}
               label="買うもの"
               clickable
               color={isPurchase ? "primary" : "default"}
@@ -201,7 +211,8 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
             />
             {isPurchase && (
               <Chip
-                icon={<PlaceOutlinedIcon sx={{ width: 16, height: 16 }} />}
+                size="small"
+                icon={<PlaceOutlinedIcon sx={{ width: 15, height: 15 }} />}
                 label={selectedLocation ? selectedLocation.name : "場所"}
                 clickable
                 color={locationId || locationOpen ? "primary" : "default"}
@@ -218,16 +229,17 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
               // MUIのPopoverはPortal+絶対座標計算のため、iOSでキーボード表示中は
               // visual viewportとのズレで位置がおかしくなる。この行（position:
               // relative）をcontaining blockにしたposition:absoluteで、JSでの
-              // 座標計算なしに右揃えのChip群の真上に出す。Modal/FocusTrapを
+              // 座標計算なしにChip群の真上に出す。Modal/FocusTrapを
               // 使わないのでキーボードを閉じさせる副作用もない。
               <Paper
                 elevation={4}
                 sx={{
                   position: "absolute",
-                  insetInlineEnd: 0,
+                  insetInlineStart: 0,
                   bottom: "100%",
                   mb: 1,
                   width: "16rem",
+                  maxWidth: "100%",
                 }}
               >
                 <Stack spacing={1} sx={{ p: 1.5 }}>
@@ -280,10 +292,11 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
                 elevation={4}
                 sx={{
                   position: "absolute",
-                  insetInlineEnd: 0,
+                  insetInlineStart: 0,
                   bottom: "100%",
                   mb: 1,
                   width: "16rem",
+                  maxWidth: "100%",
                 }}
               >
                 <MenuList disablePadding>

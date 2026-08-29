@@ -1,10 +1,12 @@
 "use client";
 
+import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import LinkIcon from "@mui/icons-material/Link";
 import NotesIcon from "@mui/icons-material/Notes";
 import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import Box from "@mui/material/Box";
@@ -144,13 +146,14 @@ export function TaskRow({
           <Box
             sx={{
               display: "flex",
-              gap: 1,
-              alignItems: "flex-start",
+              gap: 0.5,
+              alignItems: "center",
               flexWrap: "wrap",
+              mt: 0.25,
             }}
           >
             <ClickAwayListener onClickAway={() => setEditingDue(false)}>
-              <Box>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
                 {editingDue ? (
                   <Box sx={{ mt: 0.5 }}>
                     {/*
@@ -218,18 +221,23 @@ export function TaskRow({
                   <Button
                     size="small"
                     onClick={openDueEditor}
+                    aria-label={task.dueOn ? undefined : "期限を設定"}
+                    startIcon={
+                      <CalendarTodayOutlinedIcon sx={{ fontSize: 16 }} />
+                    }
                     sx={{
-                      mt: 0.25,
-                      p: 0,
+                      p: 0.5,
                       minWidth: 0,
                       textTransform: "none",
                       fontSize: "0.75rem",
                       color: "text.secondary",
+                      "& .MuiButton-startIcon": {
+                        mx: 0,
+                        mr: task.dueOn ? 0.5 : 0,
+                      },
                     }}
                   >
-                    {task.dueOn
-                      ? formatRelativeDue(task.dueOn, today)
-                      : "期限を設定"}
+                    {task.dueOn ? formatRelativeDue(task.dueOn, today) : ""}
                   </Button>
                 )}
               </Box>
@@ -239,16 +247,21 @@ export function TaskRow({
               <Button
                 size="small"
                 onClick={(event) => setLocationAnchor(event.currentTarget)}
+                aria-label={selectedLocation ? undefined : "買う場所を選ぶ"}
+                startIcon={<PlaceOutlinedIcon sx={{ fontSize: 16 }} />}
                 sx={{
-                  mt: 0.25,
-                  p: 0,
+                  p: 0.5,
                   minWidth: 0,
                   textTransform: "none",
                   fontSize: "0.75rem",
                   color: selectedLocation ? "primary.main" : "text.secondary",
+                  "& .MuiButton-startIcon": {
+                    mx: 0,
+                    mr: selectedLocation ? 0.5 : 0,
+                  },
                 }}
               >
-                {selectedLocation ? selectedLocation.name : "場所"}
+                {selectedLocation ? selectedLocation.name : ""}
               </Button>
             )}
           </Box>
