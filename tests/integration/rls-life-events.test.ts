@@ -144,6 +144,7 @@ describe("life_events / life_event_procedures RLS", () => {
         {
           family_id: familyF1,
           life_event_id: eventF1,
+          child_id: childF1,
           sort_order: 1,
           title: "出生届を出す",
           is_government: true,
@@ -154,6 +155,7 @@ describe("life_events / life_event_procedures RLS", () => {
         {
           family_id: familyF2,
           life_event_id: eventF2,
+          child_id: childF2,
           sort_order: 1,
           title: "出生届を出す",
           is_government: true,
@@ -247,6 +249,7 @@ describe("life_events / life_event_procedures RLS", () => {
           family_id: familyF1,
           kind: "birth",
           title: "第2子の出産",
+          child_id: childF1,
           created_by: memberAId,
         })
         .select("id")
@@ -259,6 +262,70 @@ describe("life_events / life_event_procedures RLS", () => {
         .eq("id", data?.id ?? "");
     });
 
+    it("accepts the 'pregnancy' kind (妊娠と出産を分けた分)", async () => {
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+
+      const { data, error } = await clientA
+        .from("life_events")
+        .insert({
+          family_id: familyF1,
+          kind: "pregnancy",
+          title: "妊娠",
+          child_id: childF1,
+          created_by: memberAId,
+        })
+        .select("id")
+        .single();
+      expect(error).toBeNull();
+
+      await admin
+        .from("life_events")
+        .delete()
+        .eq("id", data?.id ?? "");
+    });
+
+    it("can add a preconception event with started_on and an event_start item", async () => {
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+
+      const { data: created, error: createError } = await clientA
+        .from("life_events")
+        .insert({
+          family_id: familyF1,
+          kind: "preconception",
+          title: "妊活",
+          child_id: childF1,
+          started_on: "2026-01-01",
+          created_by: memberAId,
+        })
+        .select("id")
+        .single();
+      expect(createError).toBeNull();
+
+      const { error: itemError } = await clientA
+        .from("life_event_procedures")
+        .insert({
+          family_id: familyF1,
+          life_event_id: created?.id ?? "",
+          child_id: childF1,
+          sort_order: 50,
+          title: "不妊検査・不妊治療の助成制度を確認する",
+          is_government: true,
+          timing_kind: "around",
+          anchor_event: "event_start",
+          offset_days: 30,
+        });
+      expect(itemError).toBeNull();
+
+      await admin
+        .from("life_event_procedures")
+        .delete()
+        .eq("life_event_id", created?.id ?? "");
+      await admin
+        .from("life_events")
+        .delete()
+        .eq("id", created?.id ?? "");
+    });
+
     it("cannot add an event to another family", async () => {
       const clientA = await signInAsClient(userA.email, PASSWORD);
 
@@ -266,6 +333,7 @@ describe("life_events / life_event_procedures RLS", () => {
         family_id: familyF2,
         kind: "birth",
         title: "なりすまし",
+        child_id: childF2,
         created_by: memberAId,
       });
       expect(error).not.toBeNull();
@@ -291,6 +359,7 @@ describe("life_events / life_event_procedures RLS", () => {
         family_id: familyF1,
         kind: "birth",
         title: "他家族のメンバー",
+        child_id: childF1,
         created_by: memberCId,
       });
       expect(error).not.toBeNull();
@@ -323,6 +392,7 @@ describe("life_events / life_event_procedures RLS", () => {
         .insert({
           family_id: familyF1,
           life_event_id: eventF1,
+          child_id: childF1,
           sort_order: 2,
           title: "追加した項目",
           is_government: false,
@@ -356,8 +426,24 @@ describe("life_events / life_event_procedures RLS", () => {
       const { error } = await clientA.from("life_event_procedures").insert({
         family_id: familyF1,
         life_event_id: eventF2,
+        child_id: childF1,
         sort_order: 1,
         title: "なりすまし項目",
+        is_government: false,
+        timing_kind: "around",
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it("cannot add an item whose child_id belongs to another family", async () => {
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+
+      const { error } = await clientA.from("life_event_procedures").insert({
+        family_id: familyF1,
+        life_event_id: eventF1,
+        child_id: childF2,
+        sort_order: 1,
+        title: "他家族の子に紐づく項目",
         is_government: false,
         timing_kind: "around",
       });
@@ -370,6 +456,7 @@ describe("life_events / life_event_procedures RLS", () => {
       const { error } = await clientA.from("life_event_procedures").insert({
         family_id: familyF2,
         life_event_id: eventF2,
+        child_id: childF2,
         sort_order: 1,
         title: "なりすまし項目",
         is_government: false,
@@ -382,6 +469,7 @@ describe("life_events / life_event_procedures RLS", () => {
       const { error } = await admin.from("life_event_procedures").insert({
         family_id: familyF1,
         life_event_id: eventF1,
+        child_id: childF1,
         sort_order: 99,
         title: "不正な時期",
         is_government: false,
