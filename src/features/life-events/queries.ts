@@ -32,8 +32,9 @@ export async function getLifeEvents(familyId: string): Promise<LifeEvent[]> {
 }
 
 /**
- * 家族の手続きリストは family 単位で1本。イベントごとに分けず sort_order だけで
- * 並べる（妊活の項目とお宮参りが時系列で混ざるのが自然なため）。
+ * 手続きは family 内の全子供ぶんまとめて取り、画面側で childId ごとのタブに分ける。
+ * 並び順（sort_order）は子供単位で1本 — 同じ子の妊娠の項目とお宮参りが時系列で
+ * 混ざるのが自然なため、イベントをまたいで入れ替えられる。
  */
 export async function getLifeEventProcedures(
   familyId: string,
@@ -43,7 +44,7 @@ export async function getLifeEventProcedures(
   const { data, error } = await supabase
     .from("life_event_procedures")
     .select(
-      "id, life_event_id, sort_order, title, note, is_government, timing_kind, anchor_event, offset_days",
+      "id, life_event_id, child_id, sort_order, title, note, is_government, timing_kind, anchor_event, offset_days",
     )
     .eq("family_id", familyId)
     .is("deleted_at", null)
@@ -56,6 +57,7 @@ export async function getLifeEventProcedures(
   return (data ?? []).map((row) => ({
     id: row.id,
     lifeEventId: row.life_event_id,
+    childId: row.child_id,
     sortOrder: row.sort_order,
     title: row.title,
     note: row.note,

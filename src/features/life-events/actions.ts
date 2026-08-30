@@ -16,13 +16,31 @@ import type { LifeEventKind } from "./types";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
+/** その子の手続きリストの末尾 sort_order を返す（項目が無ければ 0）。 */
+async function lastSortOrderForChild(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  familyId: string,
+  childId: string,
+): Promise<number> {
+  const { data } = await supabase
+    .from("life_event_procedures")
+    .select("sort_order")
+    .eq("family_id", familyId)
+    .eq("child_id", childId)
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.sort_order ?? 0;
+}
+
 /**
- * ライフイベントを1つ足し、そのテンプレートの項目を家族のリストの末尾にコピーする。
- * コピー後はテンプレートと切り離され、家族が自由に編集できる（この編集済みリスト
- * そのものが家族の記録になる）。同じ種別を何度でも足せる（第2子など）。
+ * ライフイベントを1つ足し、そのテンプレートの項目をその子の手続きリストの末尾に
+ * コピーする。コピー後はテンプレートと切り離され、家族が自由に編集できる（この
+ * 編集済みリストそのものが家族の記録になる）。同じ子に同じ種別を何度でも足せる。
  *
  * 末尾に足すだけで、基準日順に差し込むことはしない — 基準日が未入力のイベントが
- * あると時系列に並べようがないため、初期配置は単純にして並べ替え(P6-2)に委ねる。
+ * あると時系列に並べようがないため、初期配置は単純にして並べ替えに委ねる。
  */
 export async function addLifeEvent(input: {
   kind: string;
@@ -52,7 +70,7 @@ export async function addLifeEvent(input: {
       family_id: member.familyId,
       kind: template.kind,
       title: parsed.data.title,
-      child_id: parsed.data.childId === "" ? null : parsed.data.childId,
+      child_id: parsed.data.childId,
       started_on: parsed.data.startedOn === "" ? null : parsed.data.startedOn,
       created_by: member.id,
     })
@@ -63,16 +81,11 @@ export async function addLifeEvent(input: {
     return { ok: false, error: "ライフイベントの追加に失敗しました" };
   }
 
-  const { data: last } = await supabase
-    .from("life_event_procedures")
-    .select("sort_order")
-    .eq("family_id", member.familyId)
-    .is("deleted_at", null)
-    .order("sort_order", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const baseSortOrder = last?.sort_order ?? 0;
+  const baseSortOrder = await lastSortOrderForChild(
+    supabase,
+    member.familyId,
+    parsed.data.childId,
+  );
 
   const { error: itemsError } = await supabase
     .from("life_event_procedures")
@@ -80,6 +93,7 @@ export async function addLifeEvent(input: {
       template.items.map((item, index) => ({
         family_id: member.familyId,
         life_event_id: event.id,
+        child_id: parsed.data.childId,
         sort_order: baseSortOrder + index + 1,
         title: item.title,
         note: item.note,
@@ -104,12 +118,14 @@ export async function addLifeEvent(input: {
 }
 
 /**
- * 手続きリストに項目を1つ足す。どのライフイベント由来かは基準日を引くために要る
- * （FKが not null）ので lifeEventId を受け取るが、「誰が決めたか / 時期の硬さ」は
- * 選ばせず既定（自分たち・〜ごろ）で入れる。並び順はリストの末尾。
+ * 手続きリストに項目を1つ足す。子供とライフイベント種別(kind)で受け取り、その子に
+ * その種別のライフイベントがあればそれに、無ければ空で1つ作ってぶら下げる
+ * （テンプレの他項目は入れない）。「誰が決めたか / 時期の硬さ」は選ばせず既定
+ * （自分たち・〜ごろ）で入れる。並び順はその子のリストの末尾。
  */
 export async function addLifeEventProcedure(input: {
-  lifeEventId: string;
+  childId: string;
+  kind: string;
   title: string;
 }): Promise<ActionResult> {
   const parsed = addLifeEventProcedureSchema.safeParse(input);
@@ -120,36 +136,71 @@ export async function addLifeEventProcedure(input: {
     };
   }
 
+  const template = findLifeEventTemplate(parsed.data.kind as LifeEventKind);
+  if (!template) {
+    return { ok: false, error: "このライフイベントは選べません" };
+  }
+
   const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
-  // RLS でも弾かれるが、他家族／削除済みイベントを指したときに分かりやすい
-  // エラーを返すため明示的に確認する。
-  const { data: event } = await supabase
-    .from("life_events")
+  // RLS でも弾かれるが、他家族／削除済みの子を指したときに分かりやすいエラーを
+  // 返すため明示的に確認する。
+  const { data: child } = await supabase
+    .from("children")
     .select("id")
-    .eq("id", parsed.data.lifeEventId)
+    .eq("id", parsed.data.childId)
     .eq("family_id", member.familyId)
     .is("deleted_at", null)
     .maybeSingle();
 
-  if (!event) {
-    return { ok: false, error: "ライフイベントが見つかりません" };
+  if (!child) {
+    return { ok: false, error: "子供が見つかりません" };
   }
 
-  const { data: last } = await supabase
-    .from("life_event_procedures")
-    .select("sort_order")
+  // その子の同じ種別のライフイベントを探す（複数あれば直近のもの）。
+  const { data: existing } = await supabase
+    .from("life_events")
+    .select("id")
     .eq("family_id", member.familyId)
+    .eq("child_id", parsed.data.childId)
+    .eq("kind", template.kind)
     .is("deleted_at", null)
-    .order("sort_order", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
+  let lifeEventId = existing?.id as string | undefined;
+
+  if (!lifeEventId) {
+    const { data: created, error: createError } = await supabase
+      .from("life_events")
+      .insert({
+        family_id: member.familyId,
+        kind: template.kind,
+        title: template.title,
+        child_id: parsed.data.childId,
+        created_by: member.id,
+      })
+      .select("id")
+      .single();
+    if (createError || !created) {
+      return { ok: false, error: "項目の追加に失敗しました" };
+    }
+    lifeEventId = created.id;
+  }
+
+  const lastSortOrder = await lastSortOrderForChild(
+    supabase,
+    member.familyId,
+    parsed.data.childId,
+  );
+
   const { error } = await supabase.from("life_event_procedures").insert({
     family_id: member.familyId,
-    life_event_id: parsed.data.lifeEventId,
-    sort_order: (last?.sort_order ?? 0) + 1,
+    life_event_id: lifeEventId,
+    child_id: parsed.data.childId,
+    sort_order: lastSortOrder + 1,
     title: parsed.data.title,
     is_government: false,
     timing_kind: "around",
@@ -292,14 +343,15 @@ export async function deleteLifeEventProcedure(input: {
 }
 
 /**
- * ドラッグ&ドロップで並べ替えた結果を保存する。orderedIds を新しい順とみなして
- * sort_order を 1..N に振り直す（隙間や同値があっても自己修復する）。実際に
- * 書き換わるのは動いた分だけ。
+ * ドラッグ&ドロップで並べ替えた結果を保存する。並び順は子供単位で1本なので childId で
+ * スコープし、その子の orderedIds を新しい順とみなして sort_order を 1..N に振り直す
+ * （隙間や同値があっても自己修復する）。実際に書き換わるのは動いた分だけ。
  *
- * orderedIds が現在の非削除項目の集合とちょうど一致しないときは弾く
+ * orderedIds がその子の現在の非削除項目の集合とちょうど一致しないときは弾く
  * （送信中に別の家族が項目を足した／消したケース）。呼び出し側で取り直させる。
  */
 export async function reorderLifeEventProcedures(input: {
+  childId: string;
   orderedIds: string[];
 }): Promise<ActionResult> {
   const parsed = reorderLifeEventProceduresSchema.safeParse(input);
@@ -314,6 +366,7 @@ export async function reorderLifeEventProcedures(input: {
     .from("life_event_procedures")
     .select("id, sort_order")
     .eq("family_id", member.familyId)
+    .eq("child_id", parsed.data.childId)
     .is("deleted_at", null);
 
   if (loadError || !rows) {
@@ -342,7 +395,8 @@ export async function reorderLifeEventProcedures(input: {
       .from("life_event_procedures")
       .update({ sort_order: update.sortOrder })
       .eq("id", update.id)
-      .eq("family_id", member.familyId);
+      .eq("family_id", member.familyId)
+      .eq("child_id", parsed.data.childId);
     if (error) {
       return { ok: false, error: "並べ替えに失敗しました" };
     }

@@ -149,6 +149,28 @@ describe("children RLS", () => {
       .eq("id", data?.id ?? "");
   });
 
+  it("can insert a child with no dates yet (妊活中で予定日が未定のケース)", async () => {
+    const clientA = await signInAsClient(userA.email, PASSWORD);
+
+    const { data, error } = await clientA
+      .from("children")
+      .insert({
+        family_id: familyF1,
+        display_name: "妊活メモ",
+        created_by: memberAId,
+      })
+      .select("id")
+      .single();
+
+    expect(error).toBeNull();
+    expect(data?.id).toBeTruthy();
+
+    await admin
+      .from("children")
+      .delete()
+      .eq("id", data?.id ?? "");
+  });
+
   it("cannot insert a child into another family", async () => {
     const clientA = await signInAsClient(userA.email, PASSWORD);
 

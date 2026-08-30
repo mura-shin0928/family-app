@@ -27,6 +27,8 @@ export type LifeEvent = {
 export type LifeEventProcedure = {
   id: string;
   lifeEventId: string;
+  /** どの子の手続きか。表示は子供ごとのタブに分かれ、並び順もこの単位で1本。 */
+  childId: string;
   sortOrder: number;
   title: string;
   note: string | null;

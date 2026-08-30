@@ -191,6 +191,7 @@ function ChildForm({
             size="small"
             fullWidth
             slotProps={{ inputLabel: { shrink: true } }}
+            helperText="妊活中などまだ分からなければ空のままでOK"
           />
           <TextField
             label="出生日（生まれたら入力）"
