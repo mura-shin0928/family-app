@@ -71,7 +71,6 @@ export function LifeEventListScreen({
   familyChildren: Child[];
 }) {
   const router = useRouter();
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<LifeEventProcedure | null>(
     null,
   );
@@ -159,29 +158,22 @@ export function LifeEventListScreen({
   return (
     <Box sx={{ p: 2, pb: 10 }}>
       <Stack spacing={2}>
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}
-        >
-          {lifeEvents.map((event) => (
-            <Chip
-              key={event.id}
-              label={event.title}
-              size="small"
-              variant="outlined"
-            />
-          ))}
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<AddIcon fontSize="small" />}
-            onClick={() => setDialogOpen(true)}
-            sx={{ ml: "auto" }}
+        {lifeEvents.length > 0 && (
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}
           >
-            ライフイベントを追加
-          </Button>
-        </Stack>
+            {lifeEvents.map((event) => (
+              <Chip
+                key={event.id}
+                label={event.title}
+                size="small"
+                variant="outlined"
+              />
+            ))}
+          </Stack>
+        )}
 
         {error && <Alert severity="error">{error}</Alert>}
 
@@ -244,13 +236,9 @@ export function LifeEventListScreen({
             }
           />
         )}
-      </Stack>
 
-      <AddLifeEventDialog
-        open={dialogOpen}
-        familyChildren={familyChildren}
-        onClose={() => setDialogOpen(false)}
-      />
+        <AddLifeEventForm familyChildren={familyChildren} />
+      </Stack>
 
       <Dialog
         open={pendingDelete !== null}
@@ -369,15 +357,12 @@ function AddProcedureRow({
   );
 }
 
-function AddLifeEventDialog({
-  open,
-  familyChildren,
-  onClose,
-}: {
-  open: boolean;
-  familyChildren: Child[];
-  onClose: () => void;
-}) {
+/**
+ * ライフイベントを1つ足す。ダイアログではなく画面下部に常に開いたフォームとして置く
+ * （種別プルダウンを常時見えるようにしたい、というPO要望）。追加が成功したら
+ * 呼び方と開始日だけリセットし、選んでいた種別はそのまま残す。
+ */
+function AddLifeEventForm({ familyChildren }: { familyChildren: Child[] }) {
   const router = useRouter();
   const [kind, setKind] = useState(LIFE_EVENT_TEMPLATES[0].kind);
   // タイトルはテンプレート名を初期値にしつつ、家族が呼びたい名前
@@ -407,98 +392,99 @@ function AddLifeEventDialog({
         setError(result.error);
         return;
       }
-      onClose();
+      setTitle(template.title);
+      setStartedOn("");
       router.refresh();
     });
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>ライフイベントを追加</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          <TextField
-            select
-            label="ライフイベント"
-            value={kind}
-            onChange={(event) => handleKindChange(event.target.value)}
+    <Paper variant="outlined" sx={{ p: 2 }}>
+      <Stack spacing={2}>
+        <Typography variant="subtitle2">ライフイベントを追加</Typography>
+        <TextField
+          select
+          label="ライフイベント"
+          value={kind}
+          onChange={(event) => handleKindChange(event.target.value)}
+          size="small"
+          fullWidth
+          helperText={template.description}
+        >
+          {LIFE_EVENT_TEMPLATES.map((option) => (
+            <MenuItem key={option.kind} value={option.kind}>
+              {option.title}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          label="このリストでの呼び方"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          size="small"
+          fullWidth
+        />
+        <TextField
+          select
+          label="どの子のことか"
+          value={childId}
+          onChange={(event) => setChildId(event.target.value)}
+          size="small"
+          fullWidth
+          disabled={familyChildren.length === 0}
+          helperText={
+            familyChildren.length === 0
+              ? "「家族」画面で子供を登録すると、予定日・出生日からの目安時期が出せるようになります"
+              : "予定日・出生日から時期の目安を出すために使います"
+          }
+        >
+          <MenuItem value="">選ばない</MenuItem>
+          {familyChildren.map((child) => (
+            <MenuItem key={child.id} value={child.id}>
+              {child.displayName}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          label="イベント開始日"
+          type="date"
+          value={startedOn}
+          onChange={(event) => setStartedOn(event.target.value)}
+          size="small"
+          fullWidth
+          slotProps={{ inputLabel: { shrink: true } }}
+          helperText="妊活など、子の予定日ではなく「開始日」を基準にする項目の目安時期に使います"
+        />
+        {familyChildren.length === 0 && (
+          <Button
+            component={Link}
+            href="/family"
             size="small"
-            fullWidth
-            helperText={template.description}
+            sx={{ alignSelf: "flex-start" }}
           >
-            {LIFE_EVENT_TEMPLATES.map((option) => (
-              <MenuItem key={option.kind} value={option.kind}>
-                {option.title}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            label="このリストでの呼び方"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
+            家族画面へ
+          </Button>
+        )}
+        {error && <Alert severity="error">{error}</Alert>}
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}
+        >
+          <Button
+            variant="contained"
             size="small"
-            fullWidth
-          />
-          <TextField
-            select
-            label="どの子のことか"
-            value={childId}
-            onChange={(event) => setChildId(event.target.value)}
-            size="small"
-            fullWidth
-            disabled={familyChildren.length === 0}
-            helperText={
-              familyChildren.length === 0
-                ? "「家族」画面で子供を登録すると、予定日・出生日からの目安時期が出せるようになります"
-                : "予定日・出生日から時期の目安を出すために使います"
-            }
+            onClick={handleAdd}
+            disabled={isPending || title.trim() === ""}
           >
-            <MenuItem value="">選ばない</MenuItem>
-            {familyChildren.map((child) => (
-              <MenuItem key={child.id} value={child.id}>
-                {child.displayName}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            label="イベント開始日"
-            type="date"
-            value={startedOn}
-            onChange={(event) => setStartedOn(event.target.value)}
-            size="small"
-            fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
-            helperText="妊活など、子の予定日ではなく「開始日」を基準にする項目の目安時期に使います"
-          />
-          {familyChildren.length === 0 && (
-            <Button
-              component={Link}
-              href="/family"
-              size="small"
-              sx={{ alignSelf: "flex-start" }}
-            >
-              家族画面へ
-            </Button>
-          )}
-          {error && <Alert severity="error">{error}</Alert>}
+            追加する
+          </Button>
           <Typography variant="caption" color="text.secondary">
-            追加すると{template.items.length}
+            {template.items.length}
             件の項目がリストの末尾に入ります。中身はあとから自由に書き換えられます。
           </Typography>
         </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={isPending}>
-          やめる
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleAdd}
-          disabled={isPending || title.trim() === ""}
-        >
-          追加する
-        </Button>
-      </DialogActions>
-    </Dialog>
+      </Stack>
+    </Paper>
   );
 }
