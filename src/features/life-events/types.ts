@@ -15,7 +15,6 @@ export type LifeEventAnchor = "birth" | "expected_birth" | "event_start";
 export type LifeEvent = {
   id: string;
   kind: LifeEventKind;
-  title: string;
   childId: string | null;
   startedOn: string | null;
 };

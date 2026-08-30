@@ -17,11 +17,6 @@ const optionalDateSchema = z.union([
 // anchorEvent: "event_start" の項目の基準日になる（未入力可）。
 export const addLifeEventSchema = z.object({
   kind: z.enum(kindValues),
-  title: z
-    .string()
-    .trim()
-    .min(1, "タイトルを入力してください")
-    .max(50, "タイトルは50文字以内で入力してください"),
   childId: z.string().uuid("子供を選んでください"),
   startedOn: optionalDateSchema,
 });
@@ -78,6 +73,23 @@ export const updateLifeEventProcedureTimingSchema = z.object({
 
 export const lifeEventProcedureIdSchema = z.object({
   id: z.string().uuid(),
+});
+
+// procedure → タスク化。モーダルで名前・期限をプリセットしたうえで編集可能にするため、
+// タイトルと期限をクライアントから受け取る（title 上限は tasks の createTaskSchema と揃える）。
+export const addLifeEventProcedureToTaskSchema = z.object({
+  id: z.string().uuid(),
+  title: z
+    .string()
+    .trim()
+    .min(1, "タスク名を入力してください")
+    .max(200, "タスク名は200文字以内で入力してください"),
+  dueOn: optionalDateSchema,
+});
+
+// procedure → タスク化の Undo 用。作った task の id を受け取って論理削除する。
+export const lifeEventProcedureTaskIdSchema = z.object({
+  taskId: z.string().uuid(),
 });
 
 // ドラッグ&ドロップ後の並び順を丸ごと受け取る。並び順は子供単位で1本なので childId で

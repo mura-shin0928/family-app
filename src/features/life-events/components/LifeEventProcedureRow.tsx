@@ -2,6 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import AddTaskIcon from "@mui/icons-material/AddTask";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import NotesIcon from "@mui/icons-material/Notes";
@@ -39,11 +40,14 @@ type Props = {
   procedure: LifeEventProcedure;
   /** この項目が属するライフイベントの基準日（目安時期の計算に使う）。 */
   anchor: LifeEventAnchorDates;
-  /** 並べ替えの保存待ちの間はハンドルを止めて、drop 前の連続ドラッグを防ぐ。 */
+  /** 並べ替えの保存待ち・絞り込み中はハンドルを止める。 */
   busy: boolean;
+  /** 絞り込み中は並べ替え不可（sort_order は子単位で1本のため座標がずれる）。 */
+  reorderDisabled?: boolean;
   onTitleChange: (id: string, title: string) => void;
   onNoteChange: (id: string, note: string) => void;
   onTimingChange: (id: string, change: TimingChange) => void;
+  onAddToTask: (procedure: LifeEventProcedure) => void;
   onDelete: (procedure: LifeEventProcedure) => void;
 };
 
@@ -51,9 +55,11 @@ export function LifeEventProcedureRow({
   procedure,
   anchor,
   busy,
+  reorderDisabled = false,
   onTitleChange,
   onNoteChange,
   onTimingChange,
+  onAddToTask,
   onDelete,
 }: Props) {
   const [editingTitle, setEditingTitle] = useState(false);
@@ -71,7 +77,9 @@ export function LifeEventProcedureRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: procedure.id, disabled: busy });
+  } = useSortable({ id: procedure.id, disabled: busy || reorderDisabled });
+
+  const dragDisabled = busy || reorderDisabled;
 
   function commitTitle(value: string) {
     const trimmed = value.trim();
@@ -107,13 +115,13 @@ export function LifeEventProcedureRow({
           ref={setActivatorNodeRef}
           {...attributes}
           {...listeners}
-          disabled={busy}
+          disabled={dragDisabled}
           aria-label="ドラッグして並べ替え"
           size="small"
           disableRipple
           sx={{
             color: "text.disabled",
-            cursor: busy ? "default" : "grab",
+            cursor: dragDisabled ? "default" : "grab",
             // ハンドル上のタッチはスクロールに取られず必ずドラッグ開始にする。
             touchAction: "none",
           }}
@@ -175,6 +183,16 @@ export function LifeEventProcedureRow({
           ) : (
             <NotesOutlinedIcon fontSize="small" />
           )}
+        </IconButton>
+
+        <IconButton
+          onClick={() => onAddToTask(procedure)}
+          disabled={busy}
+          aria-label="タスクに追加"
+          size="small"
+          sx={{ color: "text.disabled" }}
+        >
+          <AddTaskIcon fontSize="small" />
         </IconButton>
 
         <IconButton

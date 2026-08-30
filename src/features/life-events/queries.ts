@@ -13,7 +13,7 @@ export async function getLifeEvents(familyId: string): Promise<LifeEvent[]> {
 
   const { data, error } = await supabase
     .from("life_events")
-    .select("id, kind, title, child_id, started_on")
+    .select("id, kind, child_id, started_on")
     .eq("family_id", familyId)
     .is("deleted_at", null)
     .order("created_at", { ascending: true });
@@ -25,7 +25,6 @@ export async function getLifeEvents(familyId: string): Promise<LifeEvent[]> {
   return (data ?? []).map((row) => ({
     id: row.id,
     kind: row.kind as LifeEventKind,
-    title: row.title,
     childId: row.child_id,
     startedOn: row.started_on,
   }));
