@@ -6,34 +6,62 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import NotesIcon from "@mui/icons-material/Notes";
 import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
+import TuneIcon from "@mui/icons-material/Tune";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
 import Collapse from "@mui/material/Collapse";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
+import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
+import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
+import { addDaysToDateString, daysUntil } from "@/lib/date";
+import {
+  ANCHOR_OPTIONS,
+  describeProcedureTiming,
+  type LifeEventAnchorDates,
+  TIMING_KIND_OPTIONS,
+} from "../timing";
 import type { LifeEventProcedure } from "../types";
+
+export type TimingChange = {
+  isGovernment: boolean;
+  timingKind: string;
+  anchorEvent: string;
+  offsetDays: number | string;
+};
 
 type Props = {
   procedure: LifeEventProcedure;
+  /** この項目が属するライフイベントの基準日（目安時期の計算に使う）。 */
+  anchor: LifeEventAnchorDates;
   /** 並べ替えの保存待ちの間はハンドルを止めて、drop 前の連続ドラッグを防ぐ。 */
   busy: boolean;
   onTitleChange: (id: string, title: string) => void;
   onNoteChange: (id: string, note: string) => void;
+  onTimingChange: (id: string, change: TimingChange) => void;
   onDelete: (procedure: LifeEventProcedure) => void;
 };
 
 export function LifeEventProcedureRow({
   procedure,
+  anchor,
   busy,
   onTitleChange,
   onNoteChange,
+  onTimingChange,
   onDelete,
 }: Props) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const hasNote = !!procedure.note;
+
+  const timingLabel = describeProcedureTiming(procedure, anchor);
 
   const {
     attributes,
@@ -126,6 +154,16 @@ export function LifeEventProcedureRow({
         </Box>
 
         <IconButton
+          onClick={() => setDetailsOpen((current) => !current)}
+          color={detailsOpen ? "primary" : "default"}
+          aria-pressed={detailsOpen}
+          aria-label="行政手続きか・時期を編集"
+          size="small"
+        >
+          <TuneIcon fontSize="small" />
+        </IconButton>
+
+        <IconButton
           onClick={() => setNoteOpen((current) => !current)}
           color={hasNote ? "primary" : "default"}
           aria-pressed={noteOpen}
@@ -148,6 +186,37 @@ export function LifeEventProcedureRow({
           <DeleteOutlineIcon fontSize="small" />
         </IconButton>
       </Box>
+
+      {/* 行政手続きバッジ + 時期。どちらも無ければ行ごと出さない。 */}
+      {(procedure.isGovernment || timingLabel) && (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 0.5,
+            pl: "36px",
+            pr: 1,
+            cursor: "pointer",
+          }}
+          onClick={() => setDetailsOpen((current) => !current)}
+        >
+          {procedure.isGovernment && (
+            <Chip
+              label="行政手続き"
+              size="small"
+              variant="outlined"
+              color="primary"
+              sx={{ height: 18, fontSize: "0.6875rem" }}
+            />
+          )}
+          {timingLabel && (
+            <Typography variant="caption" color="text.secondary">
+              {timingLabel}
+            </Typography>
+          )}
+        </Box>
+      )}
 
       {hasNote && !noteOpen && (
         <Typography
@@ -185,6 +254,166 @@ export function LifeEventProcedureRow({
           />
         </Stack>
       </Collapse>
+
+      <Collapse in={detailsOpen} mountOnEnter unmountOnExit>
+        <Box sx={{ pt: 1, pl: "36px", pr: 1, pb: 0.5 }}>
+          <TimingEditForm
+            key={`${procedure.id}:${procedure.isGovernment}:${procedure.timingKind}:${procedure.anchorEvent}:${procedure.offsetDays}`}
+            procedure={procedure}
+            anchor={anchor}
+            busy={busy}
+            onSave={(change) => {
+              onTimingChange(procedure.id, change);
+              setDetailsOpen(false);
+            }}
+            onCancel={() => setDetailsOpen(false)}
+          />
+        </Box>
+      </Collapse>
     </Box>
+  );
+}
+
+/**
+ * 「行政手続きか / 時期の硬さ / 基準日・オフセット」を1フォームで編集する。
+ * 保存ボタンを押すまでローカル state のまま（複数項目を1操作で変えるので、
+ * タイトル・メモの blur 自動保存とは分ける）。
+ */
+function TimingEditForm({
+  procedure,
+  anchor,
+  busy,
+  onSave,
+  onCancel,
+}: {
+  procedure: LifeEventProcedure;
+  anchor: LifeEventAnchorDates;
+  busy: boolean;
+  onSave: (change: TimingChange) => void;
+  onCancel: () => void;
+}) {
+  const [isGovernment, setIsGovernment] = useState(procedure.isGovernment);
+  const [timingKind, setTimingKind] = useState<string>(procedure.timingKind);
+  const [anchorEvent, setAnchorEvent] = useState<string>(
+    procedure.anchorEvent ?? "",
+  );
+  const [offsetDays, setOffsetDays] = useState<string>(
+    procedure.offsetDays === null ? "" : String(procedure.offsetDays),
+  );
+
+  // 日数だけの入力は分かりにくいので、基準日が分かるならカレンダーでも指定できる
+  // ようにする（相互に同期。保存されるのは常に offsetDays）。
+  const referenceDate =
+    anchorEvent === "birth"
+      ? anchor.birthDate
+      : anchorEvent === "expected_birth"
+        ? anchor.expectedBirthDate
+        : anchorEvent === "event_start"
+          ? anchor.startedOn
+          : null;
+  const calendarDate =
+    referenceDate !== null && offsetDays !== ""
+      ? addDaysToDateString(referenceDate, Number(offsetDays))
+      : "";
+
+  function handleCalendarChange(value: string) {
+    if (referenceDate === null) return;
+    setOffsetDays(value === "" ? "" : String(daysUntil(value, referenceDate)));
+  }
+
+  return (
+    <Stack spacing={1.5}>
+      <FormControlLabel
+        control={
+          <Switch
+            checked={isGovernment}
+            onChange={(event) => setIsGovernment(event.target.checked)}
+            size="small"
+          />
+        }
+        label="行政手続き（出生届・児童手当など）"
+        slotProps={{ typography: { variant: "body2" } }}
+      />
+
+      <TextField
+        select
+        label="時期の書き方"
+        value={timingKind}
+        onChange={(event) => setTimingKind(event.target.value)}
+        size="small"
+        fullWidth
+        helperText={
+          timingKind === "deadline"
+            ? "「〜まで」と締切として出す"
+            : "「〜ごろ」と目安として出す"
+        }
+      >
+        {TIMING_KIND_OPTIONS.map((option) => (
+          <MenuItem key={option.value} value={option.value}>
+            {option.label}
+          </MenuItem>
+        ))}
+      </TextField>
+
+      <TextField
+        select
+        label="いつを基準にするか"
+        value={anchorEvent}
+        onChange={(event) => setAnchorEvent(event.target.value)}
+        size="small"
+        fullWidth
+      >
+        <MenuItem value="">目安を出さない</MenuItem>
+        {ANCHOR_OPTIONS.map((option) => (
+          <MenuItem key={option.value} value={option.value}>
+            {option.label}
+          </MenuItem>
+        ))}
+      </TextField>
+
+      {anchorEvent !== "" && (
+        <Stack direction="row" spacing={1}>
+          <TextField
+            label="日数（負=前）"
+            type="number"
+            value={offsetDays}
+            onChange={(event) => setOffsetDays(event.target.value)}
+            size="small"
+            sx={{ flex: 1 }}
+          />
+          <TextField
+            label="目安の日付"
+            type="date"
+            value={calendarDate}
+            onChange={(event) => handleCalendarChange(event.target.value)}
+            size="small"
+            sx={{ flex: 1 }}
+            disabled={referenceDate === null}
+            helperText={
+              referenceDate === null
+                ? "「家族」画面で日付を登録すると使えます"
+                : undefined
+            }
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+        </Stack>
+      )}
+
+      <Stack direction="row" spacing={1}>
+        <Button
+          size="small"
+          variant="contained"
+          disabled={busy}
+          onClick={() =>
+            onSave({ isGovernment, timingKind, anchorEvent, offsetDays })
+          }
+        >
+          保存
+        </Button>
+        <Button size="small" onClick={onCancel} disabled={busy}>
+          やめる
+        </Button>
+      </Stack>
+    </Stack>
   );
 }

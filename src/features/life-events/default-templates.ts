@@ -1,19 +1,12 @@
-import type { ProcedureCategory } from "@/features/procedures/types";
-import type {
-  DecidedBy,
-  LifeEventAnchor,
-  LifeEventKind,
-  TimingKind,
-} from "./types";
+import type { LifeEventAnchor, LifeEventKind, TimingKind } from "./types";
 
 export type LifeEventTemplateItem = {
   title: string;
   note: string | null;
-  decidedBy: DecidedBy;
+  isGovernment: boolean;
   timingKind: TimingKind;
   anchorEvent: LifeEventAnchor | null;
   offsetDays: number | null;
-  category: ProcedureCategory | null;
 };
 
 export type LifeEventTemplate = {
@@ -25,7 +18,7 @@ export type LifeEventTemplate = {
 
 // 家族がライフイベントを追加したときに life_event_procedures へコピーする既定内容。
 // offsetDaysはあくまで目安（[[project-procedure-site-findings]]の実測に基づくものと、
-// 一般的な知識からの推測が混在。根拠quoteは持たない）。
+// 一般的な知識からの推測が混在）。
 // コピーした後は家族が自由に編集する前提の叩き台であり、テンプレ側を後から直しても
 // 既に追加済みのリストには影響しない。
 const BIRTH_TEMPLATE: LifeEventTemplate = {
@@ -36,192 +29,171 @@ const BIRTH_TEMPLATE: LifeEventTemplate = {
     {
       title: "産院を決める・分娩予約をする",
       note: "人気の産院は妊娠がわかってすぐ埋まることもある。役所への手続きではないが早めの検討が必要。",
-      decidedBy: "family",
+      isGovernment: false,
       timingKind: "around",
       anchorEvent: "expected_birth",
       offsetDays: -240,
-      category: null,
     },
     {
       title: "母子健康手帳をもらう",
       note: "妊娠が分かったら早めに。妊婦健診の受診票も一緒に受け取る。",
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "around",
       anchorEvent: "expected_birth",
       offsetDays: -180,
-      category: "maternal_child_health_handbook",
     },
     {
       title: "里帰り出産をするか検討する",
       note: "する場合は転院時期・里帰り先での健診の受け方も合わせて調整する。",
-      decidedBy: "family",
+      isGovernment: false,
       timingKind: "around",
       anchorEvent: "expected_birth",
       offsetDays: -150,
-      category: null,
     },
     {
       title: "産休・育休の取得について会社と相談する",
       note: "取得時期・期間・引き継ぎについて早めにすり合わせる。",
-      decidedBy: "family",
+      isGovernment: false,
       timingKind: "around",
       anchorEvent: "expected_birth",
       offsetDays: -120,
-      category: null,
     },
     {
       title: "妊婦のための支援給付を確認する",
       note: "該当する場合は妊娠中と出生後の2回に分けて給付を受けられる。",
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "around",
       anchorEvent: "expected_birth",
       offsetDays: -60,
-      category: "pregnancy_birth_support_payment",
     },
     {
       title: "名前の候補を考える",
       note: "出生届の提出(生後14日以内が目安)までに決める必要がある。",
-      decidedBy: "family",
+      isGovernment: false,
       timingKind: "around",
       anchorEvent: "expected_birth",
       offsetDays: -45,
-      category: null,
     },
     {
       title: "ベビー用品・チャイルドシートを準備する",
       note: "退院時の移動にチャイルドシートが必要。",
-      decidedBy: "family",
+      isGovernment: false,
       timingKind: "around",
       anchorEvent: "expected_birth",
       offsetDays: -30,
-      category: null,
     },
     {
       title: "妊婦健診を受ける",
       note: "母子手帳と一緒にもらう受診票を使うと費用の助成を受けられる。",
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "around",
       anchorEvent: "expected_birth",
       offsetDays: -30,
-      category: "pregnancy_checkup_subsidy",
     },
     {
       // 実測: 小金井市は「生まれた日を1日目として数える」ため14日目はbirth+13日。
       title: "出生届を出す",
       note: "生まれた日を1日目として数えて14日以内が目安。",
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "deadline",
       anchorEvent: "birth",
       offsetDays: 13,
-      category: "birth_registration",
     },
     {
       title: "健康保険の加入手続きをする",
       note: "職場の健康保険なら勤務先へ、国民健康保険なら市区町村窓口へ。乳幼児医療証や出産育児一時金の申請に必要になることが多い。",
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 13,
-      category: "health_insurance_dependent",
     },
     {
       title: "出産育児一時金を申請する",
       note: null,
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 14,
-      category: "maternity_lump_sum",
     },
     {
       title: "新生児訪問を受ける",
       note: "自治体から連絡が来ることが多いが、無ければこちらから問い合わせる。",
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 28,
-      category: "newborn_home_visit",
     },
     {
       title: "乳幼児医療証を申請する",
       note: null,
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 14,
-      category: "infant_medical_subsidy",
     },
     {
       title: "児童手当を申請する",
       note: "申請が遅れると、遅れた分の月は受け取れないことがある。",
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "deadline",
       anchorEvent: "birth",
       offsetDays: 15,
-      category: "child_allowance",
     },
     {
       title: "予防接種のスケジュールを確認する",
       note: "定期接種の種類・時期は自治体や医療機関で確認する。生後2か月ごろから始まるものが多い。",
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 60,
-      category: null,
     },
     {
       title: "乳児健診(3〜4か月児健診)を受ける",
       note: "自治体から案内が届くことが多い。",
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 120,
-      category: null,
     },
     {
       title: "復職のタイミングを考える",
       note: "保育園の入園可否・ならし保育の期間もふまえて職場と調整する。",
-      decidedBy: "family",
+      isGovernment: false,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 180,
-      category: null,
     },
     {
       title: "学資保険・教育費の準備を検討する",
       note: null,
-      decidedBy: "family",
+      isGovernment: false,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 200,
-      category: null,
     },
     {
       title: "児童手当の現況届が必要か確認する",
       note: "多くの場合は提出不要だが、自治体から通知が来たら必ず確認する。",
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 365,
-      category: "child_allowance",
     },
     {
       title: "1歳6か月児健診を受ける",
       note: null,
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 545,
-      category: "health_checkup_18m",
     },
     {
       title: "3歳児健診を受ける",
       note: null,
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 1095,
-      category: "health_checkup_3y",
     },
   ],
 } as const;
@@ -237,20 +209,18 @@ const NURSERY_TEMPLATE: LifeEventTemplate = {
     {
       title: "保活の方針を考える(認可保育園・幼稚園など)",
       note: "希望する園の種類・見学スケジュールを検討する。",
-      decidedBy: "family",
+      isGovernment: false,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 150,
-      category: null,
     },
     {
       title: "保育所等の入園を検討・申し込む",
       note: "申込時期は希望する開始月で大きく変わる。4月入園の認可保育所は前年秋(10〜11月ごろ)が締切のことが多い。",
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "deadline",
       anchorEvent: null,
       offsetDays: null,
-      category: "nursery_enrollment",
     },
   ],
 } as const;
@@ -263,46 +233,41 @@ const SCHOOL_TEMPLATE: LifeEventTemplate = {
     {
       title: "小学校の就学先(学区・区域外就学・受験など)を検討する",
       note: "学区通学以外を考える場合は準備に時間がかかるため早めに情報収集する。",
-      decidedBy: "family",
+      isGovernment: false,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 1800,
-      category: null,
     },
     {
       title: "学童保育(放課後児童クラブ)を利用するか検討する",
       note: "人気の学童は定員があるため早めの情報収集が必要な地域もある。",
-      decidedBy: "family",
+      isGovernment: false,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 1900,
-      category: null,
     },
     {
       title: "就学時健康診断を受ける",
       note: "小学校入学前年の秋ごろが目安。誕生月によって前後する(学年区分は4月2日生まれ〜翌4月1日生まれで決まるため)。",
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 2100,
-      category: "preschool_health_checkup",
     },
     {
       title: "小学校入学の準備をする",
       note: "就学時健診のあと、就学通知や入学説明会の案内が届く。誕生月によって前後する。",
-      decidedBy: "government",
+      isGovernment: true,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 2250,
-      category: "elementary_school_enrollment",
     },
   ],
 } as const;
 
 // P6-1では「イベントを選んで足す → 1本のリストになる」を一周させるところまで。
-// 妊活(preconception)と慣習の項目はP6-4で足す — 妊活の行政項目が
-// fertility_treatment_subsidy カテゴリの追加(migration)を必要とするため
-// （選べる種別はこの配列に増やすだけで、画面側の変更は要らない）。
+// 妊活(preconception)と慣習の項目はP6-4で足す（選べる種別はこの配列に増やすだけで、
+// 画面側の変更は要らない）。
 export const LIFE_EVENT_TEMPLATES: readonly LifeEventTemplate[] = [
   BIRTH_TEMPLATE,
   NURSERY_TEMPLATE,

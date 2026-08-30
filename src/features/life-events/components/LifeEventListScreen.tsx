@@ -44,16 +44,18 @@ import {
   deleteLifeEventProcedure,
   reorderLifeEventProcedures,
   updateLifeEventProcedureNote,
+  updateLifeEventProcedureTiming,
   updateLifeEventProcedureTitle,
 } from "../actions";
 import { LIFE_EVENT_TEMPLATES } from "../default-templates";
+import { EMPTY_ANCHOR_DATES, type LifeEventAnchorDates } from "../timing";
 import type { LifeEvent, LifeEventProcedure } from "../types";
 import { LifeEventProcedureRow } from "./LifeEventProcedureRow";
 
 /**
  * 家族の手続きリスト。ライフイベントごとのセクションには分けず、family単位で
- * 1本のリストとして並べる。項目の編集・追加・削除・並べ替えはこの画面で完結する
- * （誰が決めたか・時期の表示／編集はP6-3で足す）。
+ * 1本のリストとして並べる。項目の編集・追加・削除・並べ替え、行政手続きか・時期の
+ * 表示／編集はこの画面で完結する。
  *
  * 編集・追加・削除は Server Action + router.refresh() で取り直す（滅多に触らない
  * 20〜30件のリスト想定）。並べ替えだけはスマホでの D&D 中に表示が飛ばないよう、
@@ -88,6 +90,23 @@ export function LifeEventListScreen({
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  // 各項目の目安時期は、その項目が属するライフイベントの基準日から引く
+  // （出産系は子の予定日／出生日、妊活などは started_on）。
+  const childById = new Map(familyChildren.map((child) => [child.id, child]));
+  const anchorByLifeEventId = new Map<string, LifeEventAnchorDates>(
+    lifeEvents.map((event) => {
+      const child = event.childId ? childById.get(event.childId) : undefined;
+      return [
+        event.id,
+        {
+          birthDate: child?.birthDate ?? null,
+          expectedBirthDate: child?.expectedBirthDate ?? null,
+          startedOn: event.startedOn,
+        },
+      ];
     }),
   );
 
@@ -186,12 +205,21 @@ export function LifeEventListScreen({
                   <LifeEventProcedureRow
                     key={procedure.id}
                     procedure={procedure}
+                    anchor={
+                      anchorByLifeEventId.get(procedure.lifeEventId) ??
+                      EMPTY_ANCHOR_DATES
+                    }
                     busy={isPending}
                     onTitleChange={(id, title) =>
                       run(() => updateLifeEventProcedureTitle({ id, title }))
                     }
                     onNoteChange={(id, note) =>
                       run(() => updateLifeEventProcedureNote({ id, note }))
+                    }
+                    onTimingChange={(id, change) =>
+                      run(() =>
+                        updateLifeEventProcedureTiming({ id, ...change }),
+                      )
                     }
                     onDelete={setPendingDelete}
                   />

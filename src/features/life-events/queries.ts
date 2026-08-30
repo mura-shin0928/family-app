@@ -1,8 +1,6 @@
 import "server-only";
-import type { ProcedureCategory } from "@/features/procedures/types";
 import { createClient } from "@/lib/supabase/server";
 import type {
-  DecidedBy,
   LifeEvent,
   LifeEventAnchor,
   LifeEventKind,
@@ -45,7 +43,7 @@ export async function getLifeEventProcedures(
   const { data, error } = await supabase
     .from("life_event_procedures")
     .select(
-      "id, life_event_id, sort_order, title, note, decided_by, timing_kind, anchor_event, offset_days, category",
+      "id, life_event_id, sort_order, title, note, is_government, timing_kind, anchor_event, offset_days",
     )
     .eq("family_id", familyId)
     .is("deleted_at", null)
@@ -61,10 +59,9 @@ export async function getLifeEventProcedures(
     sortOrder: row.sort_order,
     title: row.title,
     note: row.note,
-    decidedBy: row.decided_by as DecidedBy,
+    isGovernment: row.is_government,
     timingKind: row.timing_kind as TimingKind,
     anchorEvent: row.anchor_event as LifeEventAnchor | null,
     offsetDays: row.offset_days,
-    category: row.category as ProcedureCategory | null,
   }));
 }

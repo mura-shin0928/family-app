@@ -47,6 +47,24 @@ export const updateLifeEventProcedureNoteSchema = z.object({
   note: procedureNoteSchema,
 });
 
+// 「行政手続きか / 時期の硬さ / 基準日・オフセット」をまとめて1フォームで受け取る
+// （P6-3で足す編集）。空文字列 = 未設定:
+//  - anchorEvent="" / offsetDays="" は「目安時期を出さない」
+export const updateLifeEventProcedureTimingSchema = z.object({
+  id: z.string().uuid(),
+  isGovernment: z.boolean(),
+  timingKind: z.enum(["deadline", "around"]),
+  anchorEvent: z.union([
+    z.enum(["birth", "expected_birth", "event_start"]),
+    z.literal(""),
+  ]),
+  // smallint に収まる符号付き整数（負 = 基準日より前）。
+  offsetDays: z.union([
+    z.literal(""),
+    z.coerce.number().int().gte(-32768).lte(32767),
+  ]),
+});
+
 export const lifeEventProcedureIdSchema = z.object({
   id: z.string().uuid(),
 });
