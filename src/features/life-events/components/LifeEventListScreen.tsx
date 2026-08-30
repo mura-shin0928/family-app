@@ -274,8 +274,9 @@ export function LifeEventListScreen({
 }
 
 /**
- * リスト末尾に項目を1つ足す。どのライフイベント由来かは基準日を引くために要るので
- * （P6-3で使う）、イベントが2つ以上あるときだけ選ばせる。1つなら黙ってそれに紐づける。
+ * リスト末尾に項目を1つ足す。どのライフイベント由来かで目安時期の基準日
+ * （妊娠=予定日 / 出産=出生日 / 妊活=開始日）が変わるので、イベントが1つでも
+ * 選択欄を必ず出して、どれに紐づくかを明示させる。
  */
 function AddProcedureRow({
   lifeEvents,
@@ -330,23 +331,21 @@ function AddProcedureRow({
           }
         }}
       />
-      {lifeEvents.length > 1 && (
-        <TextField
-          select
-          label="どのライフイベントか"
-          value={lifeEventId}
-          onChange={(event) => setLifeEventId(event.target.value)}
-          size="small"
-          fullWidth
-          helperText="予定日・出生日からの目安時期をどのイベント基準で出すか"
-        >
-          {lifeEvents.map((event) => (
-            <MenuItem key={event.id} value={event.id}>
-              {event.title}
-            </MenuItem>
-          ))}
-        </TextField>
-      )}
+      <TextField
+        select
+        label="どのライフイベントか"
+        value={lifeEventId}
+        onChange={(event) => setLifeEventId(event.target.value)}
+        size="small"
+        fullWidth
+        helperText="予定日・出生日・開始日からの目安時期をどのイベント基準で出すか"
+      >
+        {lifeEvents.map((event) => (
+          <MenuItem key={event.id} value={event.id}>
+            {event.title}
+          </MenuItem>
+        ))}
+      </TextField>
       <Stack direction="row" spacing={1}>
         <Button
           variant="contained"

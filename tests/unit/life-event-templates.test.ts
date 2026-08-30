@@ -6,12 +6,18 @@ import {
 
 // DB(life_events.kind の CHECK 制約 / life_event_procedures の各 CHECK)と
 // テンプレの値がずれると、追加時に insert が落ちる。ここで固定しておく。
-const KINDS = ["preconception", "birth", "nursery", "school"] as const;
+const KINDS = [
+  "preconception",
+  "pregnancy",
+  "birth",
+  "nursery",
+  "school",
+] as const;
 const ANCHORS = ["birth", "expected_birth", "event_start"] as const;
 const TIMING_KINDS = ["deadline", "around"] as const;
 
 describe("LIFE_EVENT_TEMPLATES", () => {
-  it("covers all four life-event kinds", () => {
+  it("covers every life-event kind in timeline order", () => {
     expect(LIFE_EVENT_TEMPLATES.map((t) => t.kind)).toEqual([...KINDS]);
   });
 
@@ -54,11 +60,33 @@ describe("LIFE_EVENT_TEMPLATES", () => {
     expect(government.some((item) => /助成/.test(item.title))).toBe(true);
   });
 
-  it("妊娠・出産 template mixes in non-government custom/tradition items", () => {
+  it("妊娠 template is all anchored on the expected birth date", () => {
+    const pregnancy = findLifeEventTemplate("pregnancy");
+    expect(pregnancy).not.toBeNull();
+    expect(pregnancy?.items.length).toBeGreaterThan(0);
+    for (const item of pregnancy?.items ?? []) {
+      expect(item.anchorEvent).toBe("expected_birth");
+      expect(item.offsetDays).toBeLessThanOrEqual(0);
+    }
+    // 戌の日参りの慣習は妊娠側（妊娠5か月ごろ）。
+    expect(
+      (pregnancy?.items ?? []).some((item) => /戌の日/.test(item.title)),
+    ).toBe(true);
+  });
+
+  it("出産 template is anchored on the birth date and mixes in tradition items", () => {
     const birth = findLifeEventTemplate("birth");
+    expect(birth).not.toBeNull();
+    for (const item of birth?.items ?? []) {
+      if (item.anchorEvent !== null) {
+        expect(item.anchorEvent).toBe("birth");
+      }
+    }
+    // お宮参り・お食い初め・初節句・初誕生（戌の日は妊娠側なのでここには無い）。
     const traditions = (birth?.items ?? []).filter(
       (item) =>
-        !item.isGovernment && /参り|お食い初め|初節句|初誕生/.test(item.title),
+        !item.isGovernment &&
+        /お宮参り|お食い初め|初節句|初誕生/.test(item.title),
     );
     expect(traditions.length).toBeGreaterThanOrEqual(3);
     for (const item of traditions) {

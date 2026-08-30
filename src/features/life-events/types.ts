@@ -1,5 +1,10 @@
 /** 家族が選んで足せるライフイベントの種別（DBのcheck制約と同じ語彙）。 */
-export type LifeEventKind = "preconception" | "birth" | "nursery" | "school";
+export type LifeEventKind =
+  | "preconception"
+  | "pregnancy"
+  | "birth"
+  | "nursery"
+  | "school";
 
 /** 時期の硬さ。「9月2日まで」と「妊娠5か月ごろ」の言い分けにだけ効く。 */
 export type TimingKind = "deadline" | "around";

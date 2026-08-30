@@ -85,13 +85,16 @@ const PRECONCEPTION_TEMPLATE: LifeEventTemplate = {
   ],
 } as const;
 
-// 妊娠から出生後1年ごろまで。行政の手続きに、戌の日参り・お宮参り・お食い初めなどの
-// 慣習を時系列で混ぜてある（慣習は isGovernment: false / timingKind: "around" で、
+// 妊娠中のこと。すべて出産予定日(expected_birth)を基準に逆算する。行政の手続きに
+// 戌の日参りの慣習を混ぜてある（慣習は isGovernment: false / timingKind: "around" で、
 // 時期は「〜ごろ」の目安だけ。暦の十二支などの厳密な計算はしない）。
-const BIRTH_TEMPLATE: LifeEventTemplate = {
-  kind: "birth",
-  title: "妊娠・出産",
-  description: "母子手帳から児童手当まで、妊娠中〜出生後の手続きと慣習",
+// 「出産」以降(出生届・児童手当・お宮参りなど)は BIRTH_TEMPLATE 側。予定日基準と
+// 出生日基準では必要になる時期がまるで違うので、家族が別々に足せるよう分けてある。
+const PREGNANCY_TEMPLATE: LifeEventTemplate = {
+  kind: "pregnancy",
+  title: "妊娠",
+  description:
+    "母子手帳・妊婦健診から出産の準備まで、予定日を基準にした妊娠中のこと",
   items: [
     {
       title: "産院を決める・分娩予約をする",
@@ -165,6 +168,18 @@ const BIRTH_TEMPLATE: LifeEventTemplate = {
       anchorEvent: "expected_birth",
       offsetDays: -30,
     },
+  ],
+} as const;
+
+// 出産以降のこと。すべて出生日(birth)を基準にする。行政の手続きに、お宮参り・
+// お食い初め・初節句・初誕生の慣習を時系列で混ぜてある（慣習は isGovernment: false /
+// timingKind: "around" で、時期は「〜ごろ」の目安だけ。厳密な暦計算はしない）。
+const BIRTH_TEMPLATE: LifeEventTemplate = {
+  kind: "birth",
+  title: "出産",
+  description:
+    "出生届から児童手当・健診まで、出生日を基準にした出産後の手続きと慣習",
+  items: [
     {
       // 実測: 小金井市は「生まれた日を1日目として数える」ため14日目はbirth+13日。
       title: "出生届を出す",
@@ -372,9 +387,11 @@ const SCHOOL_TEMPLATE: LifeEventTemplate = {
 } as const;
 
 // 家族が選べるライフイベントはこの配列に並ぶ（画面のプルダウンと schema の
-// kind enum はここから生成される）。並び順は時系列（妊活 → 妊娠・出産 → 保育園 → 小学校）。
+// kind enum はここから生成される）。並び順は時系列
+// （妊活 → 妊娠 → 出産 → 保育園 → 小学校）。
 export const LIFE_EVENT_TEMPLATES: readonly LifeEventTemplate[] = [
   PRECONCEPTION_TEMPLATE,
+  PREGNANCY_TEMPLATE,
   BIRTH_TEMPLATE,
   NURSERY_TEMPLATE,
   SCHOOL_TEMPLATE,

@@ -259,6 +259,28 @@ describe("life_events / life_event_procedures RLS", () => {
         .eq("id", data?.id ?? "");
     });
 
+    it("accepts the 'pregnancy' kind (妊娠と出産を分けた分)", async () => {
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+
+      const { data, error } = await clientA
+        .from("life_events")
+        .insert({
+          family_id: familyF1,
+          kind: "pregnancy",
+          title: "妊娠",
+          child_id: childF1,
+          created_by: memberAId,
+        })
+        .select("id")
+        .single();
+      expect(error).toBeNull();
+
+      await admin
+        .from("life_events")
+        .delete()
+        .eq("id", data?.id ?? "");
+    });
+
     it("can add a preconception event with started_on and an event_start item", async () => {
       const clientA = await signInAsClient(userA.email, PASSWORD);
 
