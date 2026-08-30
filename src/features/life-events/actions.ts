@@ -9,6 +9,7 @@ import {
   lifeEventProcedureIdSchema,
   reorderLifeEventProceduresSchema,
   updateLifeEventProcedureNoteSchema,
+  updateLifeEventProcedureTimingSchema,
   updateLifeEventProcedureTitleSchema,
 } from "./schema";
 import type { LifeEventKind } from "./types";
@@ -80,11 +81,10 @@ export async function addLifeEvent(input: {
         sort_order: baseSortOrder + index + 1,
         title: item.title,
         note: item.note,
-        decided_by: item.decidedBy,
+        is_government: item.isGovernment,
         timing_kind: item.timingKind,
         anchor_event: item.anchorEvent,
         offset_days: item.offsetDays,
-        category: item.category,
       })),
     );
 
@@ -149,7 +149,7 @@ export async function addLifeEventProcedure(input: {
     life_event_id: parsed.data.lifeEventId,
     sort_order: (last?.sort_order ?? 0) + 1,
     title: parsed.data.title,
-    decided_by: "family",
+    is_government: false,
     timing_kind: "around",
   });
 
@@ -211,6 +211,55 @@ export async function updateLifeEventProcedureNote(input: {
 
   if (error) {
     return { ok: false, error: "メモの更新に失敗しました" };
+  }
+
+  return { ok: true };
+}
+
+/**
+ * 「行政手続きか / 時期の硬さ / 基準日・オフセット」をまとめて更新する（P6-3）。
+ * テンプレからコピーした既定値を家族が自分たちのものに直すための編集で、この
+ * 編集済みリストそのものが家族の記録になる。
+ */
+export async function updateLifeEventProcedureTiming(input: {
+  id: string;
+  isGovernment: boolean;
+  timingKind: string;
+  anchorEvent: string;
+  offsetDays: number | string;
+}): Promise<ActionResult> {
+  const parsed = updateLifeEventProcedureTimingSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  // 基準日を選ばないなら offset も持たせない（片方だけ残ると目安が出せず宙に浮く）。
+  const anchorEvent =
+    parsed.data.anchorEvent === "" ? null : parsed.data.anchorEvent;
+  const offsetDays =
+    anchorEvent === null || parsed.data.offsetDays === ""
+      ? null
+      : parsed.data.offsetDays;
+
+  const { error } = await supabase
+    .from("life_event_procedures")
+    .update({
+      is_government: parsed.data.isGovernment,
+      timing_kind: parsed.data.timingKind,
+      anchor_event: anchorEvent,
+      offset_days: offsetDays,
+    })
+    .eq("id", parsed.data.id)
+    .eq("family_id", member.familyId);
+
+  if (error) {
+    return { ok: false, error: "時期の更新に失敗しました" };
   }
 
   return { ok: true };

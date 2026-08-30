@@ -1,14 +1,5 @@
-import type { ProcedureCategory } from "@/features/procedures/types";
-
 /** 家族が選んで足せるライフイベントの種別（DBのcheck制約と同じ語彙）。 */
 export type LifeEventKind = "preconception" | "birth" | "nursery" | "school";
-
-/**
- * 誰が決めたか。行政・慣習・自分たちで「守らないとどうなるか」がまるで違うため、
- * procedures.obligation（必須/任意/条件付き）とは別の軸として項目側に持つ。
- * 表示・編集はP6-3で入れる。
- */
-export type DecidedBy = "government" | "tradition" | "family";
 
 /** 時期の硬さ。「9月2日まで」と「妊娠5か月ごろ」の言い分けにだけ効く。 */
 export type TimingKind = "deadline" | "around";
@@ -34,9 +25,9 @@ export type LifeEventProcedure = {
   sortOrder: number;
   title: string;
   note: string | null;
-  decidedBy: DecidedBy;
+  /** 行政手続きか（出生届・児童手当など）。表示の「行政手続き」バッジにだけ効く。 */
+  isGovernment: boolean;
   timingKind: TimingKind;
   anchorEvent: LifeEventAnchor | null;
   offsetDays: number | null;
-  category: ProcedureCategory | null;
 };

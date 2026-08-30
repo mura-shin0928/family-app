@@ -146,18 +146,17 @@ describe("life_events / life_event_procedures RLS", () => {
           life_event_id: eventF1,
           sort_order: 1,
           title: "出生届を出す",
-          decided_by: "government",
+          is_government: true,
           timing_kind: "deadline",
           anchor_event: "birth",
           offset_days: 13,
-          category: "birth_registration",
         },
         {
           family_id: familyF2,
           life_event_id: eventF2,
           sort_order: 1,
           title: "出生届を出す",
-          decided_by: "government",
+          is_government: true,
           timing_kind: "deadline",
         },
       ])
@@ -326,7 +325,7 @@ describe("life_events / life_event_procedures RLS", () => {
           life_event_id: eventF1,
           sort_order: 2,
           title: "追加した項目",
-          decided_by: "family",
+          is_government: false,
           timing_kind: "around",
         })
         .select("id")
@@ -359,7 +358,7 @@ describe("life_events / life_event_procedures RLS", () => {
         life_event_id: eventF2,
         sort_order: 1,
         title: "なりすまし項目",
-        decided_by: "family",
+        is_government: false,
         timing_kind: "around",
       });
       expect(error).not.toBeNull();
@@ -373,36 +372,22 @@ describe("life_events / life_event_procedures RLS", () => {
         life_event_id: eventF2,
         sort_order: 1,
         title: "なりすまし項目",
-        decided_by: "family",
+        is_government: false,
         timing_kind: "around",
       });
       expect(error).not.toBeNull();
     });
 
-    it("rejects an unknown decided_by / timing_kind", async () => {
-      const { error: decidedByError } = await admin
-        .from("life_event_procedures")
-        .insert({
-          family_id: familyF1,
-          life_event_id: eventF1,
-          sort_order: 99,
-          title: "不正な分類",
-          decided_by: "shrine",
-          timing_kind: "around",
-        });
-      expect(decidedByError).not.toBeNull();
-
-      const { error: timingError } = await admin
-        .from("life_event_procedures")
-        .insert({
-          family_id: familyF1,
-          life_event_id: eventF1,
-          sort_order: 99,
-          title: "不正な時期",
-          decided_by: "tradition",
-          timing_kind: "someday",
-        });
-      expect(timingError).not.toBeNull();
+    it("rejects an unknown timing_kind", async () => {
+      const { error } = await admin.from("life_event_procedures").insert({
+        family_id: familyF1,
+        life_event_id: eventF1,
+        sort_order: 99,
+        title: "不正な時期",
+        is_government: false,
+        timing_kind: "someday",
+      });
+      expect(error).not.toBeNull();
     });
   });
 });
