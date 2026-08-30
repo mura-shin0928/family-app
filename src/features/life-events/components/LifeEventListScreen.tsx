@@ -385,6 +385,7 @@ function AddLifeEventDialog({
   // （「第2子の出産」など）に書き換えられるようにする。
   const [title, setTitle] = useState(LIFE_EVENT_TEMPLATES[0].title);
   const [childId, setChildId] = useState(familyChildren[0]?.id ?? "");
+  const [startedOn, setStartedOn] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -402,7 +403,7 @@ function AddLifeEventDialog({
   function handleAdd() {
     setError(null);
     startTransition(async () => {
-      const result = await addLifeEvent({ kind, title, childId });
+      const result = await addLifeEvent({ kind, title, childId, startedOn });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -460,6 +461,16 @@ function AddLifeEventDialog({
               </MenuItem>
             ))}
           </TextField>
+          <TextField
+            label="イベント開始日"
+            type="date"
+            value={startedOn}
+            onChange={(event) => setStartedOn(event.target.value)}
+            size="small"
+            fullWidth
+            slotProps={{ inputLabel: { shrink: true } }}
+            helperText="妊活など、子の予定日ではなく「開始日」を基準にする項目の目安時期に使います"
+          />
           {familyChildren.length === 0 && (
             <Button
               component={Link}

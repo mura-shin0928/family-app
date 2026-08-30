@@ -6,7 +6,15 @@ const kindValues = LIFE_EVENT_TEMPLATES.map((t) => t.kind) as [
   ...string[],
 ];
 
-// childId は未選択でもよい（子供の登録前でもリストは足せる。目安時期が出ないだけ）。
+// 空文字列 = 未入力（children.schema と同じ規約）。
+const optionalDateSchema = z.union([
+  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日付の形式が正しくありません"),
+  z.literal(""),
+]);
+
+// childId / startedOn はどちらも未入力でよい（子供の登録前でもリストは足せる。
+// 目安時期が出ないだけ）。startedOn は妊活など子に紐づかないイベントで、
+// anchorEvent: "event_start" の項目の基準日になる。
 export const addLifeEventSchema = z.object({
   kind: z.enum(kindValues),
   title: z
@@ -15,6 +23,7 @@ export const addLifeEventSchema = z.object({
     .min(1, "タイトルを入力してください")
     .max(50, "タイトルは50文字以内で入力してください"),
   childId: z.union([z.string().uuid(), z.literal("")]),
+  startedOn: optionalDateSchema,
 });
 
 // 文字数上限は life_event_procedures の CHECK 制約と揃える（title<=100 / note<=2000）。

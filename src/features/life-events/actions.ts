@@ -28,6 +28,7 @@ export async function addLifeEvent(input: {
   kind: string;
   title: string;
   childId: string;
+  startedOn: string;
 }): Promise<ActionResult> {
   const parsed = addLifeEventSchema.safeParse(input);
   if (!parsed.success) {
@@ -52,6 +53,7 @@ export async function addLifeEvent(input: {
       kind: template.kind,
       title: parsed.data.title,
       child_id: parsed.data.childId === "" ? null : parsed.data.childId,
+      started_on: parsed.data.startedOn === "" ? null : parsed.data.startedOn,
       created_by: member.id,
     })
     .select("id")

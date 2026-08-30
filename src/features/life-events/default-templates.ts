@@ -21,10 +21,77 @@ export type LifeEventTemplate = {
 // 一般的な知識からの推測が混在）。
 // コピーした後は家族が自由に編集する前提の叩き台であり、テンプレ側を後から直しても
 // 既に追加済みのリストには影響しない。
+
+// 妊活は子に紐づかないので、目安時期の基準日は life_events.started_on
+// （＝anchorEvent: "event_start"）から引く。行政項目は「不妊検査等助成の確認」だけで、
+// あとは自分たちの都合で進めること（慣習ではない）。
+// P6-3で category 列（行政カタログとの結合キー）は廃止されたため、
+// fertility_treatment_subsidy というカテゴリ値は持たせず isGovernment だけで表す。
+const PRECONCEPTION_TEMPLATE: LifeEventTemplate = {
+  kind: "preconception",
+  title: "妊活",
+  description: "基礎体温の記録から不妊検査の助成確認まで、妊娠に向けた準備",
+  items: [
+    {
+      title: "基礎体温の記録をつけ始める",
+      note: "2〜3か月つけると排卵の傾向がつかめる。アプリや基礎体温表を使う。",
+      isGovernment: false,
+      timingKind: "around",
+      anchorEvent: "event_start",
+      offsetDays: 0,
+    },
+    {
+      title: "パートナーと妊活の進め方を話す",
+      note: "いつまで自己流で続けるか、受診に切り替える目安を先に決めておくと動きやすい。",
+      isGovernment: false,
+      timingKind: "around",
+      anchorEvent: "event_start",
+      offsetDays: 0,
+    },
+    {
+      title: "風しんの抗体検査を受ける(必要ならワクチン接種)",
+      note: "妊娠中は接種できず、接種後は約2か月避妊が必要。自治体で費用の助成があることが多い。",
+      isGovernment: true,
+      timingKind: "around",
+      anchorEvent: "event_start",
+      offsetDays: 0,
+    },
+    {
+      title: "ブライダルチェック(妊娠に向けた基礎的な検査)を受ける",
+      note: "産婦人科で子宮・卵巣の状態や感染症などを確認する。パートナーの検査も合わせて検討する。",
+      isGovernment: false,
+      timingKind: "around",
+      anchorEvent: "event_start",
+      offsetDays: 14,
+    },
+    {
+      // 実測: 小金井市「不妊治療費等助成」/ 東京都「不妊検査等助成」。
+      // 対象・回数・年齢の条件が自治体ごとに違うので早めに確認する。
+      title: "不妊検査・不妊治療の助成制度を確認する",
+      note: "保険適用に加えて、自治体独自の助成や上乗せがある。対象・回数・年齢の条件を早めに確認する。",
+      isGovernment: true,
+      timingKind: "around",
+      anchorEvent: "event_start",
+      offsetDays: 30,
+    },
+    {
+      title: "半年〜1年で授からなければクリニックを受診する",
+      note: "年齢によって目安は変わる(35歳以上は半年が目安とされる)。早めの相談で選択肢が広がる。",
+      isGovernment: false,
+      timingKind: "around",
+      anchorEvent: "event_start",
+      offsetDays: 180,
+    },
+  ],
+} as const;
+
+// 妊娠から出生後1年ごろまで。行政の手続きに、戌の日参り・お宮参り・お食い初めなどの
+// 慣習を時系列で混ぜてある（慣習は isGovernment: false / timingKind: "around" で、
+// 時期は「〜ごろ」の目安だけ。暦の十二支などの厳密な計算はしない）。
 const BIRTH_TEMPLATE: LifeEventTemplate = {
   kind: "birth",
   title: "妊娠・出産",
-  description: "母子手帳から児童手当まで、妊娠中〜出生後の手続き",
+  description: "母子手帳から児童手当まで、妊娠中〜出生後の手続きと慣習",
   items: [
     {
       title: "産院を決める・分娩予約をする",
@@ -49,6 +116,14 @@ const BIRTH_TEMPLATE: LifeEventTemplate = {
       timingKind: "around",
       anchorEvent: "expected_birth",
       offsetDays: -150,
+    },
+    {
+      title: "戌の日の安産祈願(帯祝い)をする",
+      note: "妊娠5か月ごろの戌の日に安産を祈願する慣習。日にちは厳密でなくてよい。腹帯を用意する家庭も多い。",
+      isGovernment: false,
+      timingKind: "around",
+      anchorEvent: "expected_birth",
+      offsetDays: -140,
     },
     {
       title: "産休・育休の取得について会社と相談する",
@@ -116,14 +191,6 @@ const BIRTH_TEMPLATE: LifeEventTemplate = {
       offsetDays: 14,
     },
     {
-      title: "新生児訪問を受ける",
-      note: "自治体から連絡が来ることが多いが、無ければこちらから問い合わせる。",
-      isGovernment: true,
-      timingKind: "around",
-      anchorEvent: "birth",
-      offsetDays: 28,
-    },
-    {
       title: "乳幼児医療証を申請する",
       note: null,
       isGovernment: true,
@@ -140,12 +207,44 @@ const BIRTH_TEMPLATE: LifeEventTemplate = {
       offsetDays: 15,
     },
     {
+      title: "新生児訪問を受ける",
+      note: "自治体から連絡が来ることが多いが、無ければこちらから問い合わせる。",
+      isGovernment: true,
+      timingKind: "around",
+      anchorEvent: "birth",
+      offsetDays: 28,
+    },
+    {
+      title: "お宮参りに行く",
+      note: "生後1か月ごろ、氏神様に赤ちゃんの誕生を報告する慣習。地域や家によって時期に幅がある。",
+      isGovernment: false,
+      timingKind: "around",
+      anchorEvent: "birth",
+      offsetDays: 31,
+    },
+    {
       title: "予防接種のスケジュールを確認する",
       note: "定期接種の種類・時期は自治体や医療機関で確認する。生後2か月ごろから始まるものが多い。",
       isGovernment: true,
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 60,
+    },
+    {
+      title: "お食い初め(百日祝い)をする",
+      note: "生後100日ごろ、一生食べ物に困らないようにと願う慣習。数え方に地域差がある。",
+      isGovernment: false,
+      timingKind: "around",
+      anchorEvent: "birth",
+      offsetDays: 100,
+    },
+    {
+      title: "初節句を祝う",
+      note: "女の子は3月3日、男の子は5月5日。生まれて間もない場合は翌年に祝う家庭も多い。日付は決まっているので基準日からの計算はしない。",
+      isGovernment: false,
+      timingKind: "around",
+      anchorEvent: null,
+      offsetDays: null,
     },
     {
       title: "乳児健診(3〜4か月児健診)を受ける",
@@ -170,6 +269,14 @@ const BIRTH_TEMPLATE: LifeEventTemplate = {
       timingKind: "around",
       anchorEvent: "birth",
       offsetDays: 200,
+    },
+    {
+      title: "初誕生(1歳の誕生日)を祝う",
+      note: "一升餅を背負わせる、選び取りをするなどの慣習がある。地域や家によってやり方はさまざま。",
+      isGovernment: false,
+      timingKind: "around",
+      anchorEvent: "birth",
+      offsetDays: 365,
     },
     {
       title: "児童手当の現況届が必要か確認する",
@@ -199,8 +306,7 @@ const BIRTH_TEMPLATE: LifeEventTemplate = {
 } as const;
 
 // 保育園・小学校は「入れる家庭と入れない家庭がある」「6年先」で、妊娠・出産とは
-// 必要になるタイミングがまるで違うため別イベントにする。3種とも基準日は子の予定日/出生日
-// （子に紐づかない妊活は life_events.started_on を基準にするが、それはP6-4で足す）。
+// 必要になるタイミングがまるで違うため別イベントにする。基準日は子の予定日/出生日。
 const NURSERY_TEMPLATE: LifeEventTemplate = {
   kind: "nursery",
   title: "保育園入園",
@@ -265,10 +371,10 @@ const SCHOOL_TEMPLATE: LifeEventTemplate = {
   ],
 } as const;
 
-// P6-1では「イベントを選んで足す → 1本のリストになる」を一周させるところまで。
-// 妊活(preconception)と慣習の項目はP6-4で足す（選べる種別はこの配列に増やすだけで、
-// 画面側の変更は要らない）。
+// 家族が選べるライフイベントはこの配列に並ぶ（画面のプルダウンと schema の
+// kind enum はここから生成される）。並び順は時系列（妊活 → 妊娠・出産 → 保育園 → 小学校）。
 export const LIFE_EVENT_TEMPLATES: readonly LifeEventTemplate[] = [
+  PRECONCEPTION_TEMPLATE,
   BIRTH_TEMPLATE,
   NURSERY_TEMPLATE,
   SCHOOL_TEMPLATE,
