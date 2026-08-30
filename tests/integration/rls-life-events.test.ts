@@ -115,14 +115,12 @@ describe("life_events / life_event_procedures RLS", () => {
         {
           family_id: familyF1,
           kind: "birth",
-          title: "妊娠・出産",
           child_id: childF1,
           created_by: memberAId,
         },
         {
           family_id: familyF2,
           kind: "birth",
-          title: "妊娠・出産",
           child_id: childF2,
           created_by: memberCId,
         },
@@ -219,7 +217,6 @@ describe("life_events / life_event_procedures RLS", () => {
         .insert({
           family_id: familyF1,
           kind: "nursery",
-          title: "保育園入園",
           child_id: childF1,
           created_by: memberAId,
         })
@@ -248,7 +245,6 @@ describe("life_events / life_event_procedures RLS", () => {
         .insert({
           family_id: familyF1,
           kind: "birth",
-          title: "第2子の出産",
           child_id: childF1,
           created_by: memberAId,
         })
@@ -270,7 +266,6 @@ describe("life_events / life_event_procedures RLS", () => {
         .insert({
           family_id: familyF1,
           kind: "pregnancy",
-          title: "妊娠",
           child_id: childF1,
           created_by: memberAId,
         })
@@ -292,7 +287,6 @@ describe("life_events / life_event_procedures RLS", () => {
         .insert({
           family_id: familyF1,
           kind: "preconception",
-          title: "妊活",
           child_id: childF1,
           started_on: "2026-01-01",
           created_by: memberAId,
@@ -332,7 +326,6 @@ describe("life_events / life_event_procedures RLS", () => {
       const { error } = await clientA.from("life_events").insert({
         family_id: familyF2,
         kind: "birth",
-        title: "なりすまし",
         child_id: childF2,
         created_by: memberAId,
       });
@@ -345,7 +338,6 @@ describe("life_events / life_event_procedures RLS", () => {
       const { error } = await clientA.from("life_events").insert({
         family_id: familyF1,
         kind: "birth",
-        title: "他家族の子",
         child_id: childF2,
         created_by: memberAId,
       });
@@ -358,7 +350,6 @@ describe("life_events / life_event_procedures RLS", () => {
       const { error } = await clientA.from("life_events").insert({
         family_id: familyF1,
         kind: "birth",
-        title: "他家族のメンバー",
         child_id: childF1,
         created_by: memberCId,
       });

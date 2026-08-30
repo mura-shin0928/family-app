@@ -5,8 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 import { findLifeEventTemplate } from "./default-templates";
 import {
   addLifeEventProcedureSchema,
+  addLifeEventProcedureToTaskSchema,
   addLifeEventSchema,
   lifeEventProcedureIdSchema,
+  lifeEventProcedureTaskIdSchema,
   reorderLifeEventProceduresSchema,
   updateLifeEventProcedureNoteSchema,
   updateLifeEventProcedureTimingSchema,
@@ -44,7 +46,6 @@ async function lastSortOrderForChild(
  */
 export async function addLifeEvent(input: {
   kind: string;
-  title: string;
   childId: string;
   startedOn: string;
 }): Promise<ActionResult> {
@@ -64,20 +65,52 @@ export async function addLifeEvent(input: {
   const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
-  const { data: event, error: eventError } = await supabase
-    .from("life_events")
-    .insert({
-      family_id: member.familyId,
-      kind: template.kind,
-      title: parsed.data.title,
-      child_id: parsed.data.childId,
-      started_on: parsed.data.startedOn === "" ? null : parsed.data.startedOn,
-      created_by: member.id,
-    })
-    .select("id")
-    .single();
+  const startedOn = parsed.data.startedOn === "" ? null : parsed.data.startedOn;
 
-  if (eventError || !event) {
+  // その子の同じ種別のライフイベントを再利用する（無ければ作る）。addLifeEventProcedure と
+  // 同じ方針 — 「項目を追加」で先に空イベントができていたときに重複して並ばないようにする。
+  const { data: existing } = await supabase
+    .from("life_events")
+    .select("id, started_on")
+    .eq("family_id", member.familyId)
+    .eq("child_id", parsed.data.childId)
+    .eq("kind", template.kind)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let event = existing ? { id: existing.id } : null;
+  const createdNew = !existing;
+
+  if (existing) {
+    // 基準日が未入力のまま残っているイベントに、今回入力があれば埋める（上書きはしない）。
+    if (existing.started_on === null && startedOn !== null) {
+      await supabase
+        .from("life_events")
+        .update({ started_on: startedOn })
+        .eq("id", existing.id);
+    }
+  } else {
+    const { data: created, error: eventError } = await supabase
+      .from("life_events")
+      .insert({
+        family_id: member.familyId,
+        kind: template.kind,
+        child_id: parsed.data.childId,
+        started_on: startedOn,
+        created_by: member.id,
+      })
+      .select("id")
+      .single();
+
+    if (eventError || !created) {
+      return { ok: false, error: "ライフイベントの追加に失敗しました" };
+    }
+    event = { id: created.id };
+  }
+
+  if (!event) {
     return { ok: false, error: "ライフイベントの追加に失敗しました" };
   }
 
@@ -105,12 +138,15 @@ export async function addLifeEvent(input: {
     );
 
   if (itemsError) {
-    // 項目が1つも入らなかったイベントだけが残ると、消す手段が無いまま
-    // リストに居座ってしまう（イベントの削除UIは無い）。作りかけを畳んでおく。
-    await supabase
-      .from("life_events")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", event.id);
+    // 今回このイベントを新規作成したときだけ畳む。項目が1つも入らなかったイベントが
+    // 残ると、消す手段が無いままリストに居座る（イベントの削除UIは無い）。
+    // 既存イベントを再利用した場合は他の項目がぶら下がっているので消さない。
+    if (createdNew) {
+      await supabase
+        .from("life_events")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", event.id);
+    }
     return { ok: false, error: "ライフイベントの追加に失敗しました" };
   }
 
@@ -178,7 +214,6 @@ export async function addLifeEventProcedure(input: {
       .insert({
         family_id: member.familyId,
         kind: template.kind,
-        title: template.title,
         child_id: parsed.data.childId,
         created_by: member.id,
       })
@@ -400,6 +435,101 @@ export async function reorderLifeEventProcedures(input: {
     if (error) {
       return { ok: false, error: "並べ替えに失敗しました" };
     }
+  }
+
+  return { ok: true };
+}
+
+export type AddProcedureToTaskResult =
+  | { ok: true; taskId: string }
+  | { ok: false; error: string };
+
+/**
+ * 手続きの1項目を「やること」に落とす。タイトルと期限は呼び出し側のモーダルで
+ * プリセット（項目名 / 目安日）してから編集できるので、確定した値をそのまま受け取る。
+ * メモは項目のものを引き継ぐ。レシピ材料 →「買うもの」と同じ流儀で、追加済みの印は
+ * 残さない（同じ項目を何度でもタスク化できる）。Undo 用に作った task の id を返す。
+ */
+export async function addLifeEventProcedureToTask(input: {
+  id: string;
+  title: string;
+  dueOn: string;
+}): Promise<AddProcedureToTaskResult> {
+  const parsed = addLifeEventProcedureToTaskSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { data: procedure } = await supabase
+    .from("life_event_procedures")
+    .select("id, note")
+    .eq("id", parsed.data.id)
+    .eq("family_id", member.familyId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (!procedure) {
+    return { ok: false, error: "項目が見つかりません" };
+  }
+
+  const { data: lastTask } = await supabase
+    .from("tasks")
+    .select("sort_order")
+    .eq("family_id", member.familyId)
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const taskId = crypto.randomUUID();
+
+  const { error } = await supabase.from("tasks").insert({
+    id: taskId,
+    family_id: member.familyId,
+    title: parsed.data.title,
+    note: procedure.note,
+    due_on: parsed.data.dueOn === "" ? null : parsed.data.dueOn,
+    is_purchase: false,
+    sort_order: (lastTask?.sort_order ?? 0) + 1,
+    created_by: member.id,
+  });
+
+  if (error) {
+    return { ok: false, error: "タスクへの追加に失敗しました" };
+  }
+
+  return { ok: true, taskId };
+}
+
+/**
+ * addLifeEventProcedureToTask の取り消し。作ったタスクを論理削除する
+ * （undoAddIngredientsToPurchases と同じ）。
+ */
+export async function undoLifeEventProcedureToTask(input: {
+  taskId: string;
+}): Promise<ActionResult> {
+  const parsed = lifeEventProcedureTaskIdSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "不正な操作です" };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", parsed.data.taskId)
+    .eq("family_id", member.familyId);
+
+  if (error) {
+    return { ok: false, error: "取り消しに失敗しました" };
   }
 
   return { ok: true };

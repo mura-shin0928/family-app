@@ -31,6 +31,7 @@ import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
+import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
@@ -43,14 +44,23 @@ import type { Child } from "@/features/children/types";
 import {
   addLifeEvent,
   addLifeEventProcedure,
+  addLifeEventProcedureToTask,
   deleteLifeEventProcedure,
   reorderLifeEventProcedures,
+  undoLifeEventProcedureToTask,
   updateLifeEventProcedureNote,
   updateLifeEventProcedureTiming,
   updateLifeEventProcedureTitle,
 } from "../actions";
-import { LIFE_EVENT_TEMPLATES } from "../default-templates";
-import { EMPTY_ANCHOR_DATES, type LifeEventAnchorDates } from "../timing";
+import {
+  findLifeEventTemplate,
+  LIFE_EVENT_TEMPLATES,
+} from "../default-templates";
+import {
+  EMPTY_ANCHOR_DATES,
+  type LifeEventAnchorDates,
+  resolveLifeEventProcedureDate,
+} from "../timing";
 import type { LifeEvent, LifeEventProcedure } from "../types";
 import {
   LifeEventProcedureRow,
@@ -85,6 +95,13 @@ export function LifeEventListScreen({
   const [activeChildId, setActiveChildId] = useState(
     familyChildren[0]?.id ?? "",
   );
+  // タスク化する項目。ボタンで即追加せず、名前・期限をプリセットしたモーダルで確定する。
+  const [taskDialog, setTaskDialog] = useState<{
+    procedure: LifeEventProcedure;
+    presetDueOn: string;
+  } | null>(null);
+  // タスク化した直後だけ出す Undo トースト（レシピ材料 →「買うもの」と同じ流儀）。
+  const [toast, setToast] = useState<{ taskId: string } | null>(null);
 
   // 各項目の目安時期は、その項目が属するライフイベントの基準日から引く
   // （妊娠=子の予定日 / 出産=子の出生日 / 妊活=イベントの started_on）。
@@ -116,6 +133,47 @@ export function LifeEventListScreen({
         return;
       }
       router.refresh();
+    });
+  }
+
+  function handleOpenAddToTask(procedure: LifeEventProcedure) {
+    setError(null);
+    const anchor =
+      anchorByLifeEventId.get(procedure.lifeEventId) ?? EMPTY_ANCHOR_DATES;
+    setTaskDialog({
+      procedure,
+      presetDueOn: resolveLifeEventProcedureDate(procedure, anchor) ?? "",
+    });
+  }
+
+  function handleSubmitAddToTask(title: string, dueOn: string) {
+    if (!taskDialog) return;
+    const { procedure } = taskDialog;
+    setError(null);
+    startTransition(async () => {
+      const result = await addLifeEventProcedureToTask({
+        id: procedure.id,
+        title,
+        dueOn,
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setTaskDialog(null);
+      setToast({ taskId: result.taskId });
+    });
+  }
+
+  function handleUndoAddToTask() {
+    if (!toast) return;
+    const { taskId } = toast;
+    setToast(null);
+    startTransition(async () => {
+      const result = await undoLifeEventProcedureToTask({ taskId });
+      if (!result.ok) {
+        setError(result.error);
+      }
     });
   }
 
@@ -209,6 +267,7 @@ export function LifeEventListScreen({
               addLifeEventProcedure({ childId: activeChild.id, kind, title }),
             )
           }
+          onAddToTask={handleOpenAddToTask}
           onDelete={setPendingDelete}
         />
       </Stack>
@@ -219,6 +278,14 @@ export function LifeEventListScreen({
         familyChildren={familyChildren}
         defaultChildId={activeChild.id}
         onClose={() => setDialogOpen(false)}
+      />
+
+      <AddToTaskDialog
+        key={taskDialog?.procedure.id ?? "none"}
+        target={taskDialog}
+        busy={isPending}
+        onClose={() => setTaskDialog(null)}
+        onSubmit={handleSubmitAddToTask}
       />
 
       <Dialog
@@ -238,7 +305,85 @@ export function LifeEventListScreen({
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={!!toast}
+        onClose={() => setToast(null)}
+        autoHideDuration={8000}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        sx={{ bottom: 72 }}
+        message="タスクに追加しました"
+        action={
+          <Button color="inherit" size="small" onClick={handleUndoAddToTask}>
+            元に戻す
+          </Button>
+        }
+      />
     </Box>
+  );
+}
+
+/**
+ * 手続きの1項目をタスク化する前の確認モーダル。タスク名は項目名、期限は目安日で
+ * プリセットしたうえで、どちらもその場で編集してから「追加する」。
+ * target が null の間は閉じている（開くたびに key で作り直してプリセットを反映する）。
+ */
+function AddToTaskDialog({
+  target,
+  busy,
+  onClose,
+  onSubmit,
+}: {
+  target: { procedure: LifeEventProcedure; presetDueOn: string } | null;
+  busy: boolean;
+  onClose: () => void;
+  onSubmit: (title: string, dueOn: string) => void;
+}) {
+  const [title, setTitle] = useState(target?.procedure.title ?? "");
+  const [dueOn, setDueOn] = useState(target?.presetDueOn ?? "");
+
+  return (
+    <Dialog open={target !== null} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>タスクに追加</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          <TextField
+            label="タスク名"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            size="small"
+            fullWidth
+            autoFocus
+          />
+          <TextField
+            label="期限"
+            type="date"
+            value={dueOn}
+            onChange={(event) => setDueOn(event.target.value)}
+            size="small"
+            fullWidth
+            slotProps={{ inputLabel: { shrink: true } }}
+            helperText={
+              target?.presetDueOn
+                ? "項目の目安日を入れています。変えられます。"
+                : "この項目は目安日が出せないので空です。任意で入れられます。"
+            }
+          />
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={busy}>
+          やめる
+        </Button>
+        <Button
+          variant="contained"
+          onClick={() => onSubmit(title.trim(), dueOn)}
+          disabled={busy || title.trim() === ""}
+        >
+          追加する
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 
@@ -257,6 +402,7 @@ function ChildLifeEventList({
   onNoteChange,
   onTimingChange,
   onAddProcedure,
+  onAddToTask,
   onDelete,
 }: {
   childId: string;
@@ -268,6 +414,7 @@ function ChildLifeEventList({
   onNoteChange: (id: string, note: string) => void;
   onTimingChange: (id: string, change: TimingChange) => void;
   onAddProcedure: (kind: string, title: string) => void;
+  onAddToTask: (procedure: LifeEventProcedure) => void;
   onDelete: (procedure: LifeEventProcedure) => void;
 }) {
   const router = useRouter();
@@ -275,6 +422,25 @@ function ChildLifeEventList({
   useEffect(() => {
     setItems(procedures);
   }, [procedures]);
+
+  // チップで1つのライフイベントに絞り込む（null = すべて表示）。
+  const [activeEventId, setActiveEventId] = useState<string | null>(null);
+  // チップ行はイベントが2つ以上あるときだけ出る。絞り込み対象が消えた／チップ行ごと
+  // 消えたときは、解除する手段が無くなるので null に戻す。
+  useEffect(() => {
+    if (
+      activeEventId &&
+      (lifeEvents.length <= 1 ||
+        !lifeEvents.some((e) => e.id === activeEventId))
+    ) {
+      setActiveEventId(null);
+    }
+  }, [activeEventId, lifeEvents]);
+
+  const filtering = activeEventId !== null;
+  const visibleItems = filtering
+    ? items.filter((item) => item.lifeEventId === activeEventId)
+    : items;
 
   const [reorderError, setReorderError] = useState<string | null>(null);
   const [reordering, startReorder] = useTransition();
@@ -287,6 +453,8 @@ function ChildLifeEventList({
   );
 
   function handleDragEnd(event: DragEndEvent) {
+    // 絞り込み中は並べ替え不可（sort_order は子単位で1本なので部分並べ替えは座標がずれる）。
+    if (filtering) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -320,16 +488,40 @@ function ChildLifeEventList({
         </Alert>
       )}
 
-      {lifeEvents.length > 0 && (
-        <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", rowGap: 1 }}>
-          {lifeEvents.map((event) => (
+      {lifeEvents.length > 1 && (
+        <Stack spacing={0.5}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ flexWrap: "wrap", rowGap: 1 }}
+          >
             <Chip
-              key={event.id}
-              label={event.title}
+              label="すべて"
               size="small"
-              variant="outlined"
+              color="primary"
+              variant={activeEventId === null ? "filled" : "outlined"}
+              onClick={() => setActiveEventId(null)}
             />
-          ))}
+            {lifeEvents.map((event) => (
+              <Chip
+                key={event.id}
+                label={findLifeEventTemplate(event.kind)?.title ?? event.kind}
+                size="small"
+                color="primary"
+                variant={activeEventId === event.id ? "filled" : "outlined"}
+                onClick={() =>
+                  setActiveEventId((current) =>
+                    current === event.id ? null : event.id,
+                  )
+                }
+              />
+            ))}
+          </Stack>
+          {filtering && (
+            <Typography variant="caption" color="text.secondary">
+              絞り込み中は並べ替えできません
+            </Typography>
+          )}
         </Stack>
       )}
 
@@ -337,6 +529,8 @@ function ChildLifeEventList({
         <Alert severity="info">
           「ライフイベントを追加」か「項目を追加」で、この子の手続きがここに並びます。追加したあとは自由に書き換えられます。
         </Alert>
+      ) : visibleItems.length === 0 ? (
+        <Alert severity="info">このライフイベントの項目はありません。</Alert>
       ) : (
         <Paper variant="outlined" sx={{ overflow: "hidden" }}>
           <DndContext
@@ -347,10 +541,10 @@ function ChildLifeEventList({
             onDragEnd={handleDragEnd}
           >
             <SortableContext
-              items={items.map((item) => item.id)}
+              items={visibleItems.map((item) => item.id)}
               strategy={verticalListSortingStrategy}
             >
-              {items.map((procedure) => (
+              {visibleItems.map((procedure) => (
                 <LifeEventProcedureRow
                   key={procedure.id}
                   procedure={procedure}
@@ -359,9 +553,11 @@ function ChildLifeEventList({
                     EMPTY_ANCHOR_DATES
                   }
                   busy={busy || reordering}
+                  reorderDisabled={filtering}
                   onTitleChange={onTitleChange}
                   onNoteChange={onNoteChange}
                   onTimingChange={onTimingChange}
+                  onAddToTask={onAddToTask}
                   onDelete={onDelete}
                 />
               ))}
@@ -478,9 +674,6 @@ function AddLifeEventDialog({
 }) {
   const router = useRouter();
   const [kind, setKind] = useState(LIFE_EVENT_TEMPLATES[0].kind);
-  // タイトルはテンプレート名を初期値にしつつ、家族が呼びたい名前
-  // （「第2子の出産」など）に書き換えられるようにする。
-  const [title, setTitle] = useState(LIFE_EVENT_TEMPLATES[0].title);
   const [childId, setChildId] = useState(defaultChildId);
   const [startedOn, setStartedOn] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -490,17 +683,24 @@ function AddLifeEventDialog({
     LIFE_EVENT_TEMPLATES.find((t) => t.kind === kind) ??
     LIFE_EVENT_TEMPLATES[0];
 
+  // 「イベント開始日」は妊活だけで使う（他は子の予定日/出生日が基準。timing.ts 参照）。
+  const usesStartedOn = kind === "preconception";
+
   function handleKindChange(value: string) {
     const next = LIFE_EVENT_TEMPLATES.find((t) => t.kind === value);
     if (!next) return;
     setKind(next.kind);
-    setTitle(next.title);
+    if (next.kind !== "preconception") setStartedOn("");
   }
 
   function handleAdd() {
     setError(null);
     startTransition(async () => {
-      const result = await addLifeEvent({ kind, title, childId, startedOn });
+      const result = await addLifeEvent({
+        kind,
+        childId,
+        startedOn: usesStartedOn ? startedOn : "",
+      });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -531,13 +731,6 @@ function AddLifeEventDialog({
             ))}
           </TextField>
           <TextField
-            label="このリストでの呼び方"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            size="small"
-            fullWidth
-          />
-          <TextField
             select
             label="どの子のことか"
             value={childId}
@@ -552,16 +745,18 @@ function AddLifeEventDialog({
               </MenuItem>
             ))}
           </TextField>
-          <TextField
-            label="イベント開始日"
-            type="date"
-            value={startedOn}
-            onChange={(event) => setStartedOn(event.target.value)}
-            size="small"
-            fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
-            helperText="妊活など、子の予定日ではなく「開始日」を基準にする項目の目安時期に使います"
-          />
+          {usesStartedOn && (
+            <TextField
+              label="イベント開始日"
+              type="date"
+              value={startedOn}
+              onChange={(event) => setStartedOn(event.target.value)}
+              size="small"
+              fullWidth
+              slotProps={{ inputLabel: { shrink: true } }}
+              helperText="妊活を始めた日。この日を基準に各項目の目安時期を出します"
+            />
+          )}
           {error && <Alert severity="error">{error}</Alert>}
           <Typography variant="caption" color="text.secondary">
             追加すると{template.items.length}
@@ -576,7 +771,7 @@ function AddLifeEventDialog({
         <Button
           variant="contained"
           onClick={handleAdd}
-          disabled={isPending || title.trim() === "" || childId === ""}
+          disabled={isPending || childId === ""}
         >
           追加する
         </Button>
