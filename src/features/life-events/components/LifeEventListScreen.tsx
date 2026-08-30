@@ -191,7 +191,13 @@ export function LifeEventListScreen({
           </Alert>
         ) : (
           <Paper variant="outlined" sx={{ overflow: "hidden" }}>
+            {/*
+              id を固定する。省略すると @dnd-kit がモジュール内カウンタで
+              DndDescribedBy-N を採番し、dev の StrictMode 二重レンダーで
+              サーバー(-0)とクライアント(-1)がずれて hydration mismatch になる。
+            */}
             <DndContext
+              id="life-event-procedures"
               sensors={sensors}
               collisionDetection={closestCenter}
               modifiers={[restrictToVerticalAxis, restrictToParentElement]}
