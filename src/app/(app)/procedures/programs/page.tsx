@@ -6,9 +6,14 @@ import Typography from "@mui/material/Typography";
 import { BackButton } from "@/components/BackButton";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { getChildren } from "@/features/children/queries";
-import { getAreaPrograms, getAreas } from "@/features/programs/api";
+import {
+  getAreaPrograms,
+  getAreas,
+  getProgramCategories,
+} from "@/features/programs/api";
 import { MunicipalityRequiredNotice } from "@/features/programs/components/MunicipalityRequiredNotice";
 import { ProgramListScreen } from "@/features/programs/components/ProgramListScreen";
+import { PROGRAM_CATEGORY_CODES } from "@/features/programs/filter";
 import { getFamilyMunicipality } from "@/features/programs/queries";
 
 /**
@@ -23,9 +28,13 @@ export default async function ProgramsPage() {
     getChildren(member.familyId),
   ]);
 
-  const [programs, areas] = municipality
-    ? await Promise.all([getAreaPrograms(municipality.code), getAreas()])
-    : [null, null];
+  const [programs, areas, categories] = municipality
+    ? await Promise.all([
+        getAreaPrograms(municipality.code),
+        getAreas(),
+        getProgramCategories(PROGRAM_CATEGORY_CODES),
+      ])
+    : [null, null, null];
 
   return (
     <Box
@@ -43,7 +52,7 @@ export default async function ProgramsPage() {
       <Toolbar />
       {!municipality ? (
         <MunicipalityRequiredNotice />
-      ) : !programs?.ok ? (
+      ) : !programs?.ok || !categories?.ok ? (
         <Box sx={{ p: 2 }}>
           <Alert severity="error">
             制度の情報を取得できませんでした。時間をおいて開き直してください。
@@ -52,6 +61,7 @@ export default async function ProgramsPage() {
       ) : (
         <ProgramListScreen
           programs={programs.data}
+          categories={categories.data}
           attribution={programs.attribution}
           areaNames={Object.fromEntries(
             (areas?.ok ? areas.data : []).map((area) => [area.code, area.name]),

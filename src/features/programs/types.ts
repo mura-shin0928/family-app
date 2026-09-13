@@ -24,6 +24,12 @@ export type Program = {
   ageMaxMonths: number | null;
 };
 
+/** 絞り込みチップ1つ分のカテゴリー（CSC_個人向けカテゴリー）。名前は /v1/tags から。 */
+export type ProgramCategory<Code extends string = string> = {
+  code: Code;
+  name: string;
+};
+
 /** CC BY 4.0 の出典表記。制度を出す画面には必ず出す。 */
 export type Attribution = {
   source: string;

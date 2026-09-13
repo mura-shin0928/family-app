@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import type { Area, Attribution, Program } from "./types";
+import type { Area, Attribution, Program, ProgramCategory } from "./types";
 
 /**
  * seido-data-hub（子育て支援制度レジストリを配る別プロダクトの API）の読み取り。
@@ -85,6 +85,37 @@ function toAttribution(raw: z.infer<typeof attributionSchema>): Attribution {
     licenseUrl: raw.license_url,
     notice: raw.notice,
   };
+}
+
+const tagSchema = z.object({ code: z.string(), name: z.string() });
+
+/**
+ * 画面のチップに出すカテゴリーの名前を /v1/tags から引く。どのコードを出すかは
+ * family-app が決め（filter.ts の PROGRAM_CATEGORY_CODES）、名前はレジストリの語彙を
+ * 持つ seido-data-hub に任せる。対象者・コンテンツタイプの名前は使わないので読まない。
+ * 渡したコードが一覧に無ければ（API とずれていれば）取得できなかった扱いにする。
+ */
+export async function getProgramCategories<Code extends string>(
+  codes: readonly Code[],
+): Promise<SeidoResult<ProgramCategory<Code>[]>> {
+  const result = await get(
+    "/v1/tags",
+    z.object({ categories: z.array(tagSchema) }),
+  );
+  if (!result.ok) return result;
+  const nameByCode = new Map(
+    result.data.categories.map((tag) => [tag.code, tag.name]),
+  );
+  const categories: ProgramCategory<Code>[] = [];
+  for (const code of codes) {
+    const name = nameByCode.get(code);
+    if (name === undefined) {
+      console.error(`seido-data-hub /v1/tags: category ${code} is missing`);
+      return { ok: false, reason: "unavailable" };
+    }
+    categories.push({ code, name });
+  }
+  return { ...result, data: categories };
 }
 
 export async function getAreas(): Promise<SeidoResult<Area[]>> {

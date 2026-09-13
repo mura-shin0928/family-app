@@ -30,12 +30,12 @@ import { todayInJst } from "@/lib/date";
 import {
   ageInMonths,
   defaultCategoryFor,
-  PROGRAM_CATEGORIES,
+  type ProgramCategoryCode,
   type ProgramCategoryFilter,
   programTitle,
   selectPrograms,
 } from "../filter";
-import type { Attribution, Program } from "../types";
+import type { Attribution, Program, ProgramCategory } from "../types";
 
 /**
  * 自治体＋都道府県の制度一覧（「一覧で気づく」）。子供ごとのタブで、その子の時期に
@@ -44,11 +44,14 @@ import type { Attribution, Program } from "../types";
  */
 export function ProgramListScreen({
   programs,
+  categories,
   attribution,
   areaNames,
   familyChildren,
 }: {
   programs: Program[];
+  /** 絞り込みチップ（「すべて」の後ろに並ぶ）。 */
+  categories: ProgramCategory<ProgramCategoryCode>[];
   attribution: Attribution;
   areaNames: Record<string, string>;
   familyChildren: Child[];
@@ -103,6 +106,7 @@ export function ProgramListScreen({
               key={activeChild.id}
               child={activeChild}
               programs={programs}
+              categories={categories}
               areaNames={areaNames}
             />
           </>
@@ -127,10 +131,12 @@ export function ProgramListScreen({
 function ChildProgramList({
   child,
   programs,
+  categories,
   areaNames,
 }: {
   child: Child;
   programs: Program[];
+  categories: ProgramCategory<ProgramCategoryCode>[];
   areaNames: Record<string, string>;
 }) {
   const ageMonths = child.birthDate
@@ -143,12 +149,15 @@ function ChildProgramList({
   const [addedTitle, setAddedTitle] = useState<string | null>(null);
 
   const visible = selectPrograms(programs, { ageMonths, category });
+  const pregnancyName =
+    categories.find((option) => option.code === defaultCategoryFor(null))
+      ?.name ?? "";
 
   return (
     <Stack spacing={1.5}>
       <Typography variant="body2" color="text.secondary">
         {ageMonths === null
-          ? `${child.displayName}はまだ生まれていないので、「妊娠・出産」から表示しています。`
+          ? `${child.displayName}はまだ生まれていないので、「${pregnancyName}」から表示しています。`
           : `生後${ageMonths}か月の${child.displayName}の対象外とわかる制度（年齢の範囲外）は除いています。`}
       </Typography>
 
@@ -160,10 +169,10 @@ function ChildProgramList({
           variant={category === "all" ? "filled" : "outlined"}
           onClick={() => setCategory("all")}
         />
-        {PROGRAM_CATEGORIES.map((option) => (
+        {categories.map((option) => (
           <Chip
             key={option.code}
-            label={option.label}
+            label={option.name}
             size="small"
             color="primary"
             variant={category === option.code ? "filled" : "outlined"}
