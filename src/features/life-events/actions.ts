@@ -156,13 +156,15 @@ export async function addLifeEvent(input: {
 /**
  * 手続きリストに項目を1つ足す。子供とライフイベント種別(kind)で受け取り、その子に
  * その種別のライフイベントがあればそれに、無ければ空で1つ作ってぶら下げる
- * （テンプレの他項目は入れない）。「誰が決めたか / 時期の硬さ」は選ばせず既定
- * （自分たち・〜ごろ）で入れる。並び順はその子のリストの末尾。
+ * （テンプレの他項目は入れない）。時期の硬さは選ばせず既定（〜ごろ）で入れる。
+ * 並び順はその子のリストの末尾。制度一覧からの追加もここを通る（url・行政手続きを付ける）。
  */
 export async function addLifeEventProcedure(input: {
   childId: string;
   kind: string;
   title: string;
+  url: string;
+  isGovernment: boolean;
 }): Promise<ActionResult> {
   const parsed = addLifeEventProcedureSchema.safeParse(input);
   if (!parsed.success) {
@@ -237,7 +239,8 @@ export async function addLifeEventProcedure(input: {
     child_id: parsed.data.childId,
     sort_order: lastSortOrder + 1,
     title: parsed.data.title,
-    is_government: false,
+    url: parsed.data.url === "" ? null : parsed.data.url,
+    is_government: parsed.data.isGovernment,
     timing_kind: "around",
   });
 
@@ -447,7 +450,7 @@ export type AddProcedureToTaskResult =
 /**
  * 手続きの1項目を「やること」に落とす。タイトルと期限は呼び出し側のモーダルで
  * プリセット（項目名 / 目安日）してから編集できるので、確定した値をそのまま受け取る。
- * メモは項目のものを引き継ぐ。レシピ材料 →「買うもの」と同じ流儀で、追加済みの印は
+ * メモ・URL は項目のものを引き継ぐ。レシピ材料 →「買うもの」と同じ流儀で、追加済みの印は
  * 残さない（同じ項目を何度でもタスク化できる）。Undo 用に作った task の id を返す。
  */
 export async function addLifeEventProcedureToTask(input: {
@@ -468,7 +471,7 @@ export async function addLifeEventProcedureToTask(input: {
 
   const { data: procedure } = await supabase
     .from("life_event_procedures")
-    .select("id, note")
+    .select("id, note, url")
     .eq("id", parsed.data.id)
     .eq("family_id", member.familyId)
     .is("deleted_at", null)
@@ -494,6 +497,7 @@ export async function addLifeEventProcedureToTask(input: {
     family_id: member.familyId,
     title: parsed.data.title,
     note: procedure.note,
+    url: procedure.url,
     due_on: parsed.data.dueOn === "" ? null : parsed.data.dueOn,
     is_purchase: false,
     sort_order: (lastTask?.sort_order ?? 0) + 1,

@@ -43,7 +43,7 @@ export async function getLifeEventProcedures(
   const { data, error } = await supabase
     .from("life_event_procedures")
     .select(
-      "id, life_event_id, child_id, sort_order, title, note, is_government, timing_kind, anchor_event, offset_days",
+      "id, life_event_id, child_id, sort_order, title, note, url, is_government, timing_kind, anchor_event, offset_days",
     )
     .eq("family_id", familyId)
     .is("deleted_at", null)
@@ -60,6 +60,7 @@ export async function getLifeEventProcedures(
     sortOrder: row.sort_order,
     title: row.title,
     note: row.note,
+    url: row.url,
     isGovernment: row.is_government,
     timingKind: row.timing_kind as TimingKind,
     anchorEvent: row.anchor_event as LifeEventAnchor | null,

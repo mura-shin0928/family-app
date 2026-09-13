@@ -31,6 +31,8 @@ export type LifeEventProcedure = {
   sortOrder: number;
   title: string;
   note: string | null;
+  /** 公式ページ。制度一覧（seido-data-hub）から足した項目にだけ入る。 */
+  url: string | null;
   /** 行政手続きか（出生届・児童手当など）。表示の「行政手続き」バッジにだけ効く。 */
   isGovernment: boolean;
   timingKind: TimingKind;

@@ -143,6 +143,64 @@ describe("families / family_members RLS", () => {
     expect(deleteError).not.toBeNull();
   });
 
+  describe("families_update_municipality_own policy", () => {
+    it("a member can set their own family's municipality", async () => {
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+      const { data, error } = await clientA
+        .from("families")
+        .update({ municipality_code: "132101", municipality_name: "小金井市" })
+        .eq("id", familyF1)
+        .select("municipality_code, municipality_name");
+      expect(error).toBeNull();
+      expect(data).toEqual([
+        { municipality_code: "132101", municipality_name: "小金井市" },
+      ]);
+    });
+
+    it("a member cannot set another family's municipality", async () => {
+      const clientC = await signInAsClient(userC.email, PASSWORD);
+      const { data, error } = await clientC
+        .from("families")
+        .update({ municipality_code: "132101", municipality_name: "小金井市" })
+        .eq("id", familyF1)
+        .select("id");
+      expect(error).toBeNull();
+      expect(data).toHaveLength(0);
+
+      const { data: f1 } = await admin
+        .from("families")
+        .select("municipality_code")
+        .eq("id", familyF1)
+        .single();
+      // 直前のテストで A が入れた値のまま（C の update は0行）
+      expect(f1?.municipality_code).toBe("132101");
+    });
+
+    it("a member still cannot rename the family (column-level grant)", async () => {
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+      const { error } = await clientA
+        .from("families")
+        .update({ name: "renamed" })
+        .eq("id", familyF1);
+      expect(error).not.toBeNull();
+    });
+
+    it("rejects a code without a name, or a malformed code", async () => {
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+      const { error: onlyCode } = await clientA
+        .from("families")
+        .update({ municipality_code: "132101", municipality_name: null })
+        .eq("id", familyF1);
+      expect(onlyCode).not.toBeNull();
+
+      const { error: malformed } = await clientA
+        .from("families")
+        .update({ municipality_code: "13210", municipality_name: "小金井市" })
+        .eq("id", familyF1);
+      expect(malformed).not.toBeNull();
+    });
+  });
+
   describe("family_members_delete_own_family policy", () => {
     it("a member can delete another member's row in their own family", async () => {
       const target = await createConfirmedUser(
