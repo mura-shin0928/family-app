@@ -1,14 +1,15 @@
 import type { DateString } from "@/lib/date";
 import type { Program } from "./types";
 
-/** 画面の絞り込みチップ。レジストリのカテゴリのうち0〜6歳の家族に関係する3つ。 */
-export const PROGRAM_CATEGORIES = [
-  { code: "002", label: "妊娠・出産" },
-  { code: "003", label: "子育て" },
-  { code: "004", label: "保育" },
-] as const;
+/**
+ * 画面の絞り込みチップにするカテゴリーのコード。レジストリのカテゴリーのうち0〜6歳の
+ * 家族に関係する3つ（002 妊娠・出産 / 003 子育て / 004 保育）。名前は /v1/tags から引く。
+ */
+export const PROGRAM_CATEGORY_CODES = ["002", "003", "004"] as const;
 
-export type ProgramCategoryFilter = "all" | "002" | "003" | "004";
+export type ProgramCategoryCode = (typeof PROGRAM_CATEGORY_CODES)[number];
+
+export type ProgramCategoryFilter = "all" | ProgramCategoryCode;
 
 /**
  * birthDate から today までの満月齢（誕生日の「日」に届いていなければ前の月まで）。
