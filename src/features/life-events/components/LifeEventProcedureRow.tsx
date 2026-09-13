@@ -7,6 +7,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import NotesIcon from "@mui/icons-material/Notes";
 import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import TuneIcon from "@mui/icons-material/Tune";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -14,6 +15,7 @@ import Chip from "@mui/material/Chip";
 import Collapse from "@mui/material/Collapse";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
+import Link from "@mui/material/Link";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
@@ -205,8 +207,8 @@ export function LifeEventProcedureRow({
         </IconButton>
       </Box>
 
-      {/* 行政手続きバッジ + 時期。どちらも無ければ行ごと出さない。 */}
-      {(procedure.isGovernment || timingLabel) && (
+      {/* 行政手続きバッジ + 時期 + 公式ページ。どれも無ければ行ごと出さない。 */}
+      {(procedure.isGovernment || timingLabel || procedure.url) && (
         <Box
           sx={{
             display: "flex",
@@ -232,6 +234,20 @@ export function LifeEventProcedureRow({
             <Typography variant="caption" color="text.secondary">
               {timingLabel}
             </Typography>
+          )}
+          {procedure.url && (
+            <Link
+              href={procedure.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="caption"
+              // 行のクリック（時期の編集を開く）に拾わせない
+              onClick={(event) => event.stopPropagation()}
+              sx={{ display: "inline-flex", alignItems: "center", gap: 0.25 }}
+            >
+              公式ページ
+              <OpenInNewIcon sx={{ fontSize: "0.875rem" }} />
+            </Link>
           )}
         </Box>
       )}

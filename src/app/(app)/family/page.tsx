@@ -19,15 +19,21 @@ import {
   getFamilyMembers,
   getInvitations,
 } from "@/features/invitations/queries";
+import { getAreas } from "@/features/programs/api";
+import { MunicipalitySection } from "@/features/programs/components/MunicipalitySection";
+import { getFamilyMunicipality } from "@/features/programs/queries";
 
 export default async function FamilyPage() {
   const { member } = await requireFamilyMember();
-  const [family, members, invitations, familyChildren] = await Promise.all([
-    getFamily(member.familyId),
-    getFamilyMembers(member.familyId),
-    getInvitations(member.familyId),
-    getChildren(member.familyId),
-  ]);
+  const [family, members, invitations, familyChildren, municipality, areas] =
+    await Promise.all([
+      getFamily(member.familyId),
+      getFamilyMembers(member.familyId),
+      getInvitations(member.familyId),
+      getChildren(member.familyId),
+      getFamilyMunicipality(member.familyId),
+      getAreas(),
+    ]);
 
   return (
     <Box
@@ -45,6 +51,18 @@ export default async function FamilyPage() {
       <Toolbar />
       <Box sx={{ px: 2, pt: 2 }}>
         <ChildrenSection familyChildren={familyChildren} />
+      </Box>
+      <Divider sx={{ mt: 2 }} />
+      <Box sx={{ px: 2, pt: 2 }}>
+        <MunicipalitySection
+          municipality={municipality}
+          // 選べるのは市区町村だけ（都道府県の制度は市区町村に付いてくる）
+          areas={
+            areas.ok
+              ? areas.data.filter((area) => area.parentCode !== null)
+              : null
+          }
+        />
       </Box>
       <Divider sx={{ mt: 2 }} />
       <InvitationsScreen

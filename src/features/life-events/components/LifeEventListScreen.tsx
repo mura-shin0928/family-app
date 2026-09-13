@@ -20,6 +20,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import AddIcon from "@mui/icons-material/Add";
+import SearchIcon from "@mui/icons-material/Search";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -214,7 +215,16 @@ export function LifeEventListScreen({
   return (
     <Box sx={{ p: 2, pb: 10 }}>
       <Stack spacing={2}>
-        <Box sx={{ display: "flex" }}>
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+          {/* 自治体の子育て支援制度（seido-data-hub）から、テンプレに無い項目を見つけて足す */}
+          <Button
+            size="small"
+            component={Link}
+            href="/procedures/programs"
+            startIcon={<SearchIcon fontSize="small" />}
+          >
+            自治体の制度を探す
+          </Button>
           <Button
             size="small"
             variant="outlined"
@@ -264,7 +274,13 @@ export function LifeEventListScreen({
           }
           onAddProcedure={(kind, title) =>
             run(() =>
-              addLifeEventProcedure({ childId: activeChild.id, kind, title }),
+              addLifeEventProcedure({
+                childId: activeChild.id,
+                kind,
+                title,
+                url: "",
+                isGovernment: false,
+              }),
             )
           }
           onAddToTask={handleOpenAddToTask}
