@@ -3,6 +3,7 @@ import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
+import { notFound } from "next/navigation";
 import { BackButton } from "@/components/BackButton";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { getChildren } from "@/features/children/queries";
@@ -10,6 +11,7 @@ import {
   getAreaPrograms,
   getAreas,
   getProgramCategories,
+  isSeidoDataHubConfigured,
 } from "@/features/programs/api";
 import { MunicipalityRequiredNotice } from "@/features/programs/components/MunicipalityRequiredNotice";
 import { ProgramListScreen } from "@/features/programs/components/ProgramListScreen";
@@ -22,6 +24,8 @@ import { getFamilyMunicipality } from "@/features/programs/queries";
  */
 export default async function ProgramsPage() {
   const { member } = await requireFamilyMember();
+  // 未設定の環境では入口を出していないので、URL 直打ちも無いページとして扱う
+  if (!isSeidoDataHubConfigured()) notFound();
 
   const [municipality, familyChildren] = await Promise.all([
     getFamilyMunicipality(member.familyId),

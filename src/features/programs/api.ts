@@ -41,6 +41,14 @@ export type SeidoResult<T> =
   | { ok: true; data: T; attribution: Attribution }
   | { ok: false; reason: "not-configured" | "unavailable" };
 
+/**
+ * seido-data-hub の URL が設定されているか。未設定の環境（ローカル等）では、
+ * 制度一覧と自治体の設定を画面に出さない（入口ごと隠す）。
+ */
+export function isSeidoDataHubConfigured(): boolean {
+  return Boolean(process.env.SEIDO_DATA_HUB_API_URL);
+}
+
 async function get<T>(
   path: string,
   dataSchema: z.ZodType<T>,
