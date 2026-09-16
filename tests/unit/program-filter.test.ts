@@ -9,7 +9,7 @@ import type { Program } from "@/features/programs/types";
 function program(overrides: Partial<Program>): Program {
   return {
     id: crypto.randomUUID(),
-    areaCode: "132101",
+    areaCode: "999999",
     canonicalName: "標準名",
     shortName: null,
     sourceUrl: "https://example.test/page",
@@ -118,7 +118,7 @@ describe("selectPrograms", () => {
   });
 
   it("merges rows with the same area, title and page, keeping the first", () => {
-    // 小金井市の産後ケア事業は日帰り型・宿泊型などが同じ呼び名・同じページで4行ある
+    // サンプル市の産後ケア事業は日帰り型・宿泊型などが同じ呼び名・同じページで4行ある
     const first = program({ shortName: "産後ケア事業" });
     const duplicate = program({ shortName: "産後ケア事業" });
     const otherArea = program({

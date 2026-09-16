@@ -148,12 +148,12 @@ describe("families / family_members RLS", () => {
       const clientA = await signInAsClient(userA.email, PASSWORD);
       const { data, error } = await clientA
         .from("families")
-        .update({ municipality_code: "132101", municipality_name: "小金井市" })
+        .update({ municipality_code: "999999", municipality_name: "サンプル市" })
         .eq("id", familyF1)
         .select("municipality_code, municipality_name");
       expect(error).toBeNull();
       expect(data).toEqual([
-        { municipality_code: "132101", municipality_name: "小金井市" },
+        { municipality_code: "999999", municipality_name: "サンプル市" },
       ]);
     });
 
@@ -161,7 +161,7 @@ describe("families / family_members RLS", () => {
       const clientC = await signInAsClient(userC.email, PASSWORD);
       const { data, error } = await clientC
         .from("families")
-        .update({ municipality_code: "132101", municipality_name: "小金井市" })
+        .update({ municipality_code: "999999", municipality_name: "サンプル市" })
         .eq("id", familyF1)
         .select("id");
       expect(error).toBeNull();
@@ -173,7 +173,7 @@ describe("families / family_members RLS", () => {
         .eq("id", familyF1)
         .single();
       // 直前のテストで A が入れた値のまま（C の update は0行）
-      expect(f1?.municipality_code).toBe("132101");
+      expect(f1?.municipality_code).toBe("999999");
     });
 
     it("a member still cannot rename the family (column-level grant)", async () => {
@@ -189,13 +189,13 @@ describe("families / family_members RLS", () => {
       const clientA = await signInAsClient(userA.email, PASSWORD);
       const { error: onlyCode } = await clientA
         .from("families")
-        .update({ municipality_code: "132101", municipality_name: null })
+        .update({ municipality_code: "999999", municipality_name: null })
         .eq("id", familyF1);
       expect(onlyCode).not.toBeNull();
 
       const { error: malformed } = await clientA
         .from("families")
-        .update({ municipality_code: "13210", municipality_name: "小金井市" })
+        .update({ municipality_code: "99999", municipality_name: "サンプル市" })
         .eq("id", familyF1);
       expect(malformed).not.toBeNull();
     });

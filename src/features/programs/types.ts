@@ -1,4 +1,4 @@
-/** seido-data-hub の自治体。code は6桁の団体コード（例: 小金井市 132101）。 */
+/** seido-data-hub の自治体。code は6桁の団体コード（例: サンプル市 999999）。 */
 export type Area = {
   code: string;
   name: string;
