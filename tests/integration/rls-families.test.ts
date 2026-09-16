@@ -148,7 +148,10 @@ describe("families / family_members RLS", () => {
       const clientA = await signInAsClient(userA.email, PASSWORD);
       const { data, error } = await clientA
         .from("families")
-        .update({ municipality_code: "999999", municipality_name: "サンプル市" })
+        .update({
+          municipality_code: "999999",
+          municipality_name: "サンプル市",
+        })
         .eq("id", familyF1)
         .select("municipality_code, municipality_name");
       expect(error).toBeNull();
@@ -161,7 +164,10 @@ describe("families / family_members RLS", () => {
       const clientC = await signInAsClient(userC.email, PASSWORD);
       const { data, error } = await clientC
         .from("families")
-        .update({ municipality_code: "999999", municipality_name: "サンプル市" })
+        .update({
+          municipality_code: "999999",
+          municipality_name: "サンプル市",
+        })
         .eq("id", familyF1)
         .select("id");
       expect(error).toBeNull();
