@@ -19,20 +19,22 @@ import {
   getFamilyMembers,
   getInvitations,
 } from "@/features/invitations/queries";
-import { getAreas } from "@/features/programs/api";
+import { getAreas, isSeidoDataHubConfigured } from "@/features/programs/api";
 import { MunicipalitySection } from "@/features/programs/components/MunicipalitySection";
 import { getFamilyMunicipality } from "@/features/programs/queries";
 
 export default async function FamilyPage() {
   const { member } = await requireFamilyMember();
+  // 自治体は制度一覧にしか使わないので、seido-data-hub が未設定なら設定欄ごと出さない
+  const seidoConfigured = isSeidoDataHubConfigured();
   const [family, members, invitations, familyChildren, municipality, areas] =
     await Promise.all([
       getFamily(member.familyId),
       getFamilyMembers(member.familyId),
       getInvitations(member.familyId),
       getChildren(member.familyId),
-      getFamilyMunicipality(member.familyId),
-      getAreas(),
+      seidoConfigured ? getFamilyMunicipality(member.familyId) : null,
+      seidoConfigured ? getAreas() : null,
     ]);
 
   return (
@@ -52,18 +54,22 @@ export default async function FamilyPage() {
       <Box sx={{ px: 2, pt: 2 }}>
         <ChildrenSection familyChildren={familyChildren} />
       </Box>
-      <Divider sx={{ mt: 2 }} />
-      <Box sx={{ px: 2, pt: 2 }}>
-        <MunicipalitySection
-          municipality={municipality}
-          // 選べるのは市区町村だけ（都道府県の制度は市区町村に付いてくる）
-          areas={
-            areas.ok
-              ? areas.data.filter((area) => area.parentCode !== null)
-              : null
-          }
-        />
-      </Box>
+      {areas && (
+        <>
+          <Divider sx={{ mt: 2 }} />
+          <Box sx={{ px: 2, pt: 2 }}>
+            <MunicipalitySection
+              municipality={municipality}
+              // 選べるのは市区町村だけ（都道府県の制度は市区町村に付いてくる）
+              areas={
+                areas.ok
+                  ? areas.data.filter((area) => area.parentCode !== null)
+                  : null
+              }
+            />
+          </Box>
+        </>
+      )}
       <Divider sx={{ mt: 2 }} />
       <InvitationsScreen
         members={members}

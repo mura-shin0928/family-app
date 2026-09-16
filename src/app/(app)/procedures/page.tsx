@@ -6,6 +6,7 @@ import {
   getLifeEventProcedures,
   getLifeEvents,
 } from "@/features/life-events/queries";
+import { isSeidoDataHubConfigured } from "@/features/programs/api";
 import { AppHeader } from "../AppHeader";
 
 export default async function ProceduresPage() {
@@ -33,6 +34,7 @@ export default async function ProceduresPage() {
         lifeEvents={lifeEvents}
         procedures={procedures}
         familyChildren={familyChildren}
+        showProgramsLink={isSeidoDataHubConfigured()}
       />
     </Box>
   );
