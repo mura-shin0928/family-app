@@ -5,8 +5,8 @@
  * service role key はこのスクリプト以外（Next.jsアプリ・ブラウザ）からは
  * 一切参照しない。.env.admin.local はコミットしない（.gitignore の .env* で保護）。
  *
- *   node --env-file=.env.admin.local scripts/admin.mts create-family --name "村上家" --yes
- *   node --env-file=.env.admin.local scripts/admin.mts invite --family <uuid> --email x@example.com --display-name "しん" --yes
+ *   node --env-file=.env.admin.local scripts/admin.mts create-family --name "山田家" --yes
+ *   node --env-file=.env.admin.local scripts/admin.mts invite --family <uuid> --email x@example.com --display-name "たろう" --yes
  *   node --env-file=.env.admin.local scripts/admin.mts list-families
  *   node --env-file=.env.admin.local scripts/admin.mts list-members --family <uuid>
  *   node --env-file=.env.admin.local scripts/admin.mts list-invitations --family <uuid>

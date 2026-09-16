@@ -45,8 +45,8 @@ npm run admin                   # 管理用CLI（下記）
 ```bash
 cp .env.admin.example .env.admin.local   # SUPABASE_SERVICE_ROLE_KEY等を埋める（コミットしない）
 
-npm run admin -- create-family --name "村上家" --yes
-npm run admin -- invite --family <family_id> --email you@example.com --display-name "しん" --yes
+npm run admin -- create-family --name "山田家" --yes
+npm run admin -- invite --family <family_id> --email you@example.com --display-name "たろう" --yes
 npm run admin -- list-families
 npm run admin -- list-invitations --family <family_id>
 npm run admin -- revoke --invitation <invitation_id> --yes

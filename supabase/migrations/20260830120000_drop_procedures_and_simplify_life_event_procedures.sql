@@ -4,7 +4,7 @@
 -- どこからも使われておらず、life_event_procedures.category はその突き合わせの
 -- 結合キーとしてだけ存在していた。「行政手続きかどうか」が分かれば十分で、
 -- 地方自治体の手続きとの照合はまた必要になったときに作り直す、とPOが確定。
--- (小金井市・東京都の実測は family-app-admin-procedures-plan.md と git 履歴に残る)
+-- (自治体・都道府県の実測は git 履歴に残る)
 --
 -- あわせて life_event_procedures.decided_by(government/tradition/family の3値)を
 -- is_government(boolean)に畳む。tradition と family は表示にも挙動にも差が無く、

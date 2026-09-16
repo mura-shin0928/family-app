@@ -15,7 +15,7 @@ create table public.procedures (
   obligation_quote text,
 
   -- 対象地域。全国地方公共団体コードの前方一致1本で 国 / 都道府県 / 市区町村 を表す。
-  -- null = 全国 / '13' = 東京都 / '13210' = 小金井市
+  -- null = 全国 / 2桁 = 都道府県（例: '13' = 東京都） / 5桁 = 市区町村
   area_code text check (area_code is null or area_code ~ '^[0-9]{2}$' or area_code ~ '^[0-9]{5}$'),
 
   -- 期限。原文の数値と数え方を分けて保存する（日付への変換は純関数が行う）。
