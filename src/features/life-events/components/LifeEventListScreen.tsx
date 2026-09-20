@@ -40,7 +40,13 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import type { Child } from "@/features/children/types";
 import {
   addLifeEvent,
@@ -277,7 +283,7 @@ export function LifeEventListScreen({
           onTimingChange={(id, change) =>
             run(() => updateLifeEventProcedureTiming({ id, ...change }))
           }
-          onAddProcedure={(kind, title) =>
+          onAddProcedure={(kind, title, position) =>
             run(() =>
               addLifeEventProcedure({
                 childId: activeChild.id,
@@ -285,6 +291,7 @@ export function LifeEventListScreen({
                 title,
                 url: "",
                 isGovernment: false,
+                position,
               }),
             )
           }
@@ -434,15 +441,23 @@ function ChildLifeEventList({
   onTitleChange: (id: string, title: string) => void;
   onNoteChange: (id: string, note: string) => void;
   onTimingChange: (id: string, change: TimingChange) => void;
-  onAddProcedure: (kind: string, title: string) => void;
+  onAddProcedure: (kind: string, title: string, position: AddPosition) => void;
   onAddToTask: (procedure: LifeEventProcedure) => void;
   onDelete: (procedure: LifeEventProcedure) => void;
 }) {
   const router = useRouter();
+
+  // procedures は親が render するたびに新しい配列になる（filter で作り直している）ので、
+  // 参照で比べて取り込むと、D&D 直後の楽観的な並びが「保存は成功しているのに
+  // 親が再 render しただけ」で巻き戻る（並べ替えの成功時は refresh しないため、
+  // 親の props はしばらく古い並びのまま）。中身で比べて本当に変わったときだけ取り込む。
   const [items, setItems] = useState(procedures);
-  useEffect(() => {
+  const serverSnapshot = JSON.stringify(procedures);
+  const [syncedSnapshot, setSyncedSnapshot] = useState(serverSnapshot);
+  if (serverSnapshot !== syncedSnapshot) {
+    setSyncedSnapshot(serverSnapshot);
     setItems(procedures);
-  }, [procedures]);
+  }
 
   // チップで1つのライフイベントに絞り込む（null = すべて表示）。
   const [activeEventId, setActiveEventId] = useState<string | null>(null);
@@ -465,6 +480,15 @@ function ChildLifeEventList({
 
   const [reorderError, setReorderError] = useState<string | null>(null);
   const [reordering, startReorder] = useTransition();
+
+  // 追加フォームを開いている端（null = どちらも閉じている）。上下の入口で1つの
+  // state を共有して、両端に入力欄が開いたままにならないようにする。
+  const [addingAt, setAddingAt] = useState<AddPosition | null>(null);
+
+  function handleAdd(kind: string, title: string, position: AddPosition) {
+    setAddingAt(null);
+    onAddProcedure(kind, title, position);
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -546,82 +570,143 @@ function ChildLifeEventList({
         </Stack>
       )}
 
-      {items.length === 0 ? (
-        <Alert severity="info">
-          「ライフイベントを追加」か「項目を追加」で、この子の手続きがここに並びます。追加したあとは自由に書き換えられます。
-        </Alert>
-      ) : visibleItems.length === 0 ? (
-        <Alert severity="info">このライフイベントの項目はありません。</Alert>
-      ) : (
-        <Paper variant="outlined" sx={{ overflow: "hidden" }}>
-          <DndContext
-            id={`life-event-procedures-${childId}`}
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={visibleItems.map((item) => item.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              {visibleItems.map((procedure) => (
-                <LifeEventProcedureRow
-                  key={procedure.id}
-                  procedure={procedure}
-                  anchor={
-                    anchorByLifeEventId.get(procedure.lifeEventId) ??
-                    EMPTY_ANCHOR_DATES
-                  }
-                  busy={busy || reordering}
-                  reorderDisabled={filtering}
-                  onTitleChange={onTitleChange}
-                  onNoteChange={onNoteChange}
-                  onTimingChange={onTimingChange}
-                  onAddToTask={onAddToTask}
-                  onDelete={onDelete}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
-        </Paper>
-      )}
+      {/*
+        追加の入口はリストと同じ枠（Paper）の中に、上下両端に置く。枠の外に1つだけ
+        置いていたときは、リストの一部に見えないうえ長いリストでは下まで
+        スクロールしないと見つからなかった。新しい項目は押した側の端に入る。
+      */}
+      <Paper variant="outlined" sx={{ overflow: "hidden" }}>
+        <AddProcedureRow
+          position="top"
+          open={addingAt === "top"}
+          disabled={busy || reordering}
+          onOpen={() => setAddingAt("top")}
+          onClose={() => setAddingAt(null)}
+          onAdd={handleAdd}
+        />
 
-      <AddProcedureRow disabled={busy || reordering} onAdd={onAddProcedure} />
+        {items.length === 0 ? (
+          <EmptyListNote>
+            「ライフイベントを追加」か「項目を追加」で、この子の手続きがここに並びます。追加したあとは自由に書き換えられます。
+          </EmptyListNote>
+        ) : visibleItems.length === 0 ? (
+          <EmptyListNote>このライフイベントの項目はありません。</EmptyListNote>
+        ) : (
+          <>
+            <DndContext
+              id={`life-event-procedures-${childId}`}
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={visibleItems.map((item) => item.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {visibleItems.map((procedure) => (
+                  <LifeEventProcedureRow
+                    key={procedure.id}
+                    procedure={procedure}
+                    anchor={
+                      anchorByLifeEventId.get(procedure.lifeEventId) ??
+                      EMPTY_ANCHOR_DATES
+                    }
+                    busy={busy || reordering}
+                    reorderDisabled={filtering}
+                    onTitleChange={onTitleChange}
+                    onNoteChange={onNoteChange}
+                    onTimingChange={onTimingChange}
+                    onAddToTask={onAddToTask}
+                    onDelete={onDelete}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
+
+            <AddProcedureRow
+              position="bottom"
+              open={addingAt === "bottom"}
+              disabled={busy || reordering}
+              onOpen={() => setAddingAt("bottom")}
+              onClose={() => setAddingAt(null)}
+              onAdd={handleAdd}
+            />
+          </>
+        )}
+      </Paper>
     </Stack>
   );
 }
 
+/** 項目が無いときに枠の中へ出す案内（枠の最後の要素なので区切り線は付けない）。 */
+function EmptyListNote({ children }: { children: ReactNode }) {
+  return (
+    <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+      {children}
+    </Typography>
+  );
+}
+
+/** 追加の入口はリストの上下両端にあり、押した側の端に項目が入る。 */
+type AddPosition = "top" | "bottom";
+
 /**
- * この子のリストの末尾に項目を1つ足す。どのライフイベント種別に入れるかを5種から
- * 選ぶ（まだ追加していない種別を選んだら、Server Action 側が空で1つ作ってぶら下げる）。
+ * この子のリストの先頭／末尾に項目を1つ足す、枠の中の1行。どのライフイベント種別に
+ * 入れるかを5種から選ぶ（まだ追加していない種別を選んだら、Server Action 側が
+ * 空で1つ作ってぶら下げる）。開閉は上下で1つの state を共有するので親が持つ。
  */
 function AddProcedureRow({
+  position,
+  open,
   disabled,
+  onOpen,
+  onClose,
   onAdd,
 }: {
+  position: AddPosition;
+  open: boolean;
   disabled: boolean;
-  onAdd: (kind: string, title: string) => void;
+  onOpen: () => void;
+  onClose: () => void;
+  onAdd: (kind: string, title: string, position: AddPosition) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<string>(LIFE_EVENT_TEMPLATES[0].kind);
+
+  // 上の入口の下には必ず何か続く（項目か、項目が無いときの案内）。下の入口は
+  // 枠の最後なので、Paper の枠線と二重にならないよう区切り線を付けない。
+  const dividerSx =
+    position === "top"
+      ? ({ borderBottom: 1, borderColor: "divider" } as const)
+      : {};
 
   function handleAdd() {
     const trimmed = title.trim();
     if (!trimmed) return;
-    onAdd(kind, trimmed);
     setTitle("");
-    setOpen(false);
+    onAdd(kind, trimmed, position);
+  }
+
+  function handleCancel() {
+    setTitle("");
+    onClose();
   }
 
   if (!open) {
     return (
       <Button
+        fullWidth
         size="small"
         startIcon={<AddIcon fontSize="small" />}
-        onClick={() => setOpen(true)}
-        sx={{ alignSelf: "flex-start" }}
+        onClick={onOpen}
+        sx={{
+          ...dividerSx,
+          justifyContent: "flex-start",
+          borderRadius: 0,
+          px: 1,
+          py: 0.75,
+        }}
       >
         項目を追加
       </Button>
@@ -629,7 +714,7 @@ function AddProcedureRow({
   }
 
   return (
-    <Stack spacing={1}>
+    <Stack spacing={1} sx={{ ...dividerSx, p: 1 }}>
       <TextField
         label="項目名"
         value={title}
@@ -651,7 +736,11 @@ function AddProcedureRow({
         onChange={(event) => setKind(event.target.value)}
         size="small"
         fullWidth
-        helperText="この子のこのライフイベントに入れます（まだ無ければ空で作成）"
+        helperText={
+          position === "top"
+            ? "この子のこのライフイベントに入れます（まだ無ければ空で作成）。リストの先頭に入ります"
+            : "この子のこのライフイベントに入れます（まだ無ければ空で作成）。リストの末尾に入ります"
+        }
       >
         {LIFE_EVENT_TEMPLATES.map((template) => (
           <MenuItem key={template.kind} value={template.kind}>
@@ -668,13 +757,7 @@ function AddProcedureRow({
         >
           追加する
         </Button>
-        <Button
-          size="small"
-          onClick={() => {
-            setTitle("");
-            setOpen(false);
-          }}
-        >
+        <Button size="small" onClick={handleCancel}>
           やめる
         </Button>
       </Stack>

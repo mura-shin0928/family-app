@@ -40,12 +40,15 @@ const procedureNoteSchema = z.union([
 //
 // 制度一覧（seido-data-hub）から足すときは公式ページの url と「行政手続き」を付けて入れる。
 // url の上限は life_event_procedures の CHECK 制約（tasks.url と同じ2000）と揃える。
+// position は手続き画面の「項目を追加」がリストの上下どちらの入口から押されたか。
+// 制度一覧からの追加のように入口が1つしかない呼び出しでは省略できる（末尾）。
 export const addLifeEventProcedureSchema = z.object({
   childId: z.string().uuid(),
   kind: z.enum(kindValues),
   title: procedureTitleSchema,
   url: z.union([z.url().max(2000), z.literal("")]),
   isGovernment: z.boolean(),
+  position: z.enum(["top", "bottom"]).default("bottom"),
 });
 
 export const updateLifeEventProcedureTitleSchema = z.object({
