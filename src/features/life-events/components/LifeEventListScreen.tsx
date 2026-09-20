@@ -222,7 +222,14 @@ export function LifeEventListScreen({
   );
 
   return (
-    <Box sx={{ p: 2, pb: 10 }}>
+    <Box
+      sx={{
+        p: 2,
+        // 下部ナビ（56px + セーフエリア）の下に文字が潜らないようにする。
+        // pb: 10（80px）固定だと、ホームインジケータのある端末で最後の数pxが隠れる。
+        pb: "calc(16px + 56px + env(safe-area-inset-bottom))",
+      }}
+    >
       <Stack spacing={2}>
         <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
           {/* 自治体の子育て支援制度（seido-data-hub）から、テンプレに無い項目を見つけて足す */}
