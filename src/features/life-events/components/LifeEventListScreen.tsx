@@ -715,13 +715,17 @@ function AddProcedureRow({
 
   return (
     <Stack spacing={1} sx={{ ...dividerSx, p: 1 }}>
+      {/*
+        autoFocus は付けない。この入力欄はリストの途中（上端／下端の行）に開くので、
+        勝手にフォーカスが当たるとスマホでキーボードが出て画面が飛ぶ。
+        ダイアログの中の入力欄（タスク化・制度の追加）とは事情が違う。
+      */}
       <TextField
         label="項目名"
         value={title}
         onChange={(event) => setTitle(event.target.value)}
         size="small"
         fullWidth
-        autoFocus
         onKeyDown={(event) => {
           if (event.key === "Enter") {
             event.preventDefault();
