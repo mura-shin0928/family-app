@@ -243,7 +243,7 @@ export function LifeEventListScreen({
             onClick={() => setDialogOpen(true)}
             sx={{ ml: "auto" }}
           >
-            ライフイベントを追加
+            テンプレートから追加
           </Button>
         </Box>
 
@@ -587,7 +587,7 @@ function ChildLifeEventList({
 
         {items.length === 0 ? (
           <EmptyListNote>
-            「ライフイベントを追加」か「項目を追加」で、この子の手続きがここに並びます。追加したあとは自由に書き換えられます。
+            「テンプレートから追加」か「項目を追加」で、この子の手続きがここに並びます。追加したあとは自由に書き換えられます。
           </EmptyListNote>
         ) : visibleItems.length === 0 ? (
           <EmptyListNote>このライフイベントの項目はありません。</EmptyListNote>
@@ -765,6 +765,15 @@ function AddProcedureRow({
   );
 }
 
+/**
+ * テンプレートを1つ選んで、その項目をまとめてこの子のリストに入れる。
+ *
+ * 画面上は「テンプレートから追加」と呼ぶが、コード・DB 側の名前は LifeEvent のまま
+ * にしてある。実態として作るのは life_events の行（＝絞り込みチップの単位）で、
+ * テンプレートはその初期項目の供給元にすぎないため。UI で「テンプレート」と呼ぶのは
+ * 「妊娠を追加します」より「妊娠の定番項目がまとめて入ります」の方が、
+ * このボタンを押したときに起きることに近いから。
+ */
 function AddLifeEventDialog({
   open,
   familyChildren,
@@ -816,12 +825,12 @@ function AddLifeEventDialog({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>ライフイベントを追加</DialogTitle>
+      <DialogTitle>テンプレートから追加</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           <TextField
             select
-            label="ライフイベント"
+            label="テンプレート"
             value={kind}
             onChange={(event) => handleKindChange(event.target.value)}
             size="small"
