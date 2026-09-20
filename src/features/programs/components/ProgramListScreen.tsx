@@ -64,7 +64,14 @@ export function ProgramListScreen({
     familyChildren[0];
 
   return (
-    <Box sx={{ p: 2, pb: 10 }}>
+    <Box
+      sx={{
+        p: 2,
+        // 下部ナビ（56px + セーフエリア）の下に文字が潜らないようにする。
+        // pb: 10（80px）固定だと、ホームインジケータのある端末で最後の数pxが隠れる。
+        pb: "calc(16px + 56px + env(safe-area-inset-bottom))",
+      }}
+    >
       <Stack spacing={2}>
         {/* レジストリの更新は2025年8月で止まっている（プラン §6 鮮度の表示）。行ごとには出さない。 */}
         <Alert severity="warning">

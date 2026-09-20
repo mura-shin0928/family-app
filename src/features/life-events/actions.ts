@@ -37,6 +37,29 @@ async function lastSortOrderForChild(
 }
 
 /**
+ * その子の手続きリストの先頭 sort_order を返す（項目が無ければ 1）。
+ * 先頭に足すときは「これ - 1」を使う。sort_order は 0 や負でも構わない
+ * （並べ替えを保存するたびに 1..N へ振り直されて自己修復する）ので、
+ * 既存の全項目を押し下げる更新はしない。
+ */
+async function firstSortOrderForChild(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  familyId: string,
+  childId: string,
+): Promise<number> {
+  const { data } = await supabase
+    .from("life_event_procedures")
+    .select("sort_order")
+    .eq("family_id", familyId)
+    .eq("child_id", childId)
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  return data?.sort_order ?? 1;
+}
+
+/**
  * ライフイベントを1つ足し、そのテンプレートの項目をその子の手続きリストの末尾に
  * コピーする。コピー後はテンプレートと切り離され、家族が自由に編集できる（この
  * 編集済みリストそのものが家族の記録になる）。同じ子に同じ種別を何度でも足せる。
@@ -157,7 +180,9 @@ export async function addLifeEvent(input: {
  * 手続きリストに項目を1つ足す。子供とライフイベント種別(kind)で受け取り、その子に
  * その種別のライフイベントがあればそれに、無ければ空で1つ作ってぶら下げる
  * （テンプレの他項目は入れない）。時期の硬さは選ばせず既定（〜ごろ）で入れる。
- * 並び順はその子のリストの末尾。制度一覧からの追加もここを通る（url・行政手続きを付ける）。
+ * 並び順は position で先頭／末尾（既定は末尾）。手続き画面はリストの上下どちらにも
+ * 追加の入口があり、押した側の端に入る。制度一覧からの追加もここを通る
+ * （url・行政手続きを付けて末尾に入れる）。
  */
 export async function addLifeEventProcedure(input: {
   childId: string;
@@ -165,6 +190,7 @@ export async function addLifeEventProcedure(input: {
   title: string;
   url: string;
   isGovernment: boolean;
+  position?: "top" | "bottom";
 }): Promise<ActionResult> {
   const parsed = addLifeEventProcedureSchema.safeParse(input);
   if (!parsed.success) {
@@ -227,17 +253,24 @@ export async function addLifeEventProcedure(input: {
     lifeEventId = created.id;
   }
 
-  const lastSortOrder = await lastSortOrderForChild(
-    supabase,
-    member.familyId,
-    parsed.data.childId,
-  );
+  const sortOrder =
+    parsed.data.position === "top"
+      ? (await firstSortOrderForChild(
+          supabase,
+          member.familyId,
+          parsed.data.childId,
+        )) - 1
+      : (await lastSortOrderForChild(
+          supabase,
+          member.familyId,
+          parsed.data.childId,
+        )) + 1;
 
   const { error } = await supabase.from("life_event_procedures").insert({
     family_id: member.familyId,
     life_event_id: lifeEventId,
     child_id: parsed.data.childId,
-    sort_order: lastSortOrder + 1,
+    sort_order: sortOrder,
     title: parsed.data.title,
     url: parsed.data.url === "" ? null : parsed.data.url,
     is_government: parsed.data.isGovernment,
