@@ -32,6 +32,7 @@ export function BottomNav() {
         bottom: 0,
         borderTop: 1,
         borderColor: "divider",
+        // 高さを変えるときは lib/layout.ts の定数も直す。
         pb: "env(safe-area-inset-bottom)",
         zIndex: (theme) => theme.zIndex.appBar,
       }}

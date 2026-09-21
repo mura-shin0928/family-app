@@ -48,6 +48,7 @@ import {
   useTransition,
 } from "react";
 import type { Child } from "@/features/children/types";
+import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
 import {
   addLifeEvent,
   addLifeEventProcedure,
@@ -225,9 +226,7 @@ export function LifeEventListScreen({
     <Box
       sx={{
         p: 2,
-        // 下部ナビ（56px + セーフエリア）の下に文字が潜らないようにする。
-        // pb: 10（80px）固定だと、ホームインジケータのある端末で最後の数pxが隠れる。
-        pb: "calc(16px + 56px + env(safe-area-inset-bottom))",
+        pb: BOTTOM_NAV_CLEARANCE,
       }}
     >
       <Stack spacing={2}>

@@ -15,6 +15,7 @@ import { type FormEvent, useId, useState } from "react";
 import { PurchaseLocationOptions } from "@/features/purchase-locations/components/PurchaseLocationOptions";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { addDaysToDateString, todayInJst } from "@/lib/date";
+import { BOTTOM_NAV_HEIGHT } from "@/lib/layout";
 
 type Props = {
   locations: PurchaseLocation[];
@@ -117,7 +118,7 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
       sx={{
         position: "fixed",
         insetInline: 0,
-        bottom: "calc(56px + env(safe-area-inset-bottom))",
+        bottom: BOTTOM_NAV_HEIGHT,
         // Checkbox内部のネイティブinputがz-index:1を持つため、指定しないと
         // タスク行と重なった際にそちらへクリックが先取りされてしまう。
         zIndex: (theme) => theme.zIndex.appBar,

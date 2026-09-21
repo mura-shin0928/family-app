@@ -27,6 +27,7 @@ import { addLifeEventProcedure } from "@/features/life-events/actions";
 import { LIFE_EVENT_TEMPLATES } from "@/features/life-events/default-templates";
 import type { LifeEventKind } from "@/features/life-events/types";
 import { todayInJst } from "@/lib/date";
+import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
 import {
   ageInMonths,
   defaultCategoryFor,
@@ -67,9 +68,7 @@ export function ProgramListScreen({
     <Box
       sx={{
         p: 2,
-        // 下部ナビ（56px + セーフエリア）の下に文字が潜らないようにする。
-        // pb: 10（80px）固定だと、ホームインジケータのある端末で最後の数pxが隠れる。
-        pb: "calc(16px + 56px + env(safe-area-inset-bottom))",
+        pb: BOTTOM_NAV_CLEARANCE,
       }}
     >
       <Stack spacing={2}>
