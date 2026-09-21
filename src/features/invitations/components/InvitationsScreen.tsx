@@ -25,6 +25,7 @@ import {
   useState,
   useTransition,
 } from "react";
+import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
 import type { ActionResult, CreateInvitationResult } from "../actions";
 import type { FamilyMemberDTO, InvitationDTO } from "../types";
 import { InvitationStatusChip } from "./InvitationStatusChip";
@@ -150,7 +151,7 @@ export function InvitationsScreen({
       spacing={4}
       sx={{
         p: 2,
-        pb: "calc(16px + 56px + env(safe-area-inset-bottom))",
+        pb: BOTTOM_NAV_CLEARANCE,
         width: "100%",
         maxWidth: 480,
         mx: "auto",

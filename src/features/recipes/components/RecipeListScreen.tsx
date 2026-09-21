@@ -9,6 +9,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
 import { fetchRecipes } from "../query-actions";
 import { RECIPES_QUERY_KEY, type RecipeDTO } from "../types";
 
@@ -80,7 +81,7 @@ export function RecipeListScreen({
         sx={{
           position: "fixed",
           right: 16,
-          bottom: "calc(16px + 56px + env(safe-area-inset-bottom))",
+          bottom: BOTTOM_NAV_CLEARANCE,
         }}
       >
         <AddIcon />

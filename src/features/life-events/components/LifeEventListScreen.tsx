@@ -48,6 +48,7 @@ import {
   useTransition,
 } from "react";
 import type { Child } from "@/features/children/types";
+import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
 import {
   addLifeEvent,
   addLifeEventProcedure,
@@ -225,9 +226,7 @@ export function LifeEventListScreen({
     <Box
       sx={{
         p: 2,
-        // 下部ナビ（56px + セーフエリア）の下に文字が潜らないようにする。
-        // pb: 10（80px）固定だと、ホームインジケータのある端末で最後の数pxが隠れる。
-        pb: "calc(16px + 56px + env(safe-area-inset-bottom))",
+        pb: BOTTOM_NAV_CLEARANCE,
       }}
     >
       <Stack spacing={2}>
@@ -454,10 +453,8 @@ function ChildLifeEventList({
 }) {
   const router = useRouter();
 
-  // procedures は親が render するたびに新しい配列になる（filter で作り直している）ので、
-  // 参照で比べて取り込むと、D&D 直後の楽観的な並びが「保存は成功しているのに
-  // 親が再 render しただけ」で巻き戻る（並べ替えの成功時は refresh しないため、
-  // 親の props はしばらく古い並びのまま）。中身で比べて本当に変わったときだけ取り込む。
+  // procedures は親の render ごとに新しい配列になるので、中身で比べて取り込む
+  // （参照で比べると D&D 直後の楽観的な並びが巻き戻る）。
   const [items, setItems] = useState(procedures);
   const serverSnapshot = JSON.stringify(procedures);
   const [syncedSnapshot, setSyncedSnapshot] = useState(serverSnapshot);
@@ -577,11 +574,7 @@ function ChildLifeEventList({
         </Stack>
       )}
 
-      {/*
-        追加の入口はリストと同じ枠（Paper）の中に、上下両端に置く。枠の外に1つだけ
-        置いていたときは、リストの一部に見えないうえ長いリストでは下まで
-        スクロールしないと見つからなかった。新しい項目は押した側の端に入る。
-      */}
+      {/* 追加の入口は枠の中の上下両端。新しい項目は押した側の端に入る。 */}
       <Paper variant="outlined" sx={{ overflow: "hidden" }}>
         <AddProcedureRow
           position="top"
@@ -681,8 +674,7 @@ function AddProcedureRow({
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<string>(LIFE_EVENT_TEMPLATES[0].kind);
 
-  // 上の入口の下には必ず何か続く（項目か、項目が無いときの案内）。下の入口は
-  // 枠の最後なので、Paper の枠線と二重にならないよう区切り線を付けない。
+  // 下の入口は枠の最後なので、Paper の枠線と二重にならないよう区切り線を付けない。
   const dividerSx =
     position === "top"
       ? ({ borderBottom: 1, borderColor: "divider" } as const)
@@ -722,11 +714,7 @@ function AddProcedureRow({
 
   return (
     <Stack spacing={1} sx={{ ...dividerSx, p: 1 }}>
-      {/*
-        autoFocus は付けない。この入力欄はリストの途中（上端／下端の行）に開くので、
-        勝手にフォーカスが当たるとスマホでキーボードが出て画面が飛ぶ。
-        ダイアログの中の入力欄（タスク化・制度の追加）とは事情が違う。
-      */}
+      {/* autoFocus は付けない（リストの途中に開くので、キーボードで画面が飛ぶ）。 */}
       <TextField
         label="項目名"
         value={title}
@@ -778,12 +766,8 @@ function AddProcedureRow({
 
 /**
  * テンプレートを1つ選んで、その項目をまとめてこの子のリストに入れる。
- *
- * 画面上は「テンプレートから追加」と呼ぶが、コード・DB 側の名前は LifeEvent のまま
- * にしてある。実態として作るのは life_events の行（＝絞り込みチップの単位）で、
- * テンプレートはその初期項目の供給元にすぎないため。UI で「テンプレート」と呼ぶのは
- * 「妊娠を追加します」より「妊娠の定番項目がまとめて入ります」の方が、
- * このボタンを押したときに起きることに近いから。
+ * 画面上は「テンプレートから追加」だが、作るのは life_events の行なので
+ * コード・DB 側の名前は LifeEvent のままにしてある。
  */
 function AddLifeEventDialog({
   open,

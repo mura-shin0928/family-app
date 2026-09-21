@@ -26,6 +26,7 @@ import {
   useState,
   useTransition,
 } from "react";
+import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
 import {
   analyzeRecipeImage,
   analyzeRecipeSource,
@@ -309,7 +310,7 @@ export function RecipeEditor({
       sx={{
         width: "100%",
         p: 2,
-        pb: "calc(16px + 56px + env(safe-area-inset-bottom))",
+        pb: BOTTOM_NAV_CLEARANCE,
         maxWidth: 480,
         mx: "auto",
       }}

@@ -20,6 +20,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { TASKS_QUERY_KEY } from "@/features/tasks/types";
+import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
 import {
   addIngredientsToPurchases,
   deleteRecipe,
@@ -140,7 +141,7 @@ export function RecipeDetailScreen({
       sx={{
         width: "100%",
         p: 2,
-        pb: "calc(16px + 56px + env(safe-area-inset-bottom))",
+        pb: BOTTOM_NAV_CLEARANCE,
         maxWidth: 480,
         mx: "auto",
       }}
