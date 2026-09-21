@@ -32,6 +32,9 @@ export function BottomNav() {
         bottom: 0,
         borderTop: 1,
         borderColor: "divider",
+        // ここで足すセーフエリアと、BottomNavigation の既定の高さ(56px)の合計が
+        // このナビの高さになる。各画面はその高さを lib/layout.ts の定数で参照して
+        // 下に潜らないようにしているので、高さを変えるときはそちらも直すこと。
         pb: "env(safe-area-inset-bottom)",
         zIndex: (theme) => theme.zIndex.appBar,
       }}
