@@ -3,6 +3,9 @@
  * 名前は DADS のトークン名を縮めたもの（color-neutral-solid-gray-50 → gray50）。
  * 用途で名付けたものは元のトークンを右に書いている。
  * DADS はダークテーマを定義していないので、ダーク用の値もここのプリミティブから選ぶ。
+ *
+ * 値は @digital-go-jp/design-tokens と一致することを tests/unit/dads-tokens.test.ts で確かめている。
+ * パッケージを直接 import しないのは、tree-shake できない 135KB の CommonJS がクライアントに載るため。
  */
 export const dads = {
   white: "#ffffff",
