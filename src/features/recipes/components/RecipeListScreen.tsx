@@ -29,7 +29,7 @@ export function RecipeListScreen({
       <Stack spacing={1} sx={{ flex: 1, px: 2, py: 2 }}>
         {recipes.length === 0 ? (
           <Typography
-            variant="body2"
+            variant="body1"
             color="text.secondary"
             align="center"
             sx={{ py: 8 }}
@@ -50,7 +50,7 @@ export function RecipeListScreen({
                 color: "text.primary",
               }}
             >
-              <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+              <Typography variant="body2" noWrap sx={{ fontWeight: 700 }}>
                 {recipe.title}
               </Typography>
               {recipe.sourceUrl && (

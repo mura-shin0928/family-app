@@ -642,7 +642,7 @@ function ChildLifeEventList({
 /** 項目が無いときに枠の中へ出す案内（枠の最後の要素なので区切り線は付けない）。 */
 function EmptyListNote({ children }: { children: ReactNode }) {
   return (
-    <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+    <Typography variant="body1" color="text.secondary" sx={{ p: 2 }}>
       {children}
     </Typography>
   );

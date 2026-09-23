@@ -158,7 +158,7 @@ export function InvitationsScreen({
       }}
     >
       <Box component="section">
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+        <Typography variant="subtitle1" sx={{ mb: 1 }}>
           メンバー（{rows.length}）
         </Typography>
         <Stack spacing={1}>
@@ -313,7 +313,7 @@ export function InvitationsScreen({
       <Dialog open={inviteUrl !== null} onClose={() => setInviteUrl(null)}>
         <DialogTitle>招待リンクを作成しました</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 1.5 }}>
             このリンクは今しか表示されません。招待したい人に共有してください。
           </Typography>
           <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
@@ -339,7 +339,7 @@ export function InvitationsScreen({
       >
         <DialogTitle>招待を取り消しますか？</DialogTitle>
         <DialogContent>
-          <Typography variant="body2">
+          <Typography variant="body1">
             {revokeTarget?.invitedEmail}{" "}
             宛の招待を取り消します。この操作は元に戻せません。
           </Typography>
@@ -362,7 +362,7 @@ export function InvitationsScreen({
       >
         <DialogTitle>{deleteTarget?.displayName}を削除しますか？</DialogTitle>
         <DialogContent>
-          <Typography variant="body2">
+          <Typography variant="body1">
             {deleteTarget?.displayName} を削除します。この操作は元に戻せません。
           </Typography>
         </DialogContent>

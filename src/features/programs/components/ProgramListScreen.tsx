@@ -161,7 +161,7 @@ function ChildProgramList({
 
   return (
     <Stack spacing={1.5}>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body1" color="text.secondary">
         {ageMonths === null
           ? `${child.displayName}はまだ生まれていないので、「${pregnancyName}」から表示しています。`
           : `生後${ageMonths}か月の${child.displayName}の対象外とわかる制度（年齢の範囲外）は除いています。`}

@@ -1,5 +1,7 @@
-const BACKGROUND = "#4f46e5";
-const FOREGROUND = "#ffffff";
+import { dads } from "@/lib/dads";
+
+const BACKGROUND = dads.key900;
+const FOREGROUND = dads.white;
 
 /**
  * アプリアイコン共通の図柄（角丸四角 + チェックマーク）。

@@ -122,7 +122,6 @@ export function LifeEventProcedureRow({
           size="small"
           disableRipple
           sx={{
-            color: "text.disabled",
             cursor: dragDisabled ? "default" : "grab",
             // ハンドル上のタッチはスクロールに取られず必ずドラッグ開始にする。
             touchAction: "none",
@@ -192,7 +191,6 @@ export function LifeEventProcedureRow({
           disabled={busy}
           aria-label="タスクに追加"
           size="small"
-          sx={{ color: "text.disabled" }}
         >
           <AddTaskIcon fontSize="small" />
         </IconButton>
@@ -201,7 +199,6 @@ export function LifeEventProcedureRow({
           onClick={() => onDelete(procedure)}
           aria-label="削除"
           size="small"
-          sx={{ color: "text.disabled" }}
         >
           <DeleteOutlineIcon fontSize="small" />
         </IconButton>
@@ -227,7 +224,6 @@ export function LifeEventProcedureRow({
               size="small"
               variant="outlined"
               color="primary"
-              sx={{ height: 18, fontSize: "0.6875rem" }}
             />
           )}
           {timingLabel && (

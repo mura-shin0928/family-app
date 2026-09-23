@@ -54,7 +54,7 @@ export default function LoginPage() {
         p: 4,
       }}
     >
-      <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+      <Typography variant="h5" component="h1">
         Family App
       </Typography>
 
@@ -82,7 +82,7 @@ export default function LoginPage() {
 
       {sent ? (
         <Typography
-          variant="body2"
+          variant="body1"
           color="text.secondary"
           sx={{ maxWidth: 320, textAlign: "center" }}
         >
@@ -110,7 +110,7 @@ export default function LoginPage() {
       )}
 
       {error && (
-        <Typography variant="body2" color="error">
+        <Typography variant="body1" color="error">
           {error}
         </Typography>
       )}

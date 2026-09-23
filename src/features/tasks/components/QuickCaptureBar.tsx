@@ -113,7 +113,7 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
     <Paper
       component="form"
       onSubmit={handleSubmit}
-      elevation={3}
+      elevation={1}
       square
       sx={{
         position: "fixed",
@@ -233,7 +233,7 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
               // 座標計算なしにChip群の真上に出す。Modal/FocusTrapを
               // 使わないのでキーボードを閉じさせる副作用もない。
               <Paper
-                elevation={4}
+                elevation={1}
                 sx={{
                   position: "absolute",
                   insetInlineStart: 0,
@@ -275,7 +275,6 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
                     <Button
                       size="small"
                       fullWidth
-                      sx={{ textTransform: "none" }}
                       onMouseDown={preventBlur}
                       onClick={() => selectDue(null)}
                     >
@@ -290,7 +289,7 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
               // 期限パネルと同じ absolute 配置。Popover を使わないのは
               // iOS でキーボード表示中に visual viewport とズレる問題を避けるため。
               <Paper
-                elevation={4}
+                elevation={1}
                 sx={{
                   position: "absolute",
                   insetInlineStart: 0,
