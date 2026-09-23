@@ -230,7 +230,7 @@ export function LifeEventListScreen({
       }}
     >
       <Stack spacing={2}>
-        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+        <Stack spacing={1} sx={{ alignItems: "flex-start" }}>
           {/* 自治体の子育て支援制度（seido-data-hub）から、テンプレに無い項目を見つけて足す */}
           {showProgramsLink && (
             <Button
@@ -247,11 +247,10 @@ export function LifeEventListScreen({
             variant="outlined"
             startIcon={<AddIcon fontSize="small" />}
             onClick={() => setDialogOpen(true)}
-            sx={{ ml: "auto" }}
           >
             テンプレートから追加
           </Button>
-        </Box>
+        </Stack>
 
         {familyChildren.length > 1 && (
           <Tabs
