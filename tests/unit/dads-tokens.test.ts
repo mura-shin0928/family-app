@@ -5,6 +5,7 @@ import { dads } from "@/lib/dads";
 const { Primitive, Neutral, Semantic, Key } = tokens.Color;
 
 // src/lib/dads.ts の各値が、公式トークンのどれに当たるか。
+// dads に値を足したら、ここに対応するトークンを書くまで型エラーになる。
 const source: Record<keyof typeof dads, { $value?: string }> = {
   white: Neutral.White,
   black: Neutral.Black,

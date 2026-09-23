@@ -523,6 +523,7 @@ export const theme = createTheme({
         },
       },
     },
+    // DADS のタブは上端 6px のバーだが、MUI の下線タブに合わせて下端 4px（下部ナビの選択バーと同じ）。
     MuiTabs: {
       styleOverrides: {
         indicator: { height: 4, backgroundColor: v("primary-main") },
