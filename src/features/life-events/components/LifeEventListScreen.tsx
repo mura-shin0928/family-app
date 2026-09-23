@@ -93,7 +93,7 @@ export function LifeEventListScreen({
   lifeEvents: LifeEvent[];
   procedures: LifeEventProcedure[];
   familyChildren: Child[];
-  /** seido-data-hub が未設定の環境では「自治体の制度を探す」を出さない */
+  /** seido-data-hub が未設定の環境では「制度を探す」を出さない */
   showProgramsLink: boolean;
 }) {
   const router = useRouter();
@@ -239,7 +239,7 @@ export function LifeEventListScreen({
               href="/procedures/programs"
               startIcon={<SearchIcon fontSize="small" />}
             >
-              自治体の制度を探す
+              制度を探す
             </Button>
           )}
           <Button
