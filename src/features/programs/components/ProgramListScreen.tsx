@@ -376,7 +376,7 @@ function AddProgramDialog({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={isPending}>
-          やめる
+          キャンセル
         </Button>
         <Button
           variant="contained"

@@ -429,7 +429,10 @@ function TimingEditForm({
         </Stack>
       )}
 
-      <Stack direction="row" spacing={1}>
+      <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+        <Button size="small" onClick={onCancel} disabled={busy}>
+          キャンセル
+        </Button>
         <Button
           size="small"
           variant="contained"
@@ -439,9 +442,6 @@ function TimingEditForm({
           }
         >
           保存
-        </Button>
-        <Button size="small" onClick={onCancel} disabled={busy}>
-          やめる
         </Button>
       </Stack>
     </Stack>

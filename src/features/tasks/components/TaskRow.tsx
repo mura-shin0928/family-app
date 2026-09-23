@@ -393,7 +393,23 @@ export function TaskRow({
             placeholder="メモ"
             defaultValue={task.note ?? ""}
             onBlur={(event) => onNoteChange(task, event.target.value)}
-            slotProps={{ htmlInput: { style: { fontSize: "1rem" } } }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  // 複数行になっても1行目の横に置く。
+                  <NotesOutlinedIcon
+                    fontSize="small"
+                    sx={{
+                      color: "text.secondary",
+                      mr: 0.5,
+                      alignSelf: "flex-start",
+                      mt: "2px",
+                    }}
+                  />
+                ),
+              },
+              htmlInput: { style: { fontSize: "1rem" } },
+            }}
           />
         </Stack>
       </Collapse>

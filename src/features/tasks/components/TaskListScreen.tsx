@@ -616,7 +616,7 @@ export function TaskListScreen({
                 <ShoppingCartOutlinedIcon />
               )
             }
-            label="買うものだけ"
+            label="買うもの"
             clickable
             color={showPurchaseOnly ? "primary" : "default"}
             variant={showPurchaseOnly ? "filled" : "outlined"}

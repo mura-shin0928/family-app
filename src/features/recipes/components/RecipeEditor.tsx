@@ -1,5 +1,6 @@
 "use client";
 
+import AddIcon from "@mui/icons-material/Add";
 import AssistantIcon from "@mui/icons-material/Assistant";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
@@ -492,7 +493,11 @@ export function RecipeEditor({
             </Stack>
           ))}
         </Stack>
-        <Button onClick={addIngredientRow} sx={{ mt: 1.5 }}>
+        <Button
+          onClick={addIngredientRow}
+          startIcon={<AddIcon fontSize="small" />}
+          sx={{ mt: 1.5 }}
+        >
           材料を追加
         </Button>
       </Box>
