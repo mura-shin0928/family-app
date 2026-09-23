@@ -93,7 +93,7 @@ export function LifeEventListScreen({
   lifeEvents: LifeEvent[];
   procedures: LifeEventProcedure[];
   familyChildren: Child[];
-  /** seido-data-hub が未設定の環境では「自治体の制度を探す」を出さない */
+  /** seido-data-hub が未設定の環境では「制度を探す」を出さない */
   showProgramsLink: boolean;
 }) {
   const router = useRouter();
@@ -230,7 +230,7 @@ export function LifeEventListScreen({
       }}
     >
       <Stack spacing={2}>
-        <Stack spacing={1} sx={{ alignItems: "flex-start" }}>
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
           {/* 自治体の子育て支援制度（seido-data-hub）から、テンプレに無い項目を見つけて足す */}
           {showProgramsLink && (
             <Button
@@ -239,7 +239,7 @@ export function LifeEventListScreen({
               href="/procedures/programs"
               startIcon={<SearchIcon fontSize="small" />}
             >
-              自治体の制度を探す
+              制度を探す
             </Button>
           )}
           <Button
@@ -247,10 +247,11 @@ export function LifeEventListScreen({
             variant="outlined"
             startIcon={<AddIcon fontSize="small" />}
             onClick={() => setDialogOpen(true)}
+            sx={{ ml: "auto" }}
           >
             テンプレートから追加
           </Button>
-        </Stack>
+        </Box>
 
         {familyChildren.length > 1 && (
           <Tabs
