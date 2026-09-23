@@ -1,7 +1,8 @@
 /**
  * デジタル庁デザインシステム（DADS）のトークンのうち、このアプリで使う値。
  * 名前は DADS のトークン名を縮めたもの（color-neutral-solid-gray-50 → gray50）。
- * 用途で名付けたものは元のトークンを右に書いている。DADS はライトテーマのみ。
+ * 用途で名付けたものは元のトークンを右に書いている。
+ * DADS はダークテーマを定義していないので、ダーク用の値もここのプリミティブから選ぶ。
  */
 export const dads = {
   white: "#ffffff",
@@ -24,6 +25,13 @@ export const dads = {
   key900: "#0017c1",
   key1000: "#00118f",
   key1200: "#000060",
+  green200: "#9bd4b5",
+  green300: "#71c598",
+  red200: "#ffbbbb",
+  red300: "#ff9696",
+  yellow200: "#ffe380",
+  magenta300: "#ff8eff",
+  orange300: "#ffa66d",
   linkVisited: "#8b008b", // primitive-magenta-900
   linkActive: "#c74700", // primitive-orange-800
   focusYellow: "#ffd43d", // primitive-yellow-300
