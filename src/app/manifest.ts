@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { dads } from "@/lib/dads";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -7,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "家族のこれからやることを共有するアプリ",
     start_url: "/tasks",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#4f46e5",
+    background_color: dads.white,
+    theme_color: dads.white,
     icons: [
       { src: "/icons/192", sizes: "192x192", type: "image/png" },
       { src: "/icons/512", sizes: "512x512", type: "image/png" },

@@ -29,7 +29,7 @@ export function InviteEmailForm({ token }: { token: string }) {
   if (sent) {
     return (
       <Typography
-        variant="body2"
+        variant="body1"
         color="text.secondary"
         sx={{ maxWidth: 320, textAlign: "center" }}
       >
@@ -51,7 +51,7 @@ export function InviteEmailForm({ token }: { token: string }) {
       }}
     >
       <Typography
-        variant="body2"
+        variant="body1"
         color="text.secondary"
         sx={{ textAlign: "center", mb: 1 }}
       >
@@ -66,7 +66,7 @@ export function InviteEmailForm({ token }: { token: string }) {
         placeholder="メールアドレス"
       />
       {error && (
-        <Typography variant="body2" color="error">
+        <Typography variant="body1" color="error">
           {error}
         </Typography>
       )}

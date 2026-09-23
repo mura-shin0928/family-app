@@ -190,7 +190,7 @@ export function RecipeDetailScreen({
           >
             メモ
           </Typography>
-          <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+          <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
             {recipe.note}
           </Typography>
         </Box>
@@ -213,7 +213,7 @@ export function RecipeDetailScreen({
               sx={{ ml: -1 }}
             />
           )}
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+          <Typography variant="subtitle1">
             材料（{ingredients.length}）
           </Typography>
         </Stack>
@@ -251,7 +251,7 @@ export function RecipeDetailScreen({
             })}
           </Stack>
         ) : (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body1" color="text.secondary">
             材料は登録されていません
           </Typography>
         )}
@@ -275,7 +275,7 @@ export function RecipeDetailScreen({
       <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
         <DialogTitle>削除しますか？</DialogTitle>
         <DialogContent>
-          <Typography variant="body2">
+          <Typography variant="body1">
             「{initialRecipe.title}」を削除しますか？
           </Typography>
         </DialogContent>

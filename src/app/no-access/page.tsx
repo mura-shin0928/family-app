@@ -26,14 +26,14 @@ export default function NoAccessPage() {
         textAlign: "center",
       }}
     >
-      <Typography variant="h6" component="h1" sx={{ fontWeight: 600 }}>
+      <Typography variant="h6" component="h1">
         アクセスできません
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 320 }}>
+      <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 320 }}>
         このアカウントはまだどのFamilyにも参加していません。Familyのメンバーまたは管理者に招待を依頼してください。
       </Typography>
       <Box component="form" action={signOut}>
-        <Button type="submit" size="small" sx={{ textTransform: "none" }}>
+        <Button type="submit" size="small">
           ログアウト
         </Button>
       </Box>

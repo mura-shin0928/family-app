@@ -54,7 +54,7 @@ export function AcceptInvitationScreen({
         textAlign: "center",
       }}
     >
-      <Typography variant="h6" component="h1" sx={{ fontWeight: 600 }}>
+      <Typography variant="h6" component="h1">
         Family App
       </Typography>
 
@@ -74,7 +74,7 @@ export function AcceptInvitationScreen({
         </>
       ) : (
         <Typography
-          variant="body2"
+          variant="body1"
           color="text.secondary"
           sx={{ maxWidth: 320 }}
         >
@@ -83,7 +83,7 @@ export function AcceptInvitationScreen({
       )}
 
       {error && (
-        <Typography variant="body2" color="error" sx={{ maxWidth: 320 }}>
+        <Typography variant="body1" color="error" sx={{ maxWidth: 320 }}>
           {error}
         </Typography>
       )}

@@ -56,9 +56,7 @@ export function AdminFamilyListScreen({ families, createFamily }: Props) {
         mx: "auto",
       }}
     >
-      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-        Family（{families.length}）
-      </Typography>
+      <Typography variant="subtitle1">Family（{families.length}）</Typography>
       <Stack spacing={1}>
         {families.map((family) => (
           <Paper

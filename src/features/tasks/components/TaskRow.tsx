@@ -97,7 +97,6 @@ export function TaskRow({
         <Checkbox
           checked={done}
           onChange={() => onToggle(task)}
-          color="success"
           size="small"
           aria-label={done ? "未完了に戻す" : "完了にする"}
           // 行の高さを詰めるため既定の padding: 9px を 4px に。
@@ -134,7 +133,7 @@ export function TaskRow({
                 cursor: "text",
                 overflowWrap: "break-word",
                 textDecoration: done ? "line-through" : "none",
-                color: done ? "text.disabled" : "text.primary",
+                color: done ? "text.secondary" : "text.primary",
               }}
             >
               {task.title}
@@ -174,7 +173,6 @@ export function TaskRow({
           onClick={() => onDelete(task)}
           aria-label="削除"
           size="small"
-          sx={{ color: "text.disabled" }}
         >
           <DeleteOutlineIcon fontSize="small" />
         </IconButton>
@@ -245,8 +243,6 @@ export function TaskRow({
                     mt: 0.5,
                     p: 0,
                     minWidth: 0,
-                    textTransform: "none",
-                    fontSize: "0.75rem",
                     whiteSpace: "nowrap",
                   }}
                   onClick={() => commitDue(draftDue || null)}
@@ -261,8 +257,6 @@ export function TaskRow({
                       mt: 0.5,
                       p: 0,
                       minWidth: 0,
-                      textTransform: "none",
-                      fontSize: "0.75rem",
                       whiteSpace: "nowrap",
                     }}
                     onClick={() => commitDue(null)}
@@ -283,8 +277,6 @@ export function TaskRow({
                   pl: 0,
                   pr: 0.5,
                   minWidth: 0,
-                  textTransform: "none",
-                  fontSize: "0.75rem",
                   color: "text.secondary",
                   // startIcon の既定の負マージンを消し、アイコンをメタ行の pl に揃える。
                   // カレンダーは glyph が枠いっぱいなので mr を少し広めに取る。
@@ -310,8 +302,6 @@ export function TaskRow({
               minWidth: 0,
               p: 0.5,
               overflow: "hidden",
-              textTransform: "none",
-              fontSize: "0.75rem",
               // 設定済みかどうかはラベルの有無で分かるので色は常に text.secondary。
               color: "text.secondary",
               // ピンは glyph の右側に透明な余白があるので mr を負にして詰める。
@@ -376,7 +366,7 @@ export function TaskRow({
                 startAdornment: (
                   <LinkIcon
                     fontSize="small"
-                    sx={{ color: "text.disabled", mr: 0.5 }}
+                    sx={{ color: "text.secondary", mr: 0.5 }}
                   />
                 ),
                 endAdornment: task.url ? (
@@ -403,7 +393,23 @@ export function TaskRow({
             placeholder="メモ"
             defaultValue={task.note ?? ""}
             onBlur={(event) => onNoteChange(task, event.target.value)}
-            slotProps={{ htmlInput: { style: { fontSize: "1rem" } } }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  // 複数行になっても1行目の横に置く。
+                  <NotesOutlinedIcon
+                    fontSize="small"
+                    sx={{
+                      color: "text.secondary",
+                      mr: 0.5,
+                      alignSelf: "flex-start",
+                      mt: "2px",
+                    }}
+                  />
+                ),
+              },
+              htmlInput: { style: { fontSize: "1rem" } },
+            }}
           />
         </Stack>
       </Collapse>

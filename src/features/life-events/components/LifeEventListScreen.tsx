@@ -333,7 +333,7 @@ export function LifeEventListScreen({
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPendingDelete(null)}>やめる</Button>
+          <Button onClick={() => setPendingDelete(null)}>キャンセル</Button>
           <Button color="error" onClick={handleConfirmDelete}>
             削除
           </Button>
@@ -407,7 +407,7 @@ function AddToTaskDialog({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={busy}>
-          やめる
+          キャンセル
         </Button>
         <Button
           variant="contained"
@@ -642,7 +642,7 @@ function ChildLifeEventList({
 /** 項目が無いときに枠の中へ出す案内（枠の最後の要素なので区切り線は付けない）。 */
 function EmptyListNote({ children }: { children: ReactNode }) {
   return (
-    <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+    <Typography variant="body1" color="text.secondary" sx={{ p: 2 }}>
       {children}
     </Typography>
   );
@@ -747,7 +747,10 @@ function AddProcedureRow({
           </MenuItem>
         ))}
       </TextField>
-      <Stack direction="row" spacing={1}>
+      <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+        <Button size="small" onClick={handleCancel}>
+          キャンセル
+        </Button>
         <Button
           variant="contained"
           size="small"
@@ -755,9 +758,6 @@ function AddProcedureRow({
           disabled={disabled || title.trim() === ""}
         >
           追加する
-        </Button>
-        <Button size="small" onClick={handleCancel}>
-          やめる
         </Button>
       </Stack>
     </Stack>
@@ -874,7 +874,7 @@ function AddLifeEventDialog({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={isPending}>
-          やめる
+          キャンセル
         </Button>
         <Button
           variant="contained"

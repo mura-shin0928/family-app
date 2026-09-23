@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Noto_Sans_JP } from "next/font/google";
+import { dads } from "@/lib/dads";
 import { ThemeRegistry } from "./ThemeRegistry";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const notoSansJp = Noto_Sans_JP({
+  variable: "--font-noto-sans-jp",
+  weight: ["400", "700"],
   subsets: ["latin"],
 });
 
@@ -22,12 +24,15 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#4f46e5",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: dads.white },
+    { media: "(prefers-color-scheme: dark)", color: dads.gray900 },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="ja" className={geistSans.variable}>
+    <html lang="ja" className={notoSansJp.variable}>
       <body>
         <ThemeRegistry>{children}</ThemeRegistry>
       </body>

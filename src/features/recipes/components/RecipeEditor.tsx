@@ -1,5 +1,6 @@
 "use client";
 
+import AddIcon from "@mui/icons-material/Add";
 import AssistantIcon from "@mui/icons-material/Assistant";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
@@ -14,7 +15,6 @@ import IconButton from "@mui/material/IconButton";
 import Radio from "@mui/material/Radio";
 import RadioGroup from "@mui/material/RadioGroup";
 import Stack from "@mui/material/Stack";
-import { alpha } from "@mui/material/styles";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useQueryClient } from "@tanstack/react-query";
@@ -316,24 +316,9 @@ export function RecipeEditor({
       }}
     >
       <Box component="section">
-        <Box
-          sx={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 0.5,
-            px: 1.25,
-            py: 0.5,
-            mb: 0.5,
-            borderRadius: 999,
-            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-          }}
-        >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
           <AssistantIcon color="primary" fontSize="small" />
-          <Typography
-            variant="subtitle1"
-            color="primary"
-            sx={{ fontWeight: 700 }}
-          >
+          <Typography variant="subtitle1" component="h2">
             レシピの簡単読み取り
           </Typography>
         </Box>
@@ -444,24 +429,9 @@ export function RecipeEditor({
       <Divider />
 
       <Box component="section">
-        <Box
-          sx={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 0.5,
-            px: 1.25,
-            py: 0.5,
-            mb: 2,
-            borderRadius: 999,
-            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-          }}
-        >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
           <NotesIcon color="primary" fontSize="small" />
-          <Typography
-            variant="subtitle1"
-            color="primary"
-            sx={{ fontWeight: 700 }}
-          >
+          <Typography variant="subtitle1" component="h2">
             レシピ詳細
           </Typography>
         </Box>
@@ -516,14 +486,18 @@ export function RecipeEditor({
               <IconButton
                 onClick={() => removeIngredientRow(row.key)}
                 aria-label="材料を削除"
-                sx={{ color: "text.disabled", flexShrink: 0 }}
+                sx={{ flexShrink: 0 }}
               >
                 <DeleteOutlineIcon fontSize="small" />
               </IconButton>
             </Stack>
           ))}
         </Stack>
-        <Button onClick={addIngredientRow} sx={{ mt: 1.5 }}>
+        <Button
+          onClick={addIngredientRow}
+          startIcon={<AddIcon fontSize="small" />}
+          sx={{ mt: 1.5 }}
+        >
           材料を追加
         </Button>
       </Box>

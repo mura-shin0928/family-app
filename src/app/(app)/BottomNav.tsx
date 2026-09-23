@@ -24,7 +24,7 @@ export function BottomNav() {
 
   return (
     <Paper
-      elevation={3}
+      elevation={1}
       square
       sx={{
         position: "fixed",
@@ -37,7 +37,20 @@ export function BottomNav() {
         zIndex: (theme) => theme.zIndex.appBar,
       }}
     >
-      <BottomNavigation value={value}>
+      <BottomNavigation
+        value={value}
+        sx={{
+          // アイコンだけのナビなので、選択中は色に加えて上端のバーでも示す。
+          "& .Mui-selected::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            insetInline: 0,
+            height: 4,
+            bgcolor: "primary.main",
+          },
+        }}
+      >
         <BottomNavigationAction
           component={Link}
           href="/tasks"

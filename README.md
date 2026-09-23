@@ -24,6 +24,17 @@
 - Vitest
 - Vercel（リージョン `hnd1`）
 
+## デザイン
+
+見た目は[デジタル庁デザインシステム（DADS）](https://design.digital.go.jp/dads/)に合わせている。
+DADS のコンポーネントは MUI 向けに配布されていないので、MUI のテーマを DADS に合わせる方式を取っている。
+
+| ファイル | 内容 |
+| --- | --- |
+| `src/lib/dads.ts` | このアプリで使う DADS のトークン値 |
+| `src/lib/theme.ts` | MUI の部品・文字スタイルへの対応付けと、ライト・ダークの配色 |
+| `tests/unit/dads-tokens.test.ts` | `dads.ts` の値が公式の [`@digital-go-jp/design-tokens`](https://www.npmjs.com/package/@digital-go-jp/design-tokens) と一致するかの確認 |
+
 ## セットアップ
 
 Node.js 24 以上が必要（`.node-version` 参照）。

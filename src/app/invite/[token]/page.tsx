@@ -30,7 +30,7 @@ export default async function InvitePage({
           textAlign: "center",
         }}
       >
-        <Typography variant="h6" component="h1" sx={{ fontWeight: 600 }}>
+        <Typography variant="h6" component="h1">
           Family App
         </Typography>
         <InviteEmailForm token={token} />

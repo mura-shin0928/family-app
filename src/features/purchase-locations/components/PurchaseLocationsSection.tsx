@@ -70,7 +70,7 @@ export function PurchaseLocationsSection({
 
       {locations.length === 0 ? (
         <Alert severity="info">
-          登録すると、「買うものだけ」表示で場所ごとに絞り込めます。
+          登録すると、「買うもの」表示で場所ごとに絞り込めます。
         </Alert>
       ) : (
         <List dense disablePadding>

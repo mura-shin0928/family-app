@@ -315,7 +315,7 @@ function CompletedSection({
                 event.stopPropagation();
                 toggleHint();
               }}
-              sx={{ color: "text.disabled", cursor: "help" }}
+              sx={{ color: "text.secondary", cursor: "help" }}
             />
           </Tooltip>
         }
@@ -616,7 +616,7 @@ export function TaskListScreen({
                 <ShoppingCartOutlinedIcon />
               )
             }
-            label="買うものだけ"
+            label="買うもの"
             clickable
             color={showPurchaseOnly ? "primary" : "default"}
             variant={showPurchaseOnly ? "filled" : "outlined"}
@@ -694,7 +694,7 @@ export function TaskListScreen({
             {filteredPurchaseOpen.length === 0 &&
               filteredPurchaseCompletedToday.length === 0 && (
                 <Typography
-                  variant="body2"
+                  variant="body1"
                   color="text.secondary"
                   align="center"
                   sx={{ py: 8 }}
@@ -761,7 +761,7 @@ export function TaskListScreen({
 
             {isEmpty && (
               <Typography
-                variant="body2"
+                variant="body1"
                 color="text.secondary"
                 align="center"
                 sx={{ py: 8 }}
@@ -802,7 +802,7 @@ export function TaskListScreen({
       >
         <DialogTitle>削除しますか？</DialogTitle>
         <DialogContent>
-          <Typography variant="body2">
+          <Typography variant="body1">
             「{taskPendingDelete?.title}」を削除しますか？
           </Typography>
         </DialogContent>
