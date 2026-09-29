@@ -77,7 +77,7 @@ export function AcceptInvitationScreen({
       ) : (
         <Typography
           variant="body1"
-          color="text.secondary"
+          color="textSecondary"
           sx={{ maxWidth: 320 }}
         >
           {STATUS_MESSAGE[preview.status]}

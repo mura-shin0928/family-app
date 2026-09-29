@@ -79,7 +79,7 @@ export default function LoginPage() {
 
       <Typography
         variant="body2"
-        color="text.secondary"
+        color="textSecondary"
         sx={{ width: 1, maxWidth: 320, textAlign: "center" }}
       >
         または
@@ -88,7 +88,7 @@ export default function LoginPage() {
       {sent ? (
         <Typography
           variant="body1"
-          color="text.secondary"
+          color="textSecondary"
           sx={{ maxWidth: 320, textAlign: "center" }}
         >
           {email} 宛にログインリンクを送りました。メールを確認してください。

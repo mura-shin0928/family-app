@@ -38,7 +38,7 @@ export function MunicipalitySection({
       <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
         <Box sx={{ flexGrow: 1 }}>
           <Typography variant="subtitle1">住んでいる自治体</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="textSecondary">
             {municipality?.name ?? "未設定"}
           </Typography>
         </Box>
@@ -52,7 +52,7 @@ export function MunicipalitySection({
         </IconButton>
       </Stack>
       {areas === null && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           自治体の一覧を取得できないため、いまは変更できません。
         </Typography>
       )}

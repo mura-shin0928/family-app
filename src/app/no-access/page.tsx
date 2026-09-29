@@ -31,7 +31,7 @@ export default function NoAccessPage() {
       <Typography variant="h6" component="h1">
         アクセスできません
       </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 320 }}>
+      <Typography variant="body1" color="textSecondary" sx={{ maxWidth: 320 }}>
         このアカウントはまだどのFamilyにも参加していません。Familyのメンバーまたは管理者に招待を依頼してください。
       </Typography>
       <Box component="form" action={signOut}>

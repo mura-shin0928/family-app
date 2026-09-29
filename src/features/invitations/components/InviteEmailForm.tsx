@@ -30,7 +30,7 @@ export function InviteEmailForm({ token }: { token: string }) {
     return (
       <Typography
         variant="body1"
-        color="text.secondary"
+        color="textSecondary"
         sx={{ maxWidth: 320, textAlign: "center" }}
       >
         {email} 宛にログインリンクを送りました。メールを確認してください。
@@ -52,7 +52,7 @@ export function InviteEmailForm({ token }: { token: string }) {
     >
       <Typography
         variant="body1"
-        color="text.secondary"
+        color="textSecondary"
         sx={{ textAlign: "center", mb: 1 }}
       >
         招待されたメールアドレスを入力してください。

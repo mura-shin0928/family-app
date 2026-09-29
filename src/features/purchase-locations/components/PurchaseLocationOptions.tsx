@@ -26,7 +26,7 @@ export function PurchaseLocationOptions({
   if (locations.length === 0) {
     return (
       <Box component="li" sx={{ px: 2, py: 1.5, textAlign: "center" }}>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
           買う場所がまだ登録されていません
         </Typography>
         <Button
