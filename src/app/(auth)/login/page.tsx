@@ -59,7 +59,7 @@ export default function LoginPage() {
       <Typography variant="h5" component="h1">
         Family App
       </Typography>
-      <Typography variant="body1" color="text.secondary">
+      <Typography variant="body1" color="textSecondary">
         家族のやることを、みんなで。
       </Typography>
 

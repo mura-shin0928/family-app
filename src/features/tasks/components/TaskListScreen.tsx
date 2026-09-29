@@ -190,7 +190,7 @@ function BucketSection({
 }) {
   return (
     <Box component="section">
-      <Typography variant="subtitle2" color="primary.dark" sx={{ mb: 1 }}>
+      <Typography variant="subtitle2" sx={{ color: "primary.dark", mb: 1 }}>
         {label}（{count}）
       </Typography>
       <Stack spacing={1}>{children}</Stack>
@@ -225,7 +225,7 @@ function CollapsibleHeader({
         mb: 1,
       }}
     >
-      <Typography variant="subtitle2" color="primary.dark">
+      <Typography variant="subtitle2" sx={{ color: "primary.dark" }}>
         {title}
       </Typography>
       {extra}

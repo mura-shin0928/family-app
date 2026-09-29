@@ -1,4 +1,7 @@
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import { createTheme, type PaletteOptions } from "@mui/material/styles";
+import { createElement } from "react";
 import { type BrandScheme, brand } from "./brand";
 import { dads } from "./dads";
 
@@ -196,6 +199,13 @@ export const theme = createTheme({
           outline: "none",
           boxShadow: "none",
         },
+      },
+    },
+    // 丸いチェック。未選択は輪、選択済みは主色の塗り。
+    MuiCheckbox: {
+      defaultProps: {
+        icon: createElement(RadioButtonUncheckedIcon),
+        checkedIcon: createElement(CheckCircleIcon),
       },
     },
     MuiButtonBase: {
@@ -460,7 +470,7 @@ export const theme = createTheme({
       styleOverrides: {
         input: {
           fontSize: "1rem",
-          color: v("brand-heading"),
+          color: v("text-primary"),
         },
       },
     },
