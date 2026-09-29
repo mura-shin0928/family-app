@@ -1,7 +1,7 @@
-import { dads } from "@/lib/dads";
+import { brand } from "@/lib/brand";
 
-const BACKGROUND = dads.key900;
-const FOREGROUND = dads.white;
+const BACKGROUND = brand.light.primary;
+const FOREGROUND = brand.light.onPrimary;
 
 /**
  * アプリアイコン共通の図柄（角丸四角 + チェックマーク）。
