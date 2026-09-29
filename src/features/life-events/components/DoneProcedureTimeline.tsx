@@ -162,16 +162,6 @@ function DoneRow({
         </Menu>
       </Box>
 
-      {hasNote && !noteOpen && (
-        <Typography
-          variant="caption"
-          color="textSecondary"
-          sx={{ display: "block", pl: "80px", whiteSpace: "pre-wrap" }}
-        >
-          {procedure.note}
-        </Typography>
-      )}
-
       <Collapse in={noteOpen} mountOnEnter unmountOnExit>
         <Stack sx={{ pt: 0.5, pl: "80px" }}>
           <TextField

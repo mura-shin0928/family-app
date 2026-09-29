@@ -284,24 +284,6 @@ export function LifeEventProcedureRow({
         </Box>
       )}
 
-      {hasNote && !noteOpen && (
-        <Typography
-          variant="caption"
-          color="textSecondary"
-          onClick={() => setNoteOpen(true)}
-          sx={{
-            display: "block",
-            cursor: "text",
-            pl: "120px",
-            pr: 1,
-            whiteSpace: "pre-wrap",
-            overflowWrap: "break-word",
-          }}
-        >
-          {procedure.note}
-        </Typography>
-      )}
-
       {/*
         開くたびに再マウントして defaultValue を最新化する（閉じている間に
         別の家族の編集が router.refresh 経由で入っても古い値が残らないように）。
