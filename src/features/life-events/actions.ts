@@ -9,11 +9,19 @@ import {
   addLifeEventSchema,
   lifeEventProcedureIdSchema,
   lifeEventProcedureTaskIdSchema,
+  recordLifeEventProcedureDoneSchema,
   reorderLifeEventProceduresSchema,
   updateLifeEventProcedureNoteSchema,
   updateLifeEventProcedureTimingSchema,
   updateLifeEventProcedureTitleSchema,
 } from "./schema";
+import {
+  existingTemplateKeys,
+  type StatusAction,
+  templateItemsToCopy,
+  templateKeyFor,
+  transitionFor,
+} from "./status";
 import type { LifeEventKind } from "./types";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -34,6 +42,130 @@ async function lastSortOrderForChild(
     .limit(1)
     .maybeSingle();
   return data?.sort_order ?? 0;
+}
+
+const STALE_STATUS_ERROR = "項目の状態が変わっています。画面を更新してください";
+
+/**
+ * 状態を遷移表どおりに変える。遷移元の状態を update の条件に入れるので、別の家族が
+ * 先に状態を変えていたときは何も書き換えず案内を返す。リストへ入る遷移
+ * （採用・戻す）は、その子のリスト末尾に置く。
+ */
+async function applyTransition(
+  action: StatusAction,
+  input: { id: string; doneOn?: string },
+  failure: string,
+): Promise<ActionResult> {
+  const { from, to } = transitionFor(action);
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const patch: Record<string, unknown> = { status: to };
+  if (action === "record") patch.done_on = input.doneOn;
+  if (action === "reopen") patch.done_on = null;
+
+  if (action === "adopt" || action === "reopen") {
+    const { data: row } = await supabase
+      .from("life_event_procedures")
+      .select("child_id")
+      .eq("id", input.id)
+      .eq("family_id", member.familyId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (!row) return { ok: false, error: "項目が見つかりません" };
+    patch.sort_order =
+      (await lastSortOrderForChild(supabase, member.familyId, row.child_id)) +
+      1;
+  }
+
+  const { data, error } = await supabase
+    .from("life_event_procedures")
+    .update(patch)
+    .eq("id", input.id)
+    .eq("family_id", member.familyId)
+    .in("status", [...from])
+    .is("deleted_at", null)
+    .select("id");
+
+  if (error) return { ok: false, error: failure };
+  if (!data || data.length === 0) {
+    return { ok: false, error: STALE_STATUS_ERROR };
+  }
+  return { ok: true };
+}
+
+export async function adoptLifeEventProcedure(input: {
+  id: string;
+}): Promise<ActionResult> {
+  const parsed = lifeEventProcedureIdSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "不正な操作です" };
+  return applyTransition("adopt", parsed.data, "採用に失敗しました");
+}
+
+export async function skipLifeEventProcedure(input: {
+  id: string;
+}): Promise<ActionResult> {
+  const parsed = lifeEventProcedureIdSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "不正な操作です" };
+  return applyTransition("skip", parsed.data, "見送りに失敗しました");
+}
+
+export async function reopenLifeEventProcedure(input: {
+  id: string;
+}): Promise<ActionResult> {
+  const parsed = lifeEventProcedureIdSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "不正な操作です" };
+  return applyTransition(
+    "reopen",
+    parsed.data,
+    "これからへの移動に失敗しました",
+  );
+}
+
+export async function recordLifeEventProcedureDone(input: {
+  id: string;
+  doneOn: string;
+}): Promise<ActionResult> {
+  const parsed = recordLifeEventProcedureDoneSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+  return applyTransition("record", parsed.data, "記録に失敗しました");
+}
+
+/** 記録済みの項目のやった日を直す。 */
+export async function updateLifeEventProcedureDoneOn(input: {
+  id: string;
+  doneOn: string;
+}): Promise<ActionResult> {
+  const parsed = recordLifeEventProcedureDoneSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("life_event_procedures")
+    .update({ done_on: parsed.data.doneOn })
+    .eq("id", parsed.data.id)
+    .eq("family_id", member.familyId)
+    .eq("status", "done")
+    .is("deleted_at", null)
+    .select("id");
+
+  if (error) return { ok: false, error: "日付の更新に失敗しました" };
+  if (!data || data.length === 0) {
+    return { ok: false, error: STALE_STATUS_ERROR };
+  }
+  return { ok: true };
 }
 
 /**
@@ -60,12 +192,9 @@ async function firstSortOrderForChild(
 }
 
 /**
- * ライフイベントを1つ足し、そのテンプレートの項目をその子の手続きリストの末尾に
- * コピーする。コピー後はテンプレートと切り離され、家族が自由に編集できる（この
- * 編集済みリストそのものが家族の記録になる）。同じ子に同じ種別を何度でも足せる。
- *
- * 末尾に足すだけで、基準日順に差し込むことはしない — 基準日が未入力のイベントが
- * あると時系列に並べようがないため、初期配置は単純にして並べ替えに委ねる。
+ * ライフイベントを1つ足し、そのテンプレートの項目を「候補」としてその子のリストへ
+ * コピーする（採用するまで「これから」には載らない）。同じ種別を再度足したときは、
+ * すでに入っている項目（見送り・記録済みを含む）を除いた分だけ入れる。
  */
 export async function addLifeEvent(input: {
   kind: string;
@@ -105,8 +234,29 @@ export async function addLifeEvent(input: {
 
   let event = existing ? { id: existing.id } : null;
   const createdNew = !existing;
+  let itemsToCopy = [...template.items];
 
   if (existing) {
+    // 何も追加しないときは、開始日の補完もせずに終える（エラーだけ返して一部だけ保存しない）。
+    const { data: existingItems } = await supabase
+      .from("life_event_procedures")
+      .select("title, template_key")
+      .eq("life_event_id", existing.id)
+      .is("deleted_at", null);
+    itemsToCopy = templateItemsToCopy(
+      template,
+      existingTemplateKeys(
+        template.kind,
+        (existingItems ?? []).map((row) => ({
+          title: row.title,
+          templateKey: row.template_key,
+        })),
+      ),
+    );
+    if (itemsToCopy.length === 0) {
+      return { ok: false, error: "このテンプレの項目はすべて追加済みです" };
+    }
+
     // 基準日が未入力のまま残っているイベントに、今回入力があれば埋める（上書きはしない）。
     if (existing.started_on === null && startedOn !== null) {
       await supabase
@@ -146,7 +296,7 @@ export async function addLifeEvent(input: {
   const { error: itemsError } = await supabase
     .from("life_event_procedures")
     .insert(
-      template.items.map((item, index) => ({
+      itemsToCopy.map((item, index) => ({
         family_id: member.familyId,
         life_event_id: event.id,
         child_id: parsed.data.childId,
@@ -157,6 +307,8 @@ export async function addLifeEvent(input: {
         timing_kind: item.timingKind,
         anchor_event: item.anchorEvent,
         offset_days: item.offsetDays,
+        status: "candidate",
+        template_key: templateKeyFor(template.kind, item.title),
       })),
     );
 
@@ -418,7 +570,7 @@ export async function deleteLifeEventProcedure(input: {
  * スコープし、その子の orderedIds を新しい順とみなして sort_order を 1..N に振り直す
  * （隙間や同値があっても自己修復する）。実際に書き換わるのは動いた分だけ。
  *
- * orderedIds がその子の現在の非削除項目の集合とちょうど一致しないときは弾く
+ * orderedIds がその子の現在の「これから」（status='active'）の項目の集合とちょうど一致しないときは弾く
  * （送信中に別の家族が項目を足した／消したケース）。呼び出し側で取り直させる。
  */
 export async function reorderLifeEventProcedures(input: {
@@ -438,6 +590,7 @@ export async function reorderLifeEventProcedures(input: {
     .select("id, sort_order")
     .eq("family_id", member.familyId)
     .eq("child_id", parsed.data.childId)
+    .eq("status", "active")
     .is("deleted_at", null);
 
   if (loadError || !rows) {

@@ -5,6 +5,8 @@ import { CSS } from "@dnd-kit/utilities";
 import AddTaskIcon from "@mui/icons-material/AddTask";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import EventAvailableIcon from "@mui/icons-material/EventAvailable";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import NotesIcon from "@mui/icons-material/Notes";
 import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
@@ -16,6 +18,8 @@ import Collapse from "@mui/material/Collapse";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
 import Link from "@mui/material/Link";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
@@ -25,7 +29,7 @@ import { useState } from "react";
 import { addDaysToDateString, daysUntil } from "@/lib/date";
 import {
   ANCHOR_OPTIONS,
-  describeProcedureTiming,
+  describeProcedureWhen,
   type LifeEventAnchorDates,
   TIMING_KIND_OPTIONS,
 } from "../timing";
@@ -50,6 +54,7 @@ type Props = {
   onNoteChange: (id: string, note: string) => void;
   onTimingChange: (id: string, change: TimingChange) => void;
   onAddToTask: (procedure: LifeEventProcedure) => void;
+  onRecordDone: (procedure: LifeEventProcedure) => void;
   onDelete: (procedure: LifeEventProcedure) => void;
 };
 
@@ -62,6 +67,7 @@ export function LifeEventProcedureRow({
   onNoteChange,
   onTimingChange,
   onAddToTask,
+  onRecordDone,
   onDelete,
 }: Props) {
   const [editingTitle, setEditingTitle] = useState(false);
@@ -69,7 +75,9 @@ export function LifeEventProcedureRow({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const hasNote = !!procedure.note;
 
-  const timingLabel = describeProcedureTiming(procedure, anchor);
+  const whenLabel = describeProcedureWhen(procedure, anchor);
+  const isOwn = procedure.templateKey === null;
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
 
   const {
     attributes,
@@ -130,6 +138,14 @@ export function LifeEventProcedureRow({
           <DragIndicatorIcon fontSize="small" />
         </IconButton>
 
+        <Typography
+          variant="caption"
+          color="textSecondary"
+          sx={{ width: 76, flexShrink: 0, lineHeight: 1.3 }}
+        >
+          {whenLabel ?? "時期なし"}
+        </Typography>
+
         <Box sx={{ minWidth: 0, flex: 1 }}>
           {editingTitle ? (
             <TextField
@@ -163,16 +179,6 @@ export function LifeEventProcedureRow({
         </Box>
 
         <IconButton
-          onClick={() => setDetailsOpen((current) => !current)}
-          color={detailsOpen ? "primary" : "default"}
-          aria-pressed={detailsOpen}
-          aria-label="行政手続きか・時期を編集"
-          size="small"
-        >
-          <TuneIcon fontSize="small" />
-        </IconButton>
-
-        <IconButton
           onClick={() => setNoteOpen((current) => !current)}
           color={hasNote ? "primary" : "default"}
           aria-pressed={noteOpen}
@@ -187,43 +193,80 @@ export function LifeEventProcedureRow({
         </IconButton>
 
         <IconButton
-          onClick={() => onAddToTask(procedure)}
+          onClick={() => onRecordDone(procedure)}
           disabled={busy}
-          aria-label="タスクに追加"
+          aria-label="やった日を記録"
           size="small"
         >
-          <AddTaskIcon fontSize="small" />
+          <EventAvailableIcon fontSize="small" />
         </IconButton>
 
         <IconButton
-          onClick={() => onDelete(procedure)}
-          aria-label="削除"
+          onClick={(event) => setMenuAnchor(event.currentTarget)}
+          aria-label="その他の操作"
           size="small"
         >
-          <DeleteOutlineIcon fontSize="small" />
+          <MoreVertIcon fontSize="small" />
         </IconButton>
+
+        <Menu
+          anchorEl={menuAnchor}
+          open={menuAnchor !== null}
+          onClose={() => setMenuAnchor(null)}
+        >
+          <MenuItem
+            disabled={busy}
+            onClick={() => {
+              setMenuAnchor(null);
+              onAddToTask(procedure);
+            }}
+          >
+            <ListItemIcon>
+              <AddTaskIcon fontSize="small" />
+            </ListItemIcon>
+            タスクに追加
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setMenuAnchor(null);
+              setDetailsOpen((current) => !current);
+            }}
+          >
+            <ListItemIcon>
+              <TuneIcon fontSize="small" />
+            </ListItemIcon>
+            詳細を編集
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setMenuAnchor(null);
+              onDelete(procedure);
+            }}
+          >
+            <ListItemIcon>
+              <DeleteOutlineIcon fontSize="small" />
+            </ListItemIcon>
+            削除
+          </MenuItem>
+        </Menu>
       </Box>
 
       {/* 行政手続きバッジ + 時期 + 公式ページ。どれも無ければ行ごと出さない。 */}
-      {(procedure.isGovernment || timingLabel || procedure.url) && (
+      {(procedure.isGovernment || isOwn || procedure.url) && (
         <Box
           sx={{
             display: "flex",
             alignItems: "center",
             flexWrap: "wrap",
             gap: 0.5,
-            pl: "36px",
+            pl: "114px",
             pr: 1,
             cursor: "pointer",
           }}
           onClick={() => setDetailsOpen((current) => !current)}
         >
           {procedure.isGovernment && <Chip label="行政手続き" size="small" />}
-          {timingLabel && (
-            <Typography variant="caption" color="textSecondary">
-              {timingLabel}
-            </Typography>
-          )}
+          {isOwn && <Chip label="自分たち" size="small" variant="outlined" />}
           {procedure.url && (
             <Link
               href={procedure.url}
@@ -241,30 +284,12 @@ export function LifeEventProcedureRow({
         </Box>
       )}
 
-      {hasNote && !noteOpen && (
-        <Typography
-          variant="caption"
-          color="textSecondary"
-          onClick={() => setNoteOpen(true)}
-          sx={{
-            display: "block",
-            cursor: "text",
-            pl: "36px",
-            pr: 1,
-            whiteSpace: "pre-wrap",
-            overflowWrap: "break-word",
-          }}
-        >
-          {procedure.note}
-        </Typography>
-      )}
-
       {/*
         開くたびに再マウントして defaultValue を最新化する（閉じている間に
         別の家族の編集が router.refresh 経由で入っても古い値が残らないように）。
       */}
       <Collapse in={noteOpen} mountOnEnter unmountOnExit>
-        <Stack sx={{ pt: 0.5, pl: "36px", pr: 1 }}>
+        <Stack sx={{ pt: 0.5, pl: "114px", pr: 1 }}>
           <TextField
             multiline
             minRows={1}
@@ -279,7 +304,7 @@ export function LifeEventProcedureRow({
       </Collapse>
 
       <Collapse in={detailsOpen} mountOnEnter unmountOnExit>
-        <Box sx={{ pt: 1, pl: "36px", pr: 1, pb: 0.5 }}>
+        <Box sx={{ pt: 1, pl: "114px", pr: 1, pb: 0.5 }}>
           <TimingEditForm
             key={`${procedure.id}:${procedure.isGovernment}:${procedure.timingKind}:${procedure.anchorEvent}:${procedure.offsetDays}`}
             procedure={procedure}

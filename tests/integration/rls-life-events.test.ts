@@ -468,5 +468,50 @@ describe("life_events / life_event_procedures RLS", () => {
       });
       expect(error).not.toBeNull();
     });
+
+    it("defaults new items to active with no done_on", async () => {
+      const { data, error } = await admin
+        .from("life_event_procedures")
+        .select("status, done_on")
+        .eq("id", itemF1)
+        .single();
+      expect(error).toBeNull();
+      expect(data?.status).toBe("active");
+      expect(data?.done_on).toBeNull();
+    });
+
+    it("rejects done without done_on and done_on without done", async () => {
+      const noDate = await admin
+        .from("life_event_procedures")
+        .update({ status: "done" })
+        .eq("id", itemF1);
+      expect(noDate.error).not.toBeNull();
+
+      const strayDate = await admin
+        .from("life_event_procedures")
+        .update({ done_on: "2026-09-01" })
+        .eq("id", itemF1);
+      expect(strayDate.error).not.toBeNull();
+    });
+
+    it("accepts done with done_on and rejects an unknown status", async () => {
+      const done = await admin
+        .from("life_event_procedures")
+        .update({ status: "done", done_on: "2026-09-01" })
+        .eq("id", itemF1);
+      expect(done.error).toBeNull();
+
+      const reopened = await admin
+        .from("life_event_procedures")
+        .update({ status: "active", done_on: null })
+        .eq("id", itemF1);
+      expect(reopened.error).toBeNull();
+
+      const unknown = await admin
+        .from("life_event_procedures")
+        .update({ status: "archived" })
+        .eq("id", itemF1);
+      expect(unknown.error).not.toBeNull();
+    });
   });
 });

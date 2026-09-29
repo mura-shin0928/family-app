@@ -5,6 +5,7 @@ import type {
   LifeEventAnchor,
   LifeEventKind,
   LifeEventProcedure,
+  ProcedureStatus,
   TimingKind,
 } from "./types";
 
@@ -43,7 +44,7 @@ export async function getLifeEventProcedures(
   const { data, error } = await supabase
     .from("life_event_procedures")
     .select(
-      "id, life_event_id, child_id, sort_order, title, note, url, is_government, timing_kind, anchor_event, offset_days",
+      "id, life_event_id, child_id, sort_order, title, note, url, is_government, timing_kind, anchor_event, offset_days, status, done_on, template_key",
     )
     .eq("family_id", familyId)
     .is("deleted_at", null)
@@ -65,5 +66,8 @@ export async function getLifeEventProcedures(
     timingKind: row.timing_kind as TimingKind,
     anchorEvent: row.anchor_event as LifeEventAnchor | null,
     offsetDays: row.offset_days,
+    status: row.status as ProcedureStatus,
+    doneOn: row.done_on,
+    templateKey: row.template_key,
   }));
 }
