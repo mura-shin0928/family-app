@@ -235,7 +235,7 @@ export function LifeEventProcedureRow({
             <ListItemIcon>
               <TuneIcon fontSize="small" />
             </ListItemIcon>
-            行政手続きか・時期を編集
+            詳細を編集
           </MenuItem>
           <MenuItem
             onClick={() => {
@@ -259,7 +259,7 @@ export function LifeEventProcedureRow({
             alignItems: "center",
             flexWrap: "wrap",
             gap: 0.5,
-            pl: "120px",
+            pl: "114px",
             pr: 1,
             cursor: "pointer",
           }}
@@ -289,7 +289,7 @@ export function LifeEventProcedureRow({
         別の家族の編集が router.refresh 経由で入っても古い値が残らないように）。
       */}
       <Collapse in={noteOpen} mountOnEnter unmountOnExit>
-        <Stack sx={{ pt: 0.5, pl: "120px", pr: 1 }}>
+        <Stack sx={{ pt: 0.5, pl: "114px", pr: 1 }}>
           <TextField
             multiline
             minRows={1}
@@ -304,7 +304,7 @@ export function LifeEventProcedureRow({
       </Collapse>
 
       <Collapse in={detailsOpen} mountOnEnter unmountOnExit>
-        <Box sx={{ pt: 1, pl: "120px", pr: 1, pb: 0.5 }}>
+        <Box sx={{ pt: 1, pl: "114px", pr: 1, pb: 0.5 }}>
           <TimingEditForm
             key={`${procedure.id}:${procedure.isGovernment}:${procedure.timingKind}:${procedure.anchorEvent}:${procedure.offsetDays}`}
             procedure={procedure}
