@@ -81,3 +81,26 @@ export function describeProcedureTiming(
     ? `${formatJpDate(estimate)}までが目安`
     : `${formatJpDate(estimate)}ごろが目安`;
 }
+
+/** 'YYYY-MM-DD' を「2026/3/5」に整形する（記録の日付・時期の左カラム用）。 */
+export function formatSlashDate(dateString: DateString): string {
+  const [year, month, day] = dateString.split("-");
+  return `${year}/${Number(month)}/${Number(day)}`;
+}
+
+/**
+ * 行の左カラムに出す短い時期（「2026/9/2まで」「2026/9/19ごろ」）。
+ * 基準日が未入力で日付を出せないときは null。
+ */
+export function describeProcedureWhen(
+  item: {
+    timingKind: TimingKind;
+    anchorEvent: LifeEventAnchor | null;
+    offsetDays: number | null;
+  },
+  anchor: LifeEventAnchorDates,
+): string | null {
+  const estimate = resolveLifeEventProcedureDate(item, anchor);
+  if (estimate === null) return null;
+  return `${formatSlashDate(estimate)}${item.timingKind === "deadline" ? "まで" : "ごろ"}`;
+}

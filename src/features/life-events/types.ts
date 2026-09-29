@@ -20,8 +20,14 @@ export type LifeEvent = {
 };
 
 /**
- * 家族の手続きリストの1項目。テンプレからコピーされた後は家族が自由に編集する
- * （この編集済みのリストそのものが家族の記録になる）。完了状態は持たない。
+ * 項目の状態。candidate=テンプレ由来で未採用 / active=採用済みで未実施 /
+ * done=やった日を記録済み / skipped=候補から見送り（DBのcheck制約と同じ語彙）。
+ */
+export type ProcedureStatus = "candidate" | "active" | "done" | "skipped";
+
+/**
+ * 家族の手続きリストの1項目。テンプレからは候補としてコピーされ、家族が採用した
+ * ものだけがリストに載る。済は完了ではなく「やった日の記録」で、tasks とは紐づけない。
  */
 export type LifeEventProcedure = {
   id: string;
@@ -38,4 +44,9 @@ export type LifeEventProcedure = {
   timingKind: TimingKind;
   anchorEvent: LifeEventAnchor | null;
   offsetDays: number | null;
+  status: ProcedureStatus;
+  /** やった日（YYYY-MM-DD）。status='done' のときだけ入る。 */
+  doneOn: string | null;
+  /** テンプレ由来の印。null は自分たちで足した項目。 */
+  templateKey: string | null;
 };
