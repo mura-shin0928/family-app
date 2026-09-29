@@ -72,6 +72,7 @@ import {
   LIFE_EVENT_TEMPLATES,
 } from "../default-templates";
 import { groupByLifeEvent, groupProceduresByStatus } from "../grouping";
+import { pendingTemplateItems } from "../status";
 import {
   EMPTY_ANCHOR_DATES,
   type LifeEventAnchorDates,
@@ -393,6 +394,8 @@ export function LifeEventListScreen({
         key={activeChild.id}
         open={dialogOpen}
         familyChildren={familyChildren}
+        lifeEvents={lifeEvents}
+        procedures={procedures}
         defaultChildId={activeChild.id}
         onClose={() => setDialogOpen(false)}
       />
@@ -881,11 +884,15 @@ function AddProcedureRow({
 function AddLifeEventDialog({
   open,
   familyChildren,
+  lifeEvents,
+  procedures,
   defaultChildId,
   onClose,
 }: {
   open: boolean;
   familyChildren: Child[];
+  lifeEvents: LifeEvent[];
+  procedures: LifeEventProcedure[];
   defaultChildId: string;
   onClose: () => void;
 }) {
@@ -899,6 +906,14 @@ function AddLifeEventDialog({
   const template =
     LIFE_EVENT_TEMPLATES.find((t) => t.kind === kind) ??
     LIFE_EVENT_TEMPLATES[0];
+
+  // 追加済みの項目は入らないので、実際に候補へ入る件数を数える。
+  const pendingCount = pendingTemplateItems(
+    template,
+    childId,
+    lifeEvents,
+    procedures,
+  ).length;
 
   // 「イベント開始日」は妊活だけで使う（他は子の予定日/出生日が基準。timing.ts 参照）。
   const usesStartedOn = kind === "preconception";
@@ -976,8 +991,9 @@ function AddLifeEventDialog({
           )}
           {error && <Alert severity="error">{error}</Alert>}
           <Typography variant="caption" color="textSecondary">
-            追加すると{template.items.length}
-            件が「候補」に入ります。採用した項目だけが、この子のリストに載ります。
+            {pendingCount === 0
+              ? "この子には、このテンプレの項目がすべて追加済みです。"
+              : `追加すると${pendingCount}件が「候補」に入ります。採用した項目だけが、この子のリストに載ります。`}
           </Typography>
         </Stack>
       </DialogContent>
@@ -988,7 +1004,7 @@ function AddLifeEventDialog({
         <Button
           variant="contained"
           onClick={handleAdd}
-          disabled={isPending || childId === ""}
+          disabled={isPending || childId === "" || pendingCount === 0}
         >
           候補に追加
         </Button>

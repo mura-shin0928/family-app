@@ -234,8 +234,29 @@ export async function addLifeEvent(input: {
 
   let event = existing ? { id: existing.id } : null;
   const createdNew = !existing;
+  let itemsToCopy = [...template.items];
 
   if (existing) {
+    // 何も追加しないときは、開始日の補完もせずに終える（エラーだけ返して一部だけ保存しない）。
+    const { data: existingItems } = await supabase
+      .from("life_event_procedures")
+      .select("title, template_key")
+      .eq("life_event_id", existing.id)
+      .is("deleted_at", null);
+    itemsToCopy = templateItemsToCopy(
+      template,
+      existingTemplateKeys(
+        template.kind,
+        (existingItems ?? []).map((row) => ({
+          title: row.title,
+          templateKey: row.template_key,
+        })),
+      ),
+    );
+    if (itemsToCopy.length === 0) {
+      return { ok: false, error: "このテンプレの項目はすべて追加済みです" };
+    }
+
     // 基準日が未入力のまま残っているイベントに、今回入力があれば埋める（上書きはしない）。
     if (existing.started_on === null && startedOn !== null) {
       await supabase
@@ -264,23 +285,6 @@ export async function addLifeEvent(input: {
 
   if (!event) {
     return { ok: false, error: "ライフイベントの追加に失敗しました" };
-  }
-
-  const { data: existingItems } = await supabase
-    .from("life_event_procedures")
-    .select("title, template_key")
-    .eq("life_event_id", event.id)
-    .is("deleted_at", null);
-  const existingKeys = existingTemplateKeys(
-    template.kind,
-    (existingItems ?? []).map((row) => ({
-      title: row.title,
-      templateKey: row.template_key,
-    })),
-  );
-  const itemsToCopy = templateItemsToCopy(template, existingKeys);
-  if (itemsToCopy.length === 0) {
-    return { ok: false, error: "このテンプレの項目はすべて追加済みです" };
   }
 
   const baseSortOrder = await lastSortOrderForChild(

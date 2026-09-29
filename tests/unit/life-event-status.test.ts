@@ -2,10 +2,15 @@ import { describe, expect, it } from "vitest";
 import type { LifeEventTemplate } from "@/features/life-events/default-templates";
 import {
   existingTemplateKeys,
+  pendingTemplateItems,
   templateItemsToCopy,
   templateKeyFor,
   transitionFor,
 } from "@/features/life-events/status";
+import type {
+  LifeEvent,
+  LifeEventProcedure,
+} from "@/features/life-events/types";
 
 const item = (title: string) => ({
   title,
@@ -72,6 +77,57 @@ describe("existingTemplateKeys", () => {
       { title: "自分たちの項目", templateKey: null },
     ]);
     expect(keys.size).toBe(0);
+  });
+});
+
+describe("pendingTemplateItems", () => {
+  const events: LifeEvent[] = [
+    { id: "e1", kind: "birth", childId: "c1", startedOn: null },
+  ];
+  const row = (
+    title: string,
+    templateKey: string | null,
+    overrides: Partial<LifeEventProcedure> = {},
+  ): LifeEventProcedure => ({
+    id: title,
+    lifeEventId: "e1",
+    childId: "c1",
+    sortOrder: 1,
+    title,
+    note: null,
+    url: null,
+    isGovernment: false,
+    timingKind: "around",
+    anchorEvent: null,
+    offsetDays: null,
+    status: "candidate",
+    doneOn: null,
+    templateKey,
+    ...overrides,
+  });
+
+  it("returns every item when the child has no event of that kind", () => {
+    expect(pendingTemplateItems(template, "c2", events, [])).toHaveLength(2);
+    expect(pendingTemplateItems(template, "c1", [], [])).toHaveLength(2);
+  });
+
+  it("excludes items already copied into the existing event", () => {
+    const rows = [row("出生届を出す", "birth:出生届を出す")];
+    expect(
+      pendingTemplateItems(template, "c1", events, rows).map((i) => i.title),
+    ).toEqual(["お宮参りに行く"]);
+  });
+
+  it("counts legacy rows by title", () => {
+    const rows = [row("出生届を出す", "legacy", { status: "active" })];
+    expect(pendingTemplateItems(template, "c1", events, rows)).toHaveLength(1);
+  });
+
+  it("returns nothing when every item is already there", () => {
+    const rows = template.items.map((i) =>
+      row(i.title, templateKeyFor("birth", i.title), { status: "skipped" }),
+    );
+    expect(pendingTemplateItems(template, "c1", events, rows)).toEqual([]);
   });
 });
 

@@ -2,7 +2,12 @@ import type {
   LifeEventTemplate,
   LifeEventTemplateItem,
 } from "./default-templates";
-import type { LifeEventKind, ProcedureStatus } from "./types";
+import type {
+  LifeEvent,
+  LifeEventKind,
+  LifeEventProcedure,
+  ProcedureStatus,
+} from "./types";
 
 /** 状態列を足す前からあった項目に付ける印。「自分たち」の項目と区別するために使う。 */
 export const LEGACY_TEMPLATE_KEY = "legacy";
@@ -54,4 +59,25 @@ export function templateItemsToCopy(
   return template.items.filter(
     (item) => !existingKeys.has(templateKeyFor(template.kind, item.title)),
   );
+}
+
+/**
+ * その子にテンプレを追加したとき、実際に候補へ入る項目。addLifeEvent と同じく
+ * その子の同じ種別のうち直近のイベントを再利用し、コピー済みの項目を除く。
+ */
+export function pendingTemplateItems(
+  template: LifeEventTemplate,
+  childId: string,
+  lifeEvents: LifeEvent[],
+  procedures: LifeEventProcedure[],
+): LifeEventTemplateItem[] {
+  const event = [...lifeEvents]
+    .reverse()
+    .find((e) => e.childId === childId && e.kind === template.kind);
+  if (!event) return [...template.items];
+  const keys = existingTemplateKeys(
+    template.kind,
+    procedures.filter((p) => p.lifeEventId === event.id),
+  );
+  return templateItemsToCopy(template, keys);
 }
