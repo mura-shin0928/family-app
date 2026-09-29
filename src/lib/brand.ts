@@ -140,3 +140,13 @@ const dark: BrandScheme = {
 };
 
 export const brand = { light, dark };
+
+/** マスコット「おうちくん」の色。ライト・ダークで変えない（背景に載せる絵なので）。 */
+export const mascotColors = {
+  line: "#93400a",
+  body: "#ffc999",
+  roof: "#f3a570",
+  cheek: "#f59a7a",
+  eye: "#2b2926",
+  cup: "#ffffff",
+} as const;

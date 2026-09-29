@@ -58,17 +58,6 @@ export function PotIllustration(props: IllustrationProps) {
   );
 }
 
-/** 湯気の立つカップ（やることが無いとき） */
-export function CupIllustration(props: IllustrationProps) {
-  return (
-    <Svg {...props}>
-      <path d="M16 30h34v10a14 14 0 0 1-14 14h-6a14 14 0 0 1-14-14V30Z" />
-      <path d="M50 34h4a6 6 0 0 1 0 12h-6M26 20c0-4 4-4 4-8M38 20c0-4 4-4 4-8" />
-      <path d="M12 62h42" />
-    </Svg>
-  );
-}
-
 /** 書類とチェック（手続き） */
 export function PaperIllustration(props: IllustrationProps) {
   return (

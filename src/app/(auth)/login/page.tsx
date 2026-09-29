@@ -6,7 +6,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { type FormEvent, useState } from "react";
-import { AppMark } from "@/components/AppMark";
+import { Mascot } from "@/components/Mascot";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -55,7 +55,7 @@ export default function LoginPage() {
         p: 4,
       }}
     >
-      <AppMark />
+      <Mascot />
       <Typography variant="h5" component="h1">
         Family App
       </Typography>

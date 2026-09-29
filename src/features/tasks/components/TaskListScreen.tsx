@@ -21,7 +21,8 @@ import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { type ReactNode, useRef, useState } from "react";
-import { CupIllustration, EmptyState } from "@/components/EmptyState";
+import { EmptyState } from "@/components/EmptyState";
+import { Mascot } from "@/components/Mascot";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { SOON_DAYS } from "@/lib/constants";
 import { todayInJst } from "@/lib/date";
@@ -747,6 +748,12 @@ export function TaskListScreen({
               ) : null,
             )}
 
+            {open.length === 0 && completedToday.length > 0 && (
+              <EmptyState illustration={<Mascot expression="cheer" />} py={3}>
+                全部できた！おつかれさま。
+              </EmptyState>
+            )}
+
             {completedToday.length > 0 && (
               <CompletedSection count={completedToday.length}>
                 {completedToday.map((task) => (
@@ -761,7 +768,7 @@ export function TaskListScreen({
             )}
 
             {isEmpty && (
-              <EmptyState illustration={<CupIllustration />}>
+              <EmptyState illustration={<Mascot expression="sleepy" />}>
                 今やることはありません。ゆっくりどうぞ。
               </EmptyState>
             )}
