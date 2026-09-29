@@ -45,7 +45,7 @@ declare module "@mui/material/styles" {
 const v = (path: string) => `var(--mui-palette-${path})`;
 
 // 下線状の影。ポップアップ類だけ、背景から浮かせるための柔らかい影を1つ足す。
-const line = "0 2px 0 rgba(59,42,32,0.16)";
+const line = "0 2px 0 rgba(43,41,38,0.14)";
 const popup = `${line}, 0 8px 24px rgba(0,0,0,0.18)`;
 const elevation = [
   "none",
