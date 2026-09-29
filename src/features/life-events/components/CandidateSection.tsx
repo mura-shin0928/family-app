@@ -138,7 +138,11 @@ function CandidateRow({
   const when = describeProcedureWhen(procedure, anchor);
   return (
     <Box sx={{ px: 2, py: 1, borderTop: 1, borderColor: "divider" }}>
-      <Typography variant="body2" sx={{ overflowWrap: "break-word" }}>
+      <Typography
+        component="div"
+        variant="body2"
+        sx={{ overflowWrap: "break-word" }}
+      >
         {procedure.title}
         {procedure.isGovernment && (
           <Chip label="行政手続き" size="small" sx={{ ml: 0.75 }} />

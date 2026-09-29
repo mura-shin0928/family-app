@@ -90,6 +90,7 @@ function DoneRow({
           {procedure.doneOn ? formatSlashDate(procedure.doneOn) : ""}
         </Typography>
         <Typography
+          component="div"
           variant="body2"
           sx={{ flex: 1, minWidth: 0, overflowWrap: "break-word" }}
         >
