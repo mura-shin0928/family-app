@@ -49,14 +49,20 @@ import {
 } from "react";
 import { EmptyState, PaperIllustration } from "@/components/EmptyState";
 import type { Child } from "@/features/children/types";
+import { todayInJst } from "@/lib/date";
 import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
 import {
   addLifeEvent,
   addLifeEventProcedure,
   addLifeEventProcedureToTask,
+  adoptLifeEventProcedure,
   deleteLifeEventProcedure,
+  recordLifeEventProcedureDone,
+  reopenLifeEventProcedure,
   reorderLifeEventProcedures,
+  skipLifeEventProcedure,
   undoLifeEventProcedureToTask,
+  updateLifeEventProcedureDoneOn,
   updateLifeEventProcedureNote,
   updateLifeEventProcedureTiming,
   updateLifeEventProcedureTitle,
@@ -65,16 +71,20 @@ import {
   findLifeEventTemplate,
   LIFE_EVENT_TEMPLATES,
 } from "../default-templates";
+import { groupByLifeEvent, groupProceduresByStatus } from "../grouping";
 import {
   EMPTY_ANCHOR_DATES,
   type LifeEventAnchorDates,
   resolveLifeEventProcedureDate,
 } from "../timing";
 import type { LifeEvent, LifeEventProcedure } from "../types";
+import { CandidateSection } from "./CandidateSection";
+import { DoneProcedureTimeline } from "./DoneProcedureTimeline";
 import {
   LifeEventProcedureRow,
   type TimingChange,
 } from "./LifeEventProcedureRow";
+import { RecordDoneDialog } from "./RecordDoneDialog";
 
 /**
  * 手続きリスト。すべての手続きは子供単位で、画面は子供ごとのタブに分かれる。
@@ -114,6 +124,12 @@ export function LifeEventListScreen({
   } | null>(null);
   // タスク化した直後だけ出す Undo トースト（レシピ材料 →「買うもの」と同じ流儀）。
   const [toast, setToast] = useState<{ taskId: string } | null>(null);
+  // 記録日ダイアログ。記録（初期値=今日）と日付の直し（初期値=いまの記録日）で共用する。
+  const [doneDialog, setDoneDialog] = useState<{
+    procedure: LifeEventProcedure;
+    mode: "record" | "edit";
+  } | null>(null);
+  const [doneError, setDoneError] = useState<string | null>(null);
 
   // 各項目の目安時期は、その項目が属するライフイベントの基準日から引く
   // （妊娠=子の予定日 / 出産=子の出生日 / 妊活=イベントの started_on）。
@@ -189,6 +205,34 @@ export function LifeEventListScreen({
     });
   }
 
+  function handleOpenRecordDone(procedure: LifeEventProcedure) {
+    setDoneError(null);
+    setDoneDialog({ procedure, mode: "record" });
+  }
+
+  function handleOpenEditDoneDate(procedure: LifeEventProcedure) {
+    setDoneError(null);
+    setDoneDialog({ procedure, mode: "edit" });
+  }
+
+  function handleSubmitDone(doneOn: string) {
+    if (!doneDialog) return;
+    const { procedure, mode } = doneDialog;
+    setDoneError(null);
+    startTransition(async () => {
+      const result =
+        mode === "record"
+          ? await recordLifeEventProcedureDone({ id: procedure.id, doneOn })
+          : await updateLifeEventProcedureDoneOn({ id: procedure.id, doneOn });
+      if (!result.ok) {
+        setDoneError(result.error);
+        return;
+      }
+      setDoneDialog(null);
+      router.refresh();
+    });
+  }
+
   function handleConfirmDelete() {
     if (!pendingDelete) return;
     const target = pendingDelete;
@@ -222,6 +266,7 @@ export function LifeEventListScreen({
   const childLifeEvents = lifeEvents.filter(
     (event) => event.childId === activeChild.id,
   );
+  const grouped = groupProceduresByStatus(childProcedures);
 
   return (
     <Box
@@ -250,7 +295,7 @@ export function LifeEventListScreen({
             onClick={() => setDialogOpen(true)}
             sx={{ ml: "auto" }}
           >
-            テンプレートから追加
+            候補を追加
           </Button>
         </Box>
 
@@ -274,10 +319,13 @@ export function LifeEventListScreen({
           </Alert>
         )}
 
+        <Typography variant="subtitle2" color="textSecondary">
+          これから {grouped.active.length}
+        </Typography>
         <ChildLifeEventList
           key={activeChild.id}
           childId={activeChild.id}
-          procedures={childProcedures}
+          procedures={grouped.active}
           lifeEvents={childLifeEvents}
           anchorByLifeEventId={anchorByLifeEventId}
           busy={isPending}
@@ -303,7 +351,37 @@ export function LifeEventListScreen({
             )
           }
           onAddToTask={handleOpenAddToTask}
+          onRecordDone={handleOpenRecordDone}
           onDelete={setPendingDelete}
+        />
+
+        <DoneProcedureTimeline
+          procedures={grouped.done}
+          busy={isPending}
+          onEditDate={handleOpenEditDoneDate}
+          onReopen={(procedure) =>
+            run(() => reopenLifeEventProcedure({ id: procedure.id }))
+          }
+          onNoteChange={(id, note) =>
+            run(() => updateLifeEventProcedureNote({ id, note }))
+          }
+          onDelete={setPendingDelete}
+        />
+
+        <CandidateSection
+          candidateGroups={groupByLifeEvent(
+            grouped.candidates,
+            childLifeEvents,
+          )}
+          skipped={grouped.skipped}
+          anchorByLifeEventId={anchorByLifeEventId}
+          busy={isPending}
+          onAdopt={(procedure) =>
+            run(() => adoptLifeEventProcedure({ id: procedure.id }))
+          }
+          onSkip={(procedure) =>
+            run(() => skipLifeEventProcedure({ id: procedure.id }))
+          }
         />
       </Stack>
 
@@ -321,6 +399,29 @@ export function LifeEventListScreen({
         busy={isPending}
         onClose={() => setTaskDialog(null)}
         onSubmit={handleSubmitAddToTask}
+      />
+
+      <RecordDoneDialog
+        key={`${doneDialog?.procedure.id ?? "none"}:${doneDialog?.mode ?? ""}`}
+        target={
+          doneDialog
+            ? {
+                procedure: doneDialog.procedure,
+                initialDate:
+                  doneDialog.mode === "edit"
+                    ? (doneDialog.procedure.doneOn ?? todayInJst())
+                    : todayInJst(),
+                heading:
+                  doneDialog.mode === "edit"
+                    ? "やった日を直す"
+                    : "やった日を記録",
+              }
+            : null
+        }
+        busy={isPending}
+        error={doneError}
+        onClose={() => setDoneDialog(null)}
+        onSubmit={handleSubmitDone}
       />
 
       <Dialog
@@ -438,6 +539,7 @@ function ChildLifeEventList({
   onTimingChange,
   onAddProcedure,
   onAddToTask,
+  onRecordDone,
   onDelete,
 }: {
   childId: string;
@@ -450,6 +552,7 @@ function ChildLifeEventList({
   onTimingChange: (id: string, change: TimingChange) => void;
   onAddProcedure: (kind: string, title: string, position: AddPosition) => void;
   onAddToTask: (procedure: LifeEventProcedure) => void;
+  onRecordDone: (procedure: LifeEventProcedure) => void;
   onDelete: (procedure: LifeEventProcedure) => void;
 }) {
   const router = useRouter();
@@ -588,7 +691,7 @@ function ChildLifeEventList({
 
         {items.length === 0 ? (
           <EmptyListNote>
-            「テンプレートから追加」か「項目を追加」で、この子の手続きがここに並びます。追加したあとは自由に書き換えられます。
+            「候補を追加」から採用するか、「項目を追加」で自分たちの項目を足すと、ここに並びます。
           </EmptyListNote>
         ) : visibleItems.length === 0 ? (
           <EmptyListNote>このライフイベントの項目はありません。</EmptyListNote>
@@ -619,6 +722,7 @@ function ChildLifeEventList({
                     onNoteChange={onNoteChange}
                     onTimingChange={onTimingChange}
                     onAddToTask={onAddToTask}
+                    onRecordDone={onRecordDone}
                     onDelete={onDelete}
                   />
                 ))}
@@ -821,7 +925,7 @@ function AddLifeEventDialog({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>テンプレートから追加</DialogTitle>
+      <DialogTitle>テンプレートから候補を追加</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           <TextField
@@ -869,7 +973,7 @@ function AddLifeEventDialog({
           {error && <Alert severity="error">{error}</Alert>}
           <Typography variant="caption" color="textSecondary">
             追加すると{template.items.length}
-            件の項目がこの子のリストの末尾に入ります。中身はあとから自由に書き換えられます。
+            件が「候補」に入ります。採用した項目だけが、この子のリストに載ります。
           </Typography>
         </Stack>
       </DialogContent>
@@ -882,7 +986,7 @@ function AddLifeEventDialog({
           onClick={handleAdd}
           disabled={isPending || childId === ""}
         >
-          追加する
+          候補に追加
         </Button>
       </DialogActions>
     </Dialog>
