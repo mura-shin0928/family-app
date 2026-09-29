@@ -26,13 +26,17 @@
 
 ## デザイン
 
-見た目は[デジタル庁デザインシステム（DADS）](https://design.digital.go.jp/dads/)に合わせている。
-DADS のコンポーネントは MUI 向けに配布されていないので、MUI のテーマを DADS に合わせる方式を取っている。
+暖色の「紙の温もり」テーマ（クリーム × 柿色、Zen Maru Gothic）。
+アクセシビリティの基準（本文16px以上、文字4.5:1・枠線3:1以上、フォーカスリング）は
+[デジタル庁デザインシステム（DADS）](https://design.digital.go.jp/dads/)に合わせている。
+DADS のコンポーネントは MUI 向けに配布されていないので、MUI のテーマで表現している。
 
 | ファイル | 内容 |
 | --- | --- |
-| `src/lib/dads.ts` | このアプリで使う DADS のトークン値 |
-| `src/lib/theme.ts` | MUI の部品・文字スタイルへの対応付けと、ライト・ダークの配色 |
+| `src/lib/brand.ts` | 役割ごとの色（ライト・ダーク） |
+| `src/lib/dads.ts` | 引き続き使う DADS の素の値（グレー・状態色・フォーカス黄など） |
+| `src/lib/theme.ts` | brand の色を MUI の部品・文字スタイルへ対応付け |
+| `tests/unit/brand-contrast.test.ts` | 配色のコントラスト検証 |
 | `tests/unit/dads-tokens.test.ts` | `dads.ts` の値が公式の [`@digital-go-jp/design-tokens`](https://www.npmjs.com/package/@digital-go-jp/design-tokens) と一致するかの確認 |
 
 ## セットアップ
