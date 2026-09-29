@@ -79,7 +79,7 @@ export function AdminFamilyListScreen({ families, createFamily }: Props) {
               </Typography>
               <Typography
                 variant="caption"
-                color="text.secondary"
+                color="textSecondary"
                 component="div"
               >
                 メンバー{family.memberCount}人・

@@ -9,6 +9,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { EmptyState, PotIllustration } from "@/components/EmptyState";
 import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
 import { fetchRecipes } from "../query-actions";
 import { RECIPES_QUERY_KEY, type RecipeDTO } from "../types";
@@ -28,14 +29,9 @@ export function RecipeListScreen({
     <Box sx={{ flex: 1, display: "flex", flexDirection: "column", pb: 12 }}>
       <Stack spacing={1} sx={{ flex: 1, px: 2, py: 2 }}>
         {recipes.length === 0 ? (
-          <Typography
-            variant="body1"
-            color="text.secondary"
-            align="center"
-            sx={{ py: 8 }}
-          >
+          <EmptyState illustration={<PotIllustration />}>
             レシピはまだありません
-          </Typography>
+          </EmptyState>
         ) : (
           recipes.map((recipe) => (
             <Paper
@@ -63,7 +59,7 @@ export function RecipeListScreen({
                     fontSize="inherit"
                     sx={{ color: "text.secondary" }}
                   />
-                  <Typography variant="caption" color="text.secondary" noWrap>
+                  <Typography variant="caption" color="textSecondary" noWrap>
                     {recipe.sourceUrl}
                   </Typography>
                 </Stack>

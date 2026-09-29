@@ -6,6 +6,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { type FormEvent, useState } from "react";
+import { Mascot } from "@/components/Mascot";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -54,8 +55,12 @@ export default function LoginPage() {
         p: 4,
       }}
     >
+      <Mascot />
       <Typography variant="h5" component="h1">
         Family App
+      </Typography>
+      <Typography variant="body1" color="textSecondary">
+        家族のやることを、みんなで。
       </Typography>
 
       <Button
@@ -74,7 +79,7 @@ export default function LoginPage() {
 
       <Typography
         variant="body2"
-        color="text.secondary"
+        color="textSecondary"
         sx={{ width: 1, maxWidth: 320, textAlign: "center" }}
       >
         または
@@ -83,7 +88,7 @@ export default function LoginPage() {
       {sent ? (
         <Typography
           variant="body1"
-          color="text.secondary"
+          color="textSecondary"
           sx={{ maxWidth: 320, textAlign: "center" }}
         >
           {email} 宛にログインリンクを送りました。メールを確認してください。

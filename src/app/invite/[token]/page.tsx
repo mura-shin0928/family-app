@@ -1,5 +1,6 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
+import { Mascot } from "@/components/Mascot";
 import { AcceptInvitationScreen } from "@/features/invitations/components/AcceptInvitationScreen";
 import { InviteEmailForm } from "@/features/invitations/components/InviteEmailForm";
 import { previewInvitation } from "@/features/invitations/queries";
@@ -30,6 +31,7 @@ export default async function InvitePage({
           textAlign: "center",
         }}
       >
+        <Mascot />
         <Typography variant="h6" component="h1">
           Family App
         </Typography>

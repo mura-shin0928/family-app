@@ -218,16 +218,9 @@ export function LifeEventProcedureRow({
           }}
           onClick={() => setDetailsOpen((current) => !current)}
         >
-          {procedure.isGovernment && (
-            <Chip
-              label="行政手続き"
-              size="small"
-              variant="outlined"
-              color="primary"
-            />
-          )}
+          {procedure.isGovernment && <Chip label="行政手続き" size="small" />}
           {timingLabel && (
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               {timingLabel}
             </Typography>
           )}
@@ -251,7 +244,7 @@ export function LifeEventProcedureRow({
       {hasNote && !noteOpen && (
         <Typography
           variant="caption"
-          color="text.secondary"
+          color="textSecondary"
           onClick={() => setNoteOpen(true)}
           sx={{
             display: "block",

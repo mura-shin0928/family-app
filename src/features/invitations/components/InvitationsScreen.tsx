@@ -180,7 +180,7 @@ export function InvitationsScreen({
                     </Typography>
                     <Typography
                       variant="caption"
-                      color="text.secondary"
+                      color="textSecondary"
                       noWrap
                       component="div"
                     >
@@ -226,7 +226,7 @@ export function InvitationsScreen({
                     </Typography>
                     <Typography
                       variant="caption"
-                      color="text.secondary"
+                      color="textSecondary"
                       noWrap
                       component="div"
                     >
@@ -313,7 +313,7 @@ export function InvitationsScreen({
       <Dialog open={inviteUrl !== null} onClose={() => setInviteUrl(null)}>
         <DialogTitle>招待リンクを作成しました</DialogTitle>
         <DialogContent>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 1.5 }}>
+          <Typography variant="body1" color="textSecondary" sx={{ mb: 1.5 }}>
             このリンクは今しか表示されません。招待したい人に共有してください。
           </Typography>
           <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>

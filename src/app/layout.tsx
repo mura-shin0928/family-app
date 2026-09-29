@@ -1,8 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_JP } from "next/font/google";
-import { dads } from "@/lib/dads";
+import { Noto_Sans_JP, Zen_Maru_Gothic } from "next/font/google";
+import { brand } from "@/lib/brand";
 import { ThemeRegistry } from "./ThemeRegistry";
 import "./globals.css";
+
+const zenMaruGothic = Zen_Maru_Gothic({
+  variable: "--font-zen-maru-gothic",
+  weight: ["400", "700"],
+  subsets: ["latin"],
+});
 
 const notoSansJp = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
@@ -25,14 +31,17 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: dads.white },
-    { media: "(prefers-color-scheme: dark)", color: dads.gray900 },
+    { media: "(prefers-color-scheme: light)", color: brand.light.background },
+    { media: "(prefers-color-scheme: dark)", color: brand.dark.background },
   ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="ja" className={notoSansJp.variable}>
+    <html
+      lang="ja"
+      className={`${zenMaruGothic.variable} ${notoSansJp.variable}`}
+    >
       <body>
         <ThemeRegistry>{children}</ThemeRegistry>
       </body>

@@ -21,6 +21,8 @@ import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { type ReactNode, useRef, useState } from "react";
+import { EmptyState } from "@/components/EmptyState";
+import { Mascot } from "@/components/Mascot";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { SOON_DAYS } from "@/lib/constants";
 import { todayInJst } from "@/lib/date";
@@ -190,7 +192,7 @@ function BucketSection({
 }) {
   return (
     <Box component="section">
-      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+      <Typography variant="subtitle2" sx={{ color: "primary.dark", mb: 1 }}>
         {label}（{count}）
       </Typography>
       <Stack spacing={1}>{children}</Stack>
@@ -225,7 +227,7 @@ function CollapsibleHeader({
         mb: 1,
       }}
     >
-      <Typography variant="subtitle2" color="text.secondary">
+      <Typography variant="subtitle2" sx={{ color: "primary.dark" }}>
         {title}
       </Typography>
       {extra}
@@ -695,7 +697,7 @@ export function TaskListScreen({
               filteredPurchaseCompletedToday.length === 0 && (
                 <Typography
                   variant="body1"
-                  color="text.secondary"
+                  color="textSecondary"
                   align="center"
                   sx={{ py: 8 }}
                 >
@@ -746,6 +748,12 @@ export function TaskListScreen({
               ) : null,
             )}
 
+            {open.length === 0 && completedToday.length > 0 && (
+              <EmptyState illustration={<Mascot expression="cheer" />} py={3}>
+                全部できた！おつかれさま。
+              </EmptyState>
+            )}
+
             {completedToday.length > 0 && (
               <CompletedSection count={completedToday.length}>
                 {completedToday.map((task) => (
@@ -760,14 +768,9 @@ export function TaskListScreen({
             )}
 
             {isEmpty && (
-              <Typography
-                variant="body1"
-                color="text.secondary"
-                align="center"
-                sx={{ py: 8 }}
-              >
+              <EmptyState illustration={<Mascot expression="sleepy" />}>
                 今やることはありません。ゆっくりどうぞ。
-              </Typography>
+              </EmptyState>
             )}
           </>
         )}

@@ -4,6 +4,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import { useState, useTransition } from "react";
+import { Mascot } from "@/components/Mascot";
 import { acceptInvitation } from "../actions";
 import type { InvitationPreview } from "../types";
 
@@ -54,6 +55,7 @@ export function AcceptInvitationScreen({
         textAlign: "center",
       }}
     >
+      <Mascot />
       <Typography variant="h6" component="h1">
         Family App
       </Typography>
@@ -75,7 +77,7 @@ export function AcceptInvitationScreen({
       ) : (
         <Typography
           variant="body1"
-          color="text.secondary"
+          color="textSecondary"
           sx={{ maxWidth: 320 }}
         >
           {STATUS_MESSAGE[preview.status]}

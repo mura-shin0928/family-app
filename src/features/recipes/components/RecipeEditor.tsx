@@ -397,7 +397,7 @@ export function RecipeEditor({
             >
               画像選択・読み取り
             </Button>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               画像はGoogle Gemini
               APIへ送信して解析します。なお、画像は保存されません。
             </Typography>

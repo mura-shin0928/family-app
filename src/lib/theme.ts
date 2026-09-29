@@ -1,8 +1,12 @@
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import { createTheme, type PaletteOptions } from "@mui/material/styles";
+import { createElement } from "react";
+import { type BrandScheme, brand } from "./brand";
 import { dads } from "./dads";
 
-/** ライト・ダークで値が変わる DADS の役割色。palette.dads に入れて CSS 変数で参照する。 */
-type DadsRoles = {
+/** ライト・ダークで値が変わる役割色。palette.brand に入れて CSS 変数で参照する。 */
+type BrandRoles = {
   heading: string;
   line: string;
   lineStrong: string;
@@ -24,37 +28,55 @@ type DadsRoles = {
   linkVisited: string;
   linkActive: string;
   linkOnFocus: string;
+  tagBg: string;
+  tagText: string;
 };
 
 declare module "@mui/material/styles" {
   interface Palette {
-    dads: DadsRoles;
+    brand: BrandRoles;
   }
   interface PaletteOptions {
-    dads?: DadsRoles;
+    brand?: BrandRoles;
   }
 }
 
 /** palette の値を CSS 変数で参照する。OS の設定でライト・ダークが切り替わっても追従する。 */
 const v = (path: string) => `var(--mui-palette-${path})`;
 
+// 下線状の影。ポップアップ類だけ、背景から浮かせるための柔らかい影を1つ足す。
+const line = "0 2px 0 rgba(43,41,38,0.14)";
+const popup = `${line}, 0 8px 24px rgba(0,0,0,0.18)`;
+const hitArea = {
+  position: "relative",
+  "&::after": {
+    content: '""',
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    width: 44,
+    height: 44,
+    transform: "translate(-50%, -50%)",
+  },
+} as const;
+
 const elevation = [
   "none",
-  "0 2px 8px 1px rgba(0,0,0,0.1), 0 1px 5px 0 rgba(0,0,0,0.3)",
-  "0 2px 12px 2px rgba(0,0,0,0.1), 0 1px 6px 0 rgba(0,0,0,0.3)",
-  "0 4px 16px 3px rgba(0,0,0,0.1), 0 1px 6px 0 rgba(0,0,0,0.3)",
-  "0 6px 20px 4px rgba(0,0,0,0.1), 0 2px 6px 0 rgba(0,0,0,0.3)",
-  "0 8px 24px 5px rgba(0,0,0,0.1), 0 2px 10px 0 rgba(0,0,0,0.3)",
-  "0 10px 30px 6px rgba(0,0,0,0.1), 0 3px 12px 0 rgba(0,0,0,0.3)",
-  "0 12px 36px 7px rgba(0,0,0,0.1), 0 3px 14px 0 rgba(0,0,0,0.3)",
-  "0 14px 40px 7px rgba(0,0,0,0.1), 0 3px 16px 0 rgba(0,0,0,0.3)",
+  line,
+  line,
+  popup,
+  popup,
+  popup,
+  popup,
+  popup,
+  popup,
 ] as const;
 
 // DADS のフォーカスリング（外枠 4px + 黄 2px の内枠）。ライトの外枠は黒、ダークは背景に埋もれないよう白。
 const focusRing = {
-  outline: `4px solid ${v("dads-focusOuter")}`,
+  outline: `4px solid ${v("brand-focusOuter")}`,
   outlineOffset: "2px",
-  boxShadow: `0 0 0 2px ${v("dads-focusInner")}`,
+  boxShadow: `0 0 0 2px ${v("brand-focusInner")}`,
 } as const;
 
 /** DADS のテキストスタイル「カテゴリー-サイズ・ウェイト-行間」を MUI の variant に当てる。 */
@@ -85,135 +107,69 @@ const grey = {
   900: dads.gray900,
 };
 
-const lightPalette: PaletteOptions = {
-  primary: {
-    main: dads.key900,
-    dark: dads.key1000,
-    light: dads.key300,
-    contrastText: dads.white,
-  },
-  // 成功・警告は main がテキスト色にも使われるので、白地で 4.5:1 を満たす段階にしている。
-  success: {
-    main: dads.success,
-    dark: dads.successDark,
-    contrastText: dads.white,
-  },
-  error: { main: dads.error, dark: dads.errorDark, contrastText: dads.white },
-  warning: {
-    main: dads.warning,
-    dark: dads.warningDark,
-    contrastText: dads.white,
-  },
-  // DADS の info-1 バナーはキーカラーと同じ blue-900。
-  info: { main: dads.key900, dark: dads.key1000, contrastText: dads.white },
-  grey,
-  text: {
-    primary: dads.gray800,
-    secondary: dads.gray600,
-    disabled: dads.gray420,
-  },
-  divider: dads.gray420,
-  background: { default: dads.white, paper: dads.white },
-  action: {
-    active: dads.gray600,
-    hover: dads.hover,
-    disabled: dads.gray420,
-    disabledBackground: dads.gray300,
-  },
-  dads: {
-    heading: dads.gray900,
-    line: dads.gray600,
-    lineStrong: dads.black,
-    focusOuter: dads.black,
-    focusInner: dads.focusYellow,
-    containedActiveBg: dads.key1200,
-    disabledFill: dads.gray300,
-    onDisabledFill: dads.gray50,
-    disabledLine: dads.gray300,
-    disabledInputBg: dads.gray50,
-    outlinedHoverBg: dads.key200,
-    outlinedActiveBg: dads.key300,
-    textHoverBg: dads.key50,
-    textActiveBg: dads.key100,
-    onTintHover: dads.key1000,
-    onTintActive: dads.key1200,
-    link: dads.key1000,
-    linkHover: dads.key900,
-    linkVisited: dads.linkVisited,
-    linkActive: dads.linkActive,
-    linkOnFocus: dads.key1000,
-  },
-};
-
-// DADS はダークテーマを定義していない。ライトと同じ色相の明るい段階を、
-// 背景 gray-900 に対して文字 4.5:1・境界線 3:1 以上になるよう選んでいる。
-const darkPalette: PaletteOptions = {
-  primary: {
-    main: dads.key300,
-    dark: dads.key200,
-    light: dads.key100,
-    contrastText: dads.gray900,
-  },
-  success: {
-    main: dads.green300,
-    dark: dads.green200,
-    contrastText: dads.gray900,
-  },
-  error: { main: dads.red300, dark: dads.red200, contrastText: dads.gray900 },
-  warning: {
-    main: dads.focusYellow,
-    dark: dads.yellow200,
-    contrastText: dads.gray900,
-  },
-  info: { main: dads.key300, dark: dads.key200, contrastText: dads.gray900 },
-  grey,
-  text: {
-    primary: dads.gray50,
-    secondary: dads.gray300,
-    disabled: dads.gray500,
-  },
-  divider: dads.gray600,
-  background: { default: dads.gray900, paper: dads.gray900 },
-  action: {
-    active: dads.gray300,
-    disabled: dads.gray500,
-    disabledBackground: dads.gray700,
-  },
-  dads: {
-    heading: dads.white,
-    line: dads.gray400,
-    lineStrong: dads.white,
-    focusOuter: dads.white,
-    focusInner: dads.focusYellow,
-    containedActiveBg: dads.key100,
-    disabledFill: dads.gray700,
-    onDisabledFill: dads.gray400,
-    disabledLine: dads.gray600,
-    disabledInputBg: dads.gray800,
-    outlinedHoverBg: dads.key1000,
-    outlinedActiveBg: dads.key900,
-    textHoverBg: dads.key1000,
-    textActiveBg: dads.key900,
-    onTintHover: dads.key200,
-    onTintActive: dads.key100,
-    link: dads.key300,
-    linkHover: dads.key200,
-    linkVisited: dads.magenta300,
-    linkActive: dads.orange300,
-    // 黄色の背景に載るので、ダークでもフォーカス中のリンク文字は暗い色にする。
-    linkOnFocus: dads.black,
-  },
-};
+function paletteFrom(c: BrandScheme): PaletteOptions {
+  return {
+    primary: {
+      main: c.primary,
+      dark: c.primaryDark,
+      light: c.primaryLight,
+      contrastText: c.onPrimary,
+    },
+    success: { main: c.success, dark: c.successDark, contrastText: c.onStatus },
+    error: { main: c.error, dark: c.errorDark, contrastText: c.onStatus },
+    warning: { main: c.warning, dark: c.warningDark, contrastText: c.onStatus },
+    info: { main: c.primary, dark: c.primaryDark, contrastText: c.onPrimary },
+    grey,
+    text: {
+      primary: c.text,
+      secondary: c.textSecondary,
+      disabled: c.textDisabled,
+    },
+    divider: c.divider,
+    background: { default: c.background, paper: c.paper },
+    action: {
+      active: c.actionActive,
+      hover: dads.hover,
+      disabled: c.textDisabled,
+      disabledBackground: c.actionDisabledBg,
+    },
+    brand: {
+      heading: c.heading,
+      line: c.inputLine,
+      lineStrong: c.lineStrong,
+      focusOuter: c.focusOuter,
+      focusInner: c.focusInner,
+      containedActiveBg: c.containedActiveBg,
+      disabledFill: c.disabledFill,
+      onDisabledFill: c.onDisabledFill,
+      disabledLine: c.disabledLine,
+      disabledInputBg: c.disabledInputBg,
+      outlinedHoverBg: c.outlinedHoverBg,
+      outlinedActiveBg: c.outlinedActiveBg,
+      textHoverBg: c.textHoverBg,
+      textActiveBg: c.textActiveBg,
+      onTintHover: c.onTintHover,
+      onTintActive: c.onTintActive,
+      link: c.link,
+      linkHover: c.linkHover,
+      linkVisited: c.linkVisited,
+      linkActive: c.linkActive,
+      linkOnFocus: c.linkOnFocus,
+      tagBg: c.tagBg,
+      tagText: c.tagText,
+    },
+  };
+}
 
 export const theme = createTheme({
   // OS のライト/ダーク設定に追従させる。手動の切り替え UI は作らない。
   colorSchemes: {
-    light: { palette: lightPalette },
-    dark: { palette: darkPalette },
+    light: { palette: paletteFrom(brand.light) },
+    dark: { palette: paletteFrom(brand.dark) },
   },
   cssVariables: { colorSchemeSelector: "media" },
   shape: {
-    borderRadius: 8,
+    borderRadius: 16,
   },
   shadows: [
     ...elevation,
@@ -221,21 +177,21 @@ export const theme = createTheme({
   ] as unknown as ReturnType<typeof createTheme>["shadows"],
   typography: {
     fontFamily:
-      'var(--font-noto-sans-jp), "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif',
-    // DADS のウェイトは 400 と 700 の 2 つだけ。見出しは本文より一段濃い色。
+      'var(--font-zen-maru-gothic), var(--font-noto-sans-jp), "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif',
+    // ウェイトは 400 と 700 の 2 つだけ。見出しは本文より一段濃い色。
     fontWeightLight: 400,
     fontWeightRegular: 400,
     fontWeightMedium: 700,
     fontWeightBold: 700,
-    h1: { ...textStyle(36, 700, 1.4, "0.01em"), color: v("dads-heading") }, // Std-36B-140
-    h2: { ...textStyle(32, 700, 1.5, "0.01em"), color: v("dads-heading") }, // Std-32B-150
-    h3: { ...textStyle(28, 700, 1.5, "0.01em"), color: v("dads-heading") }, // Std-28B-150
-    h4: { ...textStyle(24, 700, 1.5, "0.02em"), color: v("dads-heading") }, // Std-24B-150
-    h5: { ...textStyle(22, 700, 1.5, "0.02em"), color: v("dads-heading") }, // Std-22B-150
-    h6: { ...textStyle(20, 700, 1.5, "0.02em"), color: v("dads-heading") }, // Std-20B-150
+    h1: { ...textStyle(36, 700, 1.4, "0.01em"), color: v("brand-heading") }, // Std-36B-140
+    h2: { ...textStyle(32, 700, 1.5, "0.01em"), color: v("brand-heading") }, // Std-32B-150
+    h3: { ...textStyle(28, 700, 1.5, "0.01em"), color: v("brand-heading") }, // Std-28B-150
+    h4: { ...textStyle(24, 700, 1.5, "0.02em"), color: v("brand-heading") }, // Std-24B-150
+    h5: { ...textStyle(22, 700, 1.5, "0.02em"), color: v("brand-heading") }, // Std-22B-150
+    h6: { ...textStyle(20, 700, 1.5, "0.02em"), color: v("brand-heading") }, // Std-20B-150
     subtitle1: {
       ...textStyle(17, 700, 1.7, "0.02em"),
-      color: v("dads-heading"),
+      color: v("brand-heading"),
     }, // Std-17B-170
     subtitle2: textStyle(14, 700, 1.3), // Dns-14B-130
     body1: textStyle(16, 400, 1.7, "0.02em"), // Std-16N-170
@@ -258,6 +214,22 @@ export const theme = createTheme({
         },
       },
     },
+    // 丸いチェック。未選択は輪、選択済みは主色の塗り。
+    MuiCheckbox: {
+      defaultProps: {
+        icon: createElement(RadioButtonUncheckedIcon),
+        checkedIcon: createElement(CheckCircleIcon),
+      },
+      styleOverrides: {
+        root: { variants: [{ props: { size: "small" }, style: hitArea }] },
+      },
+    },
+    // small は見た目を詰めたまま、当たり判定だけ 44px 角に広げる。
+    MuiIconButton: {
+      styleOverrides: {
+        root: { variants: [{ props: { size: "small" }, style: hitArea }] },
+      },
+    },
     MuiButtonBase: {
       defaultProps: { disableRipple: true },
     },
@@ -274,7 +246,7 @@ export const theme = createTheme({
                 minWidth: 72,
                 minHeight: 28,
                 padding: "2px 8px",
-                borderRadius: 4,
+                borderRadius: 12,
                 fontSize: "0.875rem",
               },
             },
@@ -284,7 +256,7 @@ export const theme = createTheme({
                 minWidth: 80,
                 minHeight: 36,
                 padding: "2px 12px",
-                borderRadius: 6,
+                borderRadius: 16,
               },
             },
             {
@@ -293,7 +265,7 @@ export const theme = createTheme({
                 minWidth: 96,
                 minHeight: 48,
                 padding: "8px 16px",
-                borderRadius: 8,
+                borderRadius: 16,
               },
             },
             {
@@ -304,15 +276,15 @@ export const theme = createTheme({
                   textDecorationThickness: "1px",
                 },
                 "&.Mui-disabled": {
-                  backgroundColor: v("dads-disabledFill"),
-                  color: v("dads-onDisabledFill"),
+                  backgroundColor: v("brand-disabledFill"),
+                  color: v("brand-onDisabledFill"),
                 },
               },
             },
             {
               props: { variant: "contained", color: "primary" },
               style: {
-                "&:active": { backgroundColor: v("dads-containedActiveBg") },
+                "&:active": { backgroundColor: v("brand-containedActiveBg") },
               },
             },
             {
@@ -326,8 +298,8 @@ export const theme = createTheme({
                   textDecorationThickness: "1px",
                 },
                 "&.Mui-disabled": {
-                  borderColor: v("dads-disabledLine"),
-                  color: v("dads-disabledLine"),
+                  borderColor: v("brand-disabledLine"),
+                  color: v("brand-disabledLine"),
                 },
               },
             },
@@ -335,12 +307,12 @@ export const theme = createTheme({
               props: { variant: "outlined", color: "primary" },
               style: {
                 "&:hover": {
-                  backgroundColor: v("dads-outlinedHoverBg"),
-                  color: v("dads-onTintHover"),
+                  backgroundColor: v("brand-outlinedHoverBg"),
+                  color: v("brand-onTintHover"),
                 },
                 "&:active": {
-                  backgroundColor: v("dads-outlinedActiveBg"),
-                  color: v("dads-onTintActive"),
+                  backgroundColor: v("brand-outlinedActiveBg"),
+                  color: v("brand-onTintActive"),
                 },
               },
             },
@@ -361,12 +333,12 @@ export const theme = createTheme({
               props: { variant: "text", color: "primary" },
               style: {
                 "&:hover": {
-                  backgroundColor: v("dads-textHoverBg"),
-                  color: v("dads-onTintHover"),
+                  backgroundColor: v("brand-textHoverBg"),
+                  color: v("brand-onTintHover"),
                 },
                 "&:active": {
-                  backgroundColor: v("dads-textActiveBg"),
-                  color: v("dads-onTintActive"),
+                  backgroundColor: v("brand-textActiveBg"),
+                  color: v("brand-onTintActive"),
                 },
               },
             },
@@ -378,32 +350,37 @@ export const theme = createTheme({
       defaultProps: { underline: "always" },
       styleOverrides: {
         root: {
-          color: v("dads-link"),
+          color: v("brand-link"),
           textDecorationColor: "currentColor",
           textDecorationThickness: "1px",
           textUnderlineOffset: "3px",
-          "&:visited": { color: v("dads-linkVisited") },
+          "&:visited": { color: v("brand-linkVisited") },
           "&:hover": {
-            color: v("dads-linkHover"),
+            color: v("brand-linkHover"),
             textDecorationThickness: "3px",
           },
           "&:active": {
-            color: v("dads-linkActive"),
+            color: v("brand-linkActive"),
             textDecorationThickness: "1px",
           },
           "&:focus-visible": {
             borderRadius: 4,
-            backgroundColor: v("dads-focusInner"),
-            color: v("dads-linkOnFocus"),
+            backgroundColor: v("brand-focusInner"),
+            color: v("brand-linkOnFocus"),
           },
         },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        outlined: { borderColor: v("divider"), boxShadow: line },
       },
     },
     MuiAppBar: {
       styleOverrides: {
         colorDefault: {
           backgroundColor: v("background-default"),
-          color: v("dads-heading"),
+          color: v("brand-heading"),
           borderBottom: `1px solid ${v("divider")}`,
         },
       },
@@ -414,7 +391,7 @@ export const theme = createTheme({
       },
       styleOverrides: {
         root: {
-          borderRadius: 8,
+          borderRadius: 999,
           letterSpacing: "0.02em",
           variants: [
             { props: { size: "small" }, style: { fontSize: "0.875rem" } },
@@ -422,7 +399,14 @@ export const theme = createTheme({
             // 既定の枠（grey[400]）は白地で 3:1 に届かないので、DADS のコンポーネント境界線の色に。
             {
               props: { variant: "outlined", color: "default" },
-              style: { borderColor: v("dads-line") },
+              style: { borderColor: v("brand-line") },
+            },
+            {
+              props: { variant: "filled", color: "default" },
+              style: {
+                backgroundColor: v("brand-tagBg"),
+                color: v("brand-tagText"),
+              },
             },
           ],
         },
@@ -436,7 +420,7 @@ export const theme = createTheme({
           if (ownerState.variant !== "standard") return {};
           const color = ownerState.color ?? ownerState.severity ?? "success";
           return {
-            borderRadius: 12,
+            borderRadius: 16,
             border: `3px solid ${theme.vars?.palette[color].main}`,
             backgroundColor: v("background-paper"),
             color: v("text-primary"),
@@ -453,10 +437,7 @@ export const theme = createTheme({
     },
     MuiDialog: {
       styleOverrides: {
-        paper: {
-          border: `1px solid ${v("dads-lineStrong")}`,
-          boxShadow: elevation[3],
-        },
+        paper: { borderRadius: 16, boxShadow: elevation[3] },
       },
     },
     MuiDialogTitle: {
@@ -476,29 +457,30 @@ export const theme = createTheme({
         },
       },
     },
-    // ポップアップ類は DADS の割り当てどおりエレベーション 1。
+    // ポップアップ類は背景から浮かせるため、柔らかい影を含む段階にする。
     MuiPopover: {
-      styleOverrides: { paper: { boxShadow: elevation[1] } },
+      styleOverrides: { paper: { boxShadow: elevation[3] } },
     },
     MuiAutocomplete: {
-      styleOverrides: { paper: { boxShadow: elevation[1] } },
+      styleOverrides: { paper: { boxShadow: elevation[3] } },
     },
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
+          borderRadius: 12,
           "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: v("dads-line"),
+            borderColor: v("brand-line"),
           },
           "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: v("dads-lineStrong"),
+            borderColor: v("brand-lineStrong"),
           },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
             borderColor: v("primary-main"),
             borderWidth: 2,
           },
-          "&.Mui-disabled": { backgroundColor: v("dads-disabledInputBg") },
+          "&.Mui-disabled": { backgroundColor: v("brand-disabledInputBg") },
           "&.Mui-disabled .MuiOutlinedInput-notchedOutline": {
-            borderColor: v("dads-disabledLine"),
+            borderColor: v("brand-disabledLine"),
           },
         },
       },
@@ -510,7 +492,7 @@ export const theme = createTheme({
       styleOverrides: {
         input: {
           fontSize: "1rem",
-          color: v("dads-heading"),
+          color: v("text-primary"),
         },
       },
     },
@@ -519,7 +501,7 @@ export const theme = createTheme({
         root: {
           ...textStyle(16, 400, 1.2),
           color: v("text-primary"),
-          "&.Mui-selected": { color: v("dads-heading"), fontWeight: 700 },
+          "&.Mui-selected": { color: v("brand-heading"), fontWeight: 700 },
         },
       },
     },

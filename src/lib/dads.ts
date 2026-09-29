@@ -1,8 +1,9 @@
 /**
- * デジタル庁デザインシステム（DADS）のトークンのうち、このアプリで使う値。
+ * デジタル庁デザインシステム（DADS）のトークンのうち、このアプリで引き続き使う値
+ * （グレー、状態色、フォーカス黄、リンク色の素、オーバーレイ）。
  * 名前は DADS のトークン名を縮めたもの（color-neutral-solid-gray-50 → gray50）。
  * 用途で名付けたものは元のトークンを右に書いている。
- * DADS はダークテーマを定義していないので、ダーク用の値もここのプリミティブから選ぶ。
+ * 見た目の色は brand.ts が持つ。
  *
  * 値は @digital-go-jp/design-tokens と一致することを tests/unit/dads-tokens.test.ts で確かめている。
  * パッケージを直接 import しないのは、tree-shake できない 135KB の CommonJS がクライアントに載るため。
@@ -21,13 +22,6 @@ export const dads = {
   gray700: "#4d4d4d",
   gray800: "#333333",
   gray900: "#1a1a1a",
-  key50: "#e8f1fe",
-  key100: "#d9e6ff",
-  key200: "#c5d7fb",
-  key300: "#9db7f9",
-  key900: "#0017c1",
-  key1000: "#00118f",
-  key1200: "#000060",
   green200: "#9bd4b5",
   green300: "#71c598",
   red200: "#ffbbbb",
@@ -40,9 +34,7 @@ export const dads = {
   focusYellow: "#ffd43d", // primitive-yellow-300
   success: "#197a4b", // semantic-success-2
   successDark: "#0c472a", // primitive-green-1000
-  error: "#ec0000", // semantic-error-1
   errorDark: "#ce0000", // semantic-error-2
-  warning: "#927200", // semantic-warning-yellow-2
   warningDark: "#806300", // primitive-yellow-1000
   overlay: "rgba(0, 0, 0, 0.6)", // neutral-opacity-gray-600
   hover: "rgba(0, 0, 0, 0.05)", // neutral-opacity-gray-50
