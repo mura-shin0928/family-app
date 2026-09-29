@@ -1,5 +1,6 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
+import { AppMark } from "@/components/AppMark";
 import { AcceptInvitationScreen } from "@/features/invitations/components/AcceptInvitationScreen";
 import { InviteEmailForm } from "@/features/invitations/components/InviteEmailForm";
 import { previewInvitation } from "@/features/invitations/queries";
@@ -30,6 +31,7 @@ export default async function InvitePage({
           textAlign: "center",
         }}
       >
+        <AppMark />
         <Typography variant="h6" component="h1">
           Family App
         </Typography>

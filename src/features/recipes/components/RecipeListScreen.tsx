@@ -28,14 +28,34 @@ export function RecipeListScreen({
     <Box sx={{ flex: 1, display: "flex", flexDirection: "column", pb: 12 }}>
       <Stack spacing={1} sx={{ flex: 1, px: 2, py: 2 }}>
         {recipes.length === 0 ? (
-          <Typography
-            variant="body1"
-            color="text.secondary"
-            align="center"
-            sx={{ py: 8 }}
+          <Stack
+            spacing={2}
+            sx={{ alignItems: "center", py: 8, color: "text.secondary" }}
           >
-            レシピはまだありません
-          </Typography>
+            <svg
+              width="72"
+              height="72"
+              viewBox="0 0 72 72"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M14 30h44v10a16 16 0 0 1-16 16H30a16 16 0 0 1-16-16V30Z"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M10 30h52M22 20c0-4 4-4 4-8M36 20c0-4 4-4 4-8M50 20c0-4 4-4 4-8"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+            </svg>
+            <Typography variant="body1" align="center">
+              レシピはまだありません
+            </Typography>
+          </Stack>
         ) : (
           recipes.map((recipe) => (
             <Paper

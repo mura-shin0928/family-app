@@ -6,6 +6,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { type FormEvent, useState } from "react";
+import { AppMark } from "@/components/AppMark";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -54,8 +55,12 @@ export default function LoginPage() {
         p: 4,
       }}
     >
+      <AppMark />
       <Typography variant="h5" component="h1">
         Family App
+      </Typography>
+      <Typography variant="body1" color="text.secondary">
+        家族のやることを、みんなで。
       </Typography>
 
       <Button

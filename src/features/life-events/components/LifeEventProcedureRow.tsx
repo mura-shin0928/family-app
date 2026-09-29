@@ -218,14 +218,7 @@ export function LifeEventProcedureRow({
           }}
           onClick={() => setDetailsOpen((current) => !current)}
         >
-          {procedure.isGovernment && (
-            <Chip
-              label="行政手続き"
-              size="small"
-              variant="outlined"
-              color="primary"
-            />
-          )}
+          {procedure.isGovernment && <Chip label="行政手続き" size="small" />}
           {timingLabel && (
             <Typography variant="caption" color="text.secondary">
               {timingLabel}

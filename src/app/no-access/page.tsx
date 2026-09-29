@@ -2,6 +2,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import { redirect } from "next/navigation";
+import { AppMark } from "@/components/AppMark";
 import { createClient } from "@/lib/supabase/server";
 
 export default function NoAccessPage() {
@@ -26,6 +27,7 @@ export default function NoAccessPage() {
         textAlign: "center",
       }}
     >
+      <AppMark />
       <Typography variant="h6" component="h1">
         アクセスできません
       </Typography>

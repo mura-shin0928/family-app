@@ -40,6 +40,15 @@ export function BottomNav() {
       <BottomNavigation
         value={value}
         sx={{
+          "& .MuiSvgIcon-root": {
+            boxSizing: "content-box",
+            px: "14px",
+            py: "4px",
+            borderRadius: 999,
+          },
+          "& .Mui-selected .MuiSvgIcon-root": {
+            bgcolor: "var(--mui-palette-brand-tagBg)",
+          },
           // アイコンだけのナビなので、選択中は色に加えて上端のバーでも示す。
           "& .Mui-selected::before": {
             content: '""',
