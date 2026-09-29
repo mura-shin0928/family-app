@@ -2,6 +2,7 @@
 
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import EditCalendarIcon from "@mui/icons-material/EditCalendar";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import NotesIcon from "@mui/icons-material/Notes";
 import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
 import UndoIcon from "@mui/icons-material/Undo";
@@ -9,6 +10,9 @@ import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -72,6 +76,7 @@ function DoneRow({
   onDelete: (procedure: LifeEventProcedure) => void;
 }) {
   const [noteOpen, setNoteOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const hasNote = !!procedure.note;
 
   return (
@@ -107,28 +112,53 @@ function DoneRow({
           )}
         </IconButton>
         <IconButton
-          onClick={() => onEditDate(procedure)}
-          disabled={busy}
-          aria-label="やった日を直す"
+          onClick={(event) => setMenuAnchor(event.currentTarget)}
+          aria-label="その他の操作"
           size="small"
         >
-          <EditCalendarIcon fontSize="small" />
+          <MoreVertIcon fontSize="small" />
         </IconButton>
-        <IconButton
-          onClick={() => onReopen(procedure)}
-          disabled={busy}
-          aria-label="これからに戻す"
-          size="small"
+        <Menu
+          anchorEl={menuAnchor}
+          open={menuAnchor !== null}
+          onClose={() => setMenuAnchor(null)}
         >
-          <UndoIcon fontSize="small" />
-        </IconButton>
-        <IconButton
-          onClick={() => onDelete(procedure)}
-          aria-label="削除"
-          size="small"
-        >
-          <DeleteOutlineIcon fontSize="small" />
-        </IconButton>
+          <MenuItem
+            disabled={busy}
+            onClick={() => {
+              setMenuAnchor(null);
+              onEditDate(procedure);
+            }}
+          >
+            <ListItemIcon>
+              <EditCalendarIcon fontSize="small" />
+            </ListItemIcon>
+            やった日を直す
+          </MenuItem>
+          <MenuItem
+            disabled={busy}
+            onClick={() => {
+              setMenuAnchor(null);
+              onReopen(procedure);
+            }}
+          >
+            <ListItemIcon>
+              <UndoIcon fontSize="small" />
+            </ListItemIcon>
+            これからに戻す
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setMenuAnchor(null);
+              onDelete(procedure);
+            }}
+          >
+            <ListItemIcon>
+              <DeleteOutlineIcon fontSize="small" />
+            </ListItemIcon>
+            削除
+          </MenuItem>
+        </Menu>
       </Box>
 
       {hasNote && !noteOpen && (

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { LifeEventTemplate } from "@/features/life-events/default-templates";
 import {
+  existingTemplateKeys,
   templateItemsToCopy,
   templateKeyFor,
   transitionFor,
@@ -46,6 +47,31 @@ describe("transitionFor", () => {
 describe("templateKeyFor", () => {
   it("combines kind and title", () => {
     expect(templateKeyFor("birth", "出生届を出す")).toBe("birth:出生届を出す");
+  });
+});
+
+describe("existingTemplateKeys", () => {
+  it("keeps real template keys", () => {
+    const keys = existingTemplateKeys("birth", [
+      { title: "編集した名前", templateKey: "birth:出生届を出す" },
+    ]);
+    expect(keys.has("birth:出生届を出す")).toBe(true);
+  });
+
+  it("counts legacy rows by their title so re-adding does not duplicate them", () => {
+    const keys = existingTemplateKeys("birth", [
+      { title: "出生届を出す", templateKey: "legacy" },
+    ]);
+    expect(templateItemsToCopy(template, keys).map((i) => i.title)).toEqual([
+      "お宮参りに行く",
+    ]);
+  });
+
+  it("ignores rows without a template key", () => {
+    const keys = existingTemplateKeys("birth", [
+      { title: "自分たちの項目", templateKey: null },
+    ]);
+    expect(keys.size).toBe(0);
   });
 });
 

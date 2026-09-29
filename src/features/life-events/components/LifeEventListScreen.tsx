@@ -326,7 +326,11 @@ export function LifeEventListScreen({
           key={activeChild.id}
           childId={activeChild.id}
           procedures={grouped.active}
-          lifeEvents={childLifeEvents}
+          lifeEvents={childLifeEvents.filter((event) =>
+            grouped.active.some(
+              (procedure) => procedure.lifeEventId === event.id,
+            ),
+          )}
           anchorByLifeEventId={anchorByLifeEventId}
           busy={isPending}
           onTitleChange={(id, title) =>

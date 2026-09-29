@@ -28,6 +28,25 @@ export function templateKeyFor(kind: LifeEventKind, title: string): string {
   return `${kind}:${title}`;
 }
 
+/**
+ * その種別のイベントに入っている項目から、コピー済みのテンプレ項目の key を集める。
+ * 状態列を足す前からある項目（'legacy'）は key を持たないので、項目名で数える。
+ */
+export function existingTemplateKeys(
+  kind: LifeEventKind,
+  rows: { title: string; templateKey: string | null }[],
+): Set<string> {
+  const keys = new Set<string>();
+  for (const row of rows) {
+    if (row.templateKey === LEGACY_TEMPLATE_KEY) {
+      keys.add(templateKeyFor(kind, row.title));
+    } else if (row.templateKey) {
+      keys.add(row.templateKey);
+    }
+  }
+  return keys;
+}
+
 export function templateItemsToCopy(
   template: LifeEventTemplate,
   existingKeys: ReadonlySet<string>,

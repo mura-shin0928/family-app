@@ -16,6 +16,7 @@ import {
   updateLifeEventProcedureTitleSchema,
 } from "./schema";
 import {
+  existingTemplateKeys,
   type StatusAction,
   templateItemsToCopy,
   templateKeyFor,
@@ -267,13 +268,15 @@ export async function addLifeEvent(input: {
 
   const { data: existingItems } = await supabase
     .from("life_event_procedures")
-    .select("template_key")
+    .select("title, template_key")
     .eq("life_event_id", event.id)
     .is("deleted_at", null);
-  const existingKeys = new Set(
-    (existingItems ?? []).flatMap((row) =>
-      row.template_key ? [row.template_key] : [],
-    ),
+  const existingKeys = existingTemplateKeys(
+    template.kind,
+    (existingItems ?? []).map((row) => ({
+      title: row.title,
+      templateKey: row.template_key,
+    })),
   );
   const itemsToCopy = templateItemsToCopy(template, existingKeys);
   if (itemsToCopy.length === 0) {
