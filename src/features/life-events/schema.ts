@@ -108,3 +108,13 @@ export const reorderLifeEventProceduresSchema = z.object({
   childId: z.string().uuid(),
   orderedIds: z.array(z.string().uuid()).min(1),
 });
+
+// 記録日は必須（「やった日」を入れて初めて記録になる）。空文字は不可。
+const doneOnSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "日付を入力してください");
+
+export const recordLifeEventProcedureDoneSchema = z.object({
+  id: z.string().uuid(),
+  doneOn: doneOnSchema,
+});
