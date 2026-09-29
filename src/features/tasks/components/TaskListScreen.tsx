@@ -21,6 +21,7 @@ import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { type ReactNode, useRef, useState } from "react";
+import { CupIllustration, EmptyState } from "@/components/EmptyState";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { SOON_DAYS } from "@/lib/constants";
 import { todayInJst } from "@/lib/date";
@@ -695,7 +696,7 @@ export function TaskListScreen({
               filteredPurchaseCompletedToday.length === 0 && (
                 <Typography
                   variant="body1"
-                  color="text.secondary"
+                  color="textSecondary"
                   align="center"
                   sx={{ py: 8 }}
                 >
@@ -760,14 +761,9 @@ export function TaskListScreen({
             )}
 
             {isEmpty && (
-              <Typography
-                variant="body1"
-                color="text.secondary"
-                align="center"
-                sx={{ py: 8 }}
-              >
+              <EmptyState illustration={<CupIllustration />}>
                 今やることはありません。ゆっくりどうぞ。
-              </Typography>
+              </EmptyState>
             )}
           </>
         )}

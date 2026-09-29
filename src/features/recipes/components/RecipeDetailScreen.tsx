@@ -185,7 +185,7 @@ export function RecipeDetailScreen({
         <Box component="section">
           <Typography
             variant="subtitle2"
-            color="text.secondary"
+            color="textSecondary"
             sx={{ mb: 0.5 }}
           >
             メモ
@@ -242,7 +242,7 @@ export function RecipeDetailScreen({
                     {ingredient.name}
                   </Typography>
                   {ingredient.quantity && (
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="textSecondary">
                       {ingredient.quantity}
                     </Typography>
                   )}
@@ -251,7 +251,7 @@ export function RecipeDetailScreen({
             })}
           </Stack>
         ) : (
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body1" color="textSecondary">
             材料は登録されていません
           </Typography>
         )}

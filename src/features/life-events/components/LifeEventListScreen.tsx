@@ -47,6 +47,7 @@ import {
   useState,
   useTransition,
 } from "react";
+import { EmptyState, PaperIllustration } from "@/components/EmptyState";
 import type { Child } from "@/features/children/types";
 import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
 import {
@@ -567,7 +568,7 @@ function ChildLifeEventList({
             ))}
           </Stack>
           {filtering && (
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="textSecondary">
               絞り込み中は並べ替えできません
             </Typography>
           )}
@@ -642,9 +643,9 @@ function ChildLifeEventList({
 /** 項目が無いときに枠の中へ出す案内（枠の最後の要素なので区切り線は付けない）。 */
 function EmptyListNote({ children }: { children: ReactNode }) {
   return (
-    <Typography variant="body1" color="text.secondary" sx={{ p: 2 }}>
+    <EmptyState illustration={<PaperIllustration size={56} />} py={3}>
       {children}
-    </Typography>
+    </EmptyState>
   );
 }
 
@@ -866,7 +867,7 @@ function AddLifeEventDialog({
             />
           )}
           {error && <Alert severity="error">{error}</Alert>}
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="textSecondary">
             追加すると{template.items.length}
             件の項目がこの子のリストの末尾に入ります。中身はあとから自由に書き換えられます。
           </Typography>
