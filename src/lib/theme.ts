@@ -47,6 +47,19 @@ const v = (path: string) => `var(--mui-palette-${path})`;
 // 下線状の影。ポップアップ類だけ、背景から浮かせるための柔らかい影を1つ足す。
 const line = "0 2px 0 rgba(43,41,38,0.14)";
 const popup = `${line}, 0 8px 24px rgba(0,0,0,0.18)`;
+const hitArea = {
+  position: "relative",
+  "&::after": {
+    content: '""',
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    width: 44,
+    height: 44,
+    transform: "translate(-50%, -50%)",
+  },
+} as const;
+
 const elevation = [
   "none",
   line,
@@ -206,6 +219,15 @@ export const theme = createTheme({
       defaultProps: {
         icon: createElement(RadioButtonUncheckedIcon),
         checkedIcon: createElement(CheckCircleIcon),
+      },
+      styleOverrides: {
+        root: { variants: [{ props: { size: "small" }, style: hitArea }] },
+      },
+    },
+    // small は見た目を詰めたまま、当たり判定だけ 44px 角に広げる。
+    MuiIconButton: {
+      styleOverrides: {
+        root: { variants: [{ props: { size: "small" }, style: hitArea }] },
       },
     },
     MuiButtonBase: {
