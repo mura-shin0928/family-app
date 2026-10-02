@@ -49,6 +49,7 @@ export async function createTask(input: {
   dueOn: string;
   isPurchase: boolean;
   purchaseLocationId: string;
+  recordChildId: string;
 }): Promise<ActionResult> {
   const parsed = createTaskSchema.safeParse(input);
   if (!parsed.success) {
@@ -69,6 +70,20 @@ export async function createTask(input: {
     return location;
   }
 
+  const recordChildId = parsed.data.recordChildId;
+  if (recordChildId !== "") {
+    const { data: child } = await supabase
+      .from("children")
+      .select("id")
+      .eq("id", recordChildId)
+      .eq("family_id", member.familyId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (!child) {
+      return { ok: false, error: "子供が見つかりません" };
+    }
+  }
+
   const dueOn = parsed.data.dueOn === "" ? null : parsed.data.dueOn;
 
   const { data: lastTask } = await supabase
@@ -82,6 +97,26 @@ export async function createTask(input: {
 
   const nextSortOrder = (lastTask?.sort_order ?? 0) + 1;
 
+  let lifeEventItemId: string | null = null;
+  if (recordChildId !== "") {
+    const { data: item, error: itemError } = await supabase
+      .from("life_event_items")
+      .insert({
+        family_id: member.familyId,
+        child_id: recordChildId,
+        catalog_key: null,
+        title: parsed.data.title.slice(0, 100),
+        status: "in_task",
+        created_by: member.id,
+      })
+      .select("id")
+      .single();
+    if (itemError || !item) {
+      return { ok: false, error: "登録に失敗しました" };
+    }
+    lifeEventItemId = item.id;
+  }
+
   const { error } = await supabase.from("tasks").insert({
     id: parsed.data.id,
     family_id: member.familyId,
@@ -91,9 +126,16 @@ export async function createTask(input: {
     purchase_location_id: location.value,
     sort_order: nextSortOrder,
     created_by: member.id,
+    life_event_item_id: lifeEventItemId,
   });
 
   if (error) {
+    if (lifeEventItemId) {
+      await supabase
+        .from("life_event_items")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", lifeEventItemId);
+    }
     return { ok: false, error: "登録に失敗しました" };
   }
 

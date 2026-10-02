@@ -3,6 +3,13 @@ import { startOfTodayJstUtc } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
 import type { TaskDTO } from "./types";
 
+/** 埋め込みは単一オブジェクトか null（型が配列になる場合も考慮する）。 */
+function recordChildIdOf(embedded: unknown): string | null {
+  const item = Array.isArray(embedded) ? embedded[0] : embedded;
+  const childId = (item as { child_id?: string } | null | undefined)?.child_id;
+  return childId ?? null;
+}
+
 /**
  * familyの未完了タスク全件 + 「今日JSTで完了した」done タスクのみ（前日以前の完了は除外）を
  * 1クエリで取得する。期限による絞り込みは行わない — 「今日画面」に限らず、この家族が
@@ -16,7 +23,7 @@ export async function getTasks(familyId: string): Promise<TaskDTO[]> {
   const { data, error } = await supabase
     .from("tasks")
     .select(
-      "id, title, due_on, is_purchase, status, completed_at, sort_order, url, note, purchase_location_id",
+      "id, title, due_on, is_purchase, status, completed_at, sort_order, url, note, purchase_location_id, life_event_items(child_id)",
     )
     .eq("family_id", familyId)
     .is("deleted_at", null)
@@ -40,6 +47,7 @@ export async function getTasks(familyId: string): Promise<TaskDTO[]> {
       url: row.url,
       note: row.note,
       purchaseLocationId: row.purchase_location_id,
+      recordChildId: recordChildIdOf(row.life_event_items),
     }),
   );
 }
