@@ -104,7 +104,7 @@ export function SearchTab({
       <TextField
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="手続きや制度を探す"
+        placeholder="例: 出生届、児童手当"
         size="small"
         fullWidth
         slotProps={{
@@ -138,8 +138,15 @@ export function SearchTab({
       </Box>
 
       <Box>
+        <SectionHeading>一般的な手続き・行事</SectionHeading>
         {!searching && chip === "current" && stage && (
-          <SectionHeading>いまの時期 ─ {stage}</SectionHeading>
+          <Typography
+            variant="caption"
+            component="p"
+            sx={{ color: "text.secondary", mt: 0.5 }}
+          >
+            いまの時期 ─ {stage}
+          </Typography>
         )}
         {catalogList.map(renderRow)}
         {catalogList.length === 0 && !programsPending && (
@@ -253,6 +260,21 @@ function ProgramSection({
   return (
     <Box>
       <SectionHeading>{data.municipalityName}の制度</SectionHeading>
+      <Typography
+        variant="caption"
+        component="p"
+        sx={{ color: "text.secondary", mt: 0.5 }}
+      >
+        出典: {attribution.source}（
+        <MuiLink
+          href={attribution.licenseUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {attribution.license}
+        </MuiLink>
+        ）。{attribution.notice}
+      </Typography>
       {(collapsed && !expanded
         ? list.slice(0, COLLAPSED_PROGRAM_COUNT)
         : list
@@ -267,21 +289,6 @@ function ProgramSection({
           該当する制度はありません
         </Typography>
       )}
-      <Typography
-        variant="caption"
-        component="p"
-        sx={{ color: "text.secondary", mt: 1 }}
-      >
-        出典: {attribution.source}（
-        <MuiLink
-          href={attribution.licenseUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {attribution.license}
-        </MuiLink>
-        ）。{attribution.notice}
-      </Typography>
     </Box>
   );
 }
