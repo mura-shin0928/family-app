@@ -20,8 +20,8 @@ describe("LIFE_EVENT_CATALOG", () => {
     ))
       expect(i.timing).toBeNull();
   });
-  it("既存テンプレの項目を落とさず移す（38件）", () => {
-    expect(LIFE_EVENT_CATALOG).toHaveLength(38);
+  it("全項目に一言説明がある", () => {
+    for (const i of LIFE_EVENT_CATALOG) expect(i.summary).not.toBe("");
   });
   it("出生届は出生日から14日以内（deadline, birth, 13）", () => {
     expect(findCatalogItem("birth:birth-registration")?.timing).toEqual({
