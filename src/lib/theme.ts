@@ -493,6 +493,19 @@ export const theme = createTheme({
         input: {
           fontSize: "1rem",
           color: v("text-primary"),
+          // iOS Safari は日付を中央に寄せるので、他の入力欄と同じ左寄せにする。
+          "&[type='date']": { textAlign: "left" },
+          "&[type='date']::-webkit-date-and-time-value": { textAlign: "left" },
+          // PC のネイティブのアイコンは隠し、欄全体をピッカーを開く面にする
+          // （右端のアイコンは DateField が出す）。
+          "&[type='date']::-webkit-calendar-picker-indicator": {
+            position: "absolute",
+            inset: 0,
+            width: "auto",
+            height: "auto",
+            opacity: 0,
+            cursor: "pointer",
+          },
         },
       },
     },

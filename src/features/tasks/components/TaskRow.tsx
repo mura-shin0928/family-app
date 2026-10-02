@@ -22,6 +22,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
+import { DateField } from "@/components/DateField";
 import { PurchaseLocationOptions } from "@/features/purchase-locations/components/PurchaseLocationOptions";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { formatRelativeDue } from "@/lib/date";
@@ -226,8 +227,7 @@ export function TaskRow({
                   見えてしまっていた。値はdraftDueに留め、下のボタンでの明示的な
                   確定操作でのみonDueDateChangeを呼ぶ。
                 */}
-                <TextField
-                  type="date"
+                <DateField
                   size="small"
                   variant="standard"
                   value={draftDue}

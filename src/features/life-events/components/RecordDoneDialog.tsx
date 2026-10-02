@@ -7,9 +7,9 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
+import { DateField } from "@/components/DateField";
 
 /**
  * やった日を入れて記録する。記録のときも日付の直しのときも同じ形で、初期値と見出しだけ
@@ -40,9 +40,8 @@ export function RecordDoneDialog({
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           <Typography variant="body2">{target?.title}</Typography>
-          <TextField
+          <DateField
             label="やった日"
-            type="date"
             value={doneOn}
             onChange={(event) => setDoneOn(event.target.value)}
             size="small"
