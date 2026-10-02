@@ -1,5 +1,7 @@
 "use client";
 
+import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
+import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -138,7 +140,9 @@ export function SearchTab({
       </Box>
 
       <Box>
-        <SectionHeading>一般的な手続き・行事</SectionHeading>
+        <SectionHeading icon={<MenuBookOutlinedIcon fontSize="small" />}>
+          一般的な手続き・行事
+        </SectionHeading>
         {!searching && chip === "current" && stage && (
           <Typography
             variant="caption"
@@ -191,18 +195,28 @@ export function SearchTab({
 }
 
 /** 一覧の区分の見出し。テンプレ側と制度側で同じ強さにする。 */
-function SectionHeading({ children }: { children: React.ReactNode }) {
+function SectionHeading({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <Typography
       variant="subtitle1"
       component="h2"
       sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 0.75,
         fontWeight: 700,
         pb: 0.5,
         borderBottom: 2,
         borderColor: "divider",
       }}
     >
+      {icon}
       {children}
     </Typography>
   );
@@ -259,7 +273,9 @@ function ProgramSection({
   const { attribution } = data;
   return (
     <Box>
-      <SectionHeading>{data.municipalityName}の制度</SectionHeading>
+      <SectionHeading icon={<AccountBalanceOutlinedIcon fontSize="small" />}>
+        {data.municipalityName}の制度
+      </SectionHeading>
       <Typography
         variant="caption"
         component="p"

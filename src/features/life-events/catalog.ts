@@ -8,8 +8,8 @@ export const LIFE_EVENT_KINDS: readonly {
   { kind: "preconception", label: "妊活" },
   { kind: "pregnancy", label: "妊娠" },
   { kind: "birth", label: "出産" },
-  { kind: "nursery", label: "保育園入園" },
-  { kind: "school", label: "小学校入学" },
+  { kind: "nursery", label: "保育園" },
+  { kind: "school", label: "小学校" },
 ];
 
 // key は項目の意味を表す不変の識別子。title を直しても key は変えない。

@@ -18,7 +18,7 @@
 
 - ページタイトル：`/tasks`＝「タスク」、`/recipes`＝「レシピ」、`/life-events`＝「ライフイベント」。BottomNav の `aria-label` も同じにする。
 - `/procedures` は削除する。リダイレクトは置かない。
-- 画面の文言は日本語。探すタブの絞り込みチップは「いまの時期 / 妊活 / 妊娠 / 出産 / 保育園入園 / 小学校入学」。
+- 画面の文言は日本語。探すタブの絞り込みチップは「いまの時期 / 妊活 / 妊娠 / 出産 / 保育園 / 小学校」。
 - いまの時期＝目安日が「今日(JST)の30日前〜90日後」（両端を含む）。目安日の昇順で並べる。
 - `life_event_items.status` は `in_task` / `done` の2値。`(status = 'done') = (done_on is not null)`。
 - 行政／慣習の区別（`isGovernment`）、見送り（`skipped`）、`event_start` 基準は持たない。
