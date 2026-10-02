@@ -125,16 +125,20 @@ export function QuickCaptureBar({
   function toggleRecord() {
     setDueOpen(false);
     setLocationOpen(false);
+    // オンのときに押したら外す。オフのときは子が1人ならその子、複数なら選ばせる。
+    if (recordChildId !== null) {
+      setRecordChildId(null);
+      setRecordOpen(false);
+      return;
+    }
     if (familyChildren.length === 1) {
-      setRecordChildId((current) =>
-        current ? null : (familyChildren[0]?.id ?? null),
-      );
+      setRecordChildId(familyChildren[0]?.id ?? null);
       return;
     }
     setRecordOpen((current) => !current);
   }
 
-  function selectRecordChild(value: string | null) {
+  function selectRecordChild(value: string) {
     setRecordChildId(value);
     setRecordOpen(false);
   }
@@ -396,12 +400,6 @@ export function QuickCaptureBar({
                       {child.displayName}
                     </MenuItem>
                   ))}
-                  <MenuItem
-                    onMouseDown={preventBlur}
-                    onClick={() => selectRecordChild(null)}
-                  >
-                    記録しない
-                  </MenuItem>
                 </MenuList>
               </Paper>
             )}
