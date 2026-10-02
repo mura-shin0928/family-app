@@ -50,3 +50,22 @@ export type LifeEventProcedure = {
   /** テンプレ由来の印。null は自分たちで足した項目。 */
   templateKey: string | null;
 };
+
+/** カタログ項目の目安時期。基準日は子の出生日か出産予定日。 */
+export type CatalogTiming = {
+  kind: TimingKind;
+  anchor: "birth" | "expected_birth";
+  offsetDays: number;
+};
+
+/** 全家族共通のカタログの1項目。key は `${kind}:<slug>` で、変更しない。 */
+export type CatalogItem = {
+  key: string;
+  kind: LifeEventKind;
+  title: string;
+  summary: string;
+  note: string | null;
+  aliases: string[];
+  timing: CatalogTiming | null;
+  url: string | null;
+};
