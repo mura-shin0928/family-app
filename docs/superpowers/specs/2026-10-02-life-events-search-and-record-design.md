@@ -122,7 +122,7 @@ uuid null、`life_event_items(id)` への FK。
 | `/recipes` | レシピ | レシピ（変更なし） |
 | `/procedures` → `/life-events` | 手続き | ライフイベント |
 
-- `/procedures` は `/life-events` へリダイレクトする。
+- `/procedures` は削除する（使うのは家族だけなので、リダイレクトは置かない）。
 - 下のナビの `aria-label` も同じ名前に揃える。
 
 ### ライフイベント画面
