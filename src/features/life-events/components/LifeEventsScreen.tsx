@@ -194,7 +194,7 @@ export function LifeEventsScreen({
       </Stack>
 
       <AddToTaskDialog
-        key={taskDialog?.item.key ?? "none"}
+        key={`task:${taskDialog?.item.key ?? "none"}`}
         target={
           taskDialog
             ? {
@@ -210,7 +210,7 @@ export function LifeEventsScreen({
       />
 
       <RecordDoneDialog
-        key={doneDialog?.key ?? "none"}
+        key={`done:${doneDialog?.key ?? "none"}`}
         target={
           doneDialog
             ? {
