@@ -120,6 +120,7 @@ export function LifeEventsScreen({
         catalogKey: item.key,
         title: item.title,
         doneOn,
+        url: item.url ?? "",
       });
       if (!result.ok) {
         setError(result.error);

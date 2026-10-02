@@ -1,17 +1,16 @@
 "use client";
 
-import MoreHoriz from "@mui/icons-material/MoreHoriz";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import ButtonBase from "@mui/material/ButtonBase";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
-import IconButton from "@mui/material/IconButton";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
+import Drawer from "@mui/material/Drawer";
+import MuiLink from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -51,16 +50,41 @@ function firstLine(note: string): string {
   return note.split("\n")[0] ?? "";
 }
 
+const URL_PATTERN = /(https?:\/\/[^\s]+)/;
+
+/** メモの URL だけリンクにする。 */
+function NoteText({ note }: { note: string }) {
+  return (
+    <Typography
+      variant="body2"
+      sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
+    >
+      {note.split(URL_PATTERN).map((part, index) =>
+        index % 2 === 1 ? (
+          <MuiLink
+            // biome-ignore lint/suspicious/noArrayIndexKey: 分割結果は並びが変わらない
+            key={index}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {part}
+          </MuiLink>
+        ) : (
+          part
+        ),
+      )}
+    </Typography>
+  );
+}
+
 /** その子の記録（done の項目）を、やった日の新しい順に月ごとに並べる。 */
 export function RecordTab({ items }: { items: LifeEventItem[] }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [menu, setMenu] = useState<{
-    anchor: HTMLElement;
-    item: DoneItem;
-  } | null>(null);
+  const [sheetItem, setSheetItem] = useState<DoneItem | null>(null);
   const [dateTarget, setDateTarget] = useState<DoneItem | null>(null);
   const [noteTarget, setNoteTarget] = useState<DoneItem | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
@@ -124,11 +148,21 @@ export function RecordTab({ items }: { items: LifeEventItem[] }) {
             divider={<Box sx={{ borderTop: 1, borderColor: "divider" }} />}
           >
             {group.rows.map((item) => (
-              <Stack
+              <ButtonBase
                 key={item.id}
-                direction="row"
-                spacing={1.5}
-                sx={{ alignItems: "center", py: 1 }}
+                component="div"
+                onClick={() => {
+                  setError(null);
+                  setSheetItem(item);
+                }}
+                sx={{
+                  display: "flex",
+                  gap: 1.5,
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                  textAlign: "left",
+                  py: 1,
+                }}
               >
                 <Typography
                   variant="body2"
@@ -152,56 +186,70 @@ export function RecordTab({ items }: { items: LifeEventItem[] }) {
                     </Typography>
                   )}
                 </Box>
-                <IconButton
-                  size="small"
-                  aria-label={`${item.title}のメニュー`}
-                  onClick={(event) =>
-                    setMenu({ anchor: event.currentTarget, item })
-                  }
-                >
-                  <MoreHoriz fontSize="small" />
-                </IconButton>
-              </Stack>
+              </ButtonBase>
             ))}
           </Stack>
         </Box>
       ))}
 
-      <Menu
-        anchorEl={menu?.anchor}
-        open={menu !== null}
-        onClose={() => setMenu(null)}
+      <Drawer
+        anchor="bottom"
+        open={sheetItem !== null}
+        onClose={() => setSheetItem(null)}
+        slotProps={{
+          paper: { sx: { borderRadius: "16px 16px 0 0", maxHeight: "85dvh" } },
+        }}
       >
-        <MenuItem
-          onClick={() => {
-            if (!menu) return;
-            setError(null);
-            setDateTarget(menu.item);
-            setMenu(null);
-          }}
-        >
-          やった日を直す
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            if (!menu) return;
-            openNote(menu.item);
-            setMenu(null);
-          }}
-        >
-          メモ
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            if (!menu) return;
-            setError(null);
-            setRemoveTarget(menu.item);
-            setMenu(null);
-          }}
-        >
-          記録から外す
-        </MenuItem>
-      </Menu>
+        {sheetItem && (
+          <Stack
+            spacing={1.5}
+            sx={{ p: 2, pb: "calc(16px + env(safe-area-inset-bottom))" }}
+          >
+            <Typography variant="caption" sx={{ color: "text.secondary" }}>
+              {formatSlashDate(sheetItem.doneOn)} にやった
+            </Typography>
+            <Typography variant="h6">{sheetItem.title}</Typography>
+            {sheetItem.note ? (
+              <NoteText note={sheetItem.note} />
+            ) : (
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                メモはありません
+              </Typography>
+            )}
+            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  openNote(sheetItem);
+                  setSheetItem(null);
+                }}
+              >
+                メモを編集
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setError(null);
+                  setDateTarget(sheetItem);
+                  setSheetItem(null);
+                }}
+              >
+                やった日を直す
+              </Button>
+              <Button
+                color="error"
+                onClick={() => {
+                  setError(null);
+                  setRemoveTarget(sheetItem);
+                  setSheetItem(null);
+                }}
+              >
+                記録から外す
+              </Button>
+            </Stack>
+          </Stack>
+        )}
+      </Drawer>
 
       <RecordDoneDialog
         key={dateTarget?.id ?? "none"}

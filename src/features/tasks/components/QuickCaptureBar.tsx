@@ -15,6 +15,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { type FormEvent, useId, useState } from "react";
+import { DateField } from "@/components/DateField";
 import type { Child } from "@/features/children/types";
 import { PurchaseLocationOptions } from "@/features/purchase-locations/components/PurchaseLocationOptions";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
@@ -304,8 +305,7 @@ export function QuickCaptureBar({
                 }}
               >
                 <Stack spacing={1} sx={{ p: 1.5 }}>
-                  <TextField
-                    type="date"
+                  <DateField
                     size="small"
                     fullWidth
                     value={dueOn ?? ""}

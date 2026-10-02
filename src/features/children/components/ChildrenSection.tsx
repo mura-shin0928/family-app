@@ -18,6 +18,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { DateField } from "@/components/DateField";
 import { createChild, deleteChild, updateChild } from "../actions";
 import type { Child } from "../types";
 
@@ -183,9 +184,8 @@ function ChildForm({
             size="small"
             fullWidth
           />
-          <TextField
+          <DateField
             label="出産予定日"
-            type="date"
             value={expectedBirthDate}
             onChange={(event) => setExpectedBirthDate(event.target.value)}
             size="small"
@@ -193,9 +193,8 @@ function ChildForm({
             slotProps={{ inputLabel: { shrink: true } }}
             helperText="妊活中などまだ分からなければ空のままでOK"
           />
-          <TextField
+          <DateField
             label="出生日（生まれたら入力）"
-            type="date"
             value={birthDate}
             onChange={(event) => setBirthDate(event.target.value)}
             size="small"
