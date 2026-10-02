@@ -9,6 +9,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import { useState } from "react";
+import { DateField } from "@/components/DateField";
 
 /**
  * 項目をタスク化する前の確認モーダル。タスク名は項目名、期限は目安日でプリセットし、
@@ -42,11 +43,9 @@ export function AddToTaskDialog({
             onChange={(event) => setTitle(event.target.value)}
             size="small"
             fullWidth
-            autoFocus
           />
-          <TextField
+          <DateField
             label="期限"
-            type="date"
             value={dueOn}
             onChange={(event) => setDueOn(event.target.value)}
             size="small"
