@@ -6,8 +6,12 @@ import type { TaskDTO } from "./types";
 /** 埋め込みは単一オブジェクトか null（型が配列になる場合も考慮する）。 */
 function recordChildIdOf(embedded: unknown): string | null {
   const item = Array.isArray(embedded) ? embedded[0] : embedded;
-  const childId = (item as { child_id?: string } | null | undefined)?.child_id;
-  return childId ?? null;
+  const record = item as
+    | { child_id?: string; deleted_at?: string | null }
+    | null
+    | undefined;
+  if (!record || record.deleted_at) return null;
+  return record.child_id ?? null;
 }
 
 /**
@@ -23,7 +27,7 @@ export async function getTasks(familyId: string): Promise<TaskDTO[]> {
   const { data, error } = await supabase
     .from("tasks")
     .select(
-      "id, title, due_on, is_purchase, status, completed_at, sort_order, url, note, purchase_location_id, life_event_items(child_id)",
+      "id, title, due_on, is_purchase, status, completed_at, sort_order, url, note, purchase_location_id, life_event_items(child_id, deleted_at)",
     )
     .eq("family_id", familyId)
     .is("deleted_at", null)

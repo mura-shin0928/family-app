@@ -15,8 +15,10 @@ import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { TASKS_QUERY_KEY } from "@/features/tasks/types";
 import {
   removeLifeEventItem,
   updateLifeEventItemDoneOn,
@@ -52,6 +54,7 @@ function firstLine(note: string): string {
 /** その子の記録（done の項目）を、やった日の新しい順に月ごとに並べる。 */
 export function RecordTab({ items }: { items: LifeEventItem[] }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [menu, setMenu] = useState<{
@@ -77,6 +80,7 @@ export function RecordTab({ items }: { items: LifeEventItem[] }) {
         return;
       }
       onDone();
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
       router.refresh();
     });
   }

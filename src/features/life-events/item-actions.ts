@@ -84,18 +84,20 @@ export async function addLifeEventItemToTask(input: {
 
   // テンプレはサーバー側のカタログを正とする。制度は呼び出し側の値を使う。
   const template = findCatalogItem(catalogKey);
-  const title = template?.title ?? parsed.data.title;
+  const itemTitle = template?.title ?? parsed.data.title;
+  const taskTitle = parsed.data.title;
   const note = template?.note ?? null;
   const url = template ? template.url : parsed.data.url || null;
 
   let itemId: string;
+  let createdItem = false;
   const { data: inserted, error: insertError } = await supabase
     .from("life_event_items")
     .insert({
       family_id: member.familyId,
       child_id: childId,
       catalog_key: catalogKey,
-      title,
+      title: itemTitle,
       status: "in_task",
       created_by: member.id,
     })
@@ -104,6 +106,7 @@ export async function addLifeEventItemToTask(input: {
 
   if (inserted) {
     itemId = inserted.id;
+    createdItem = true;
   } else if (insertError?.code === "23505") {
     // 同時に追加された。先にできた行を使う。
     const existing = await findActiveItem(supabase, childId, catalogKey);
@@ -129,7 +132,7 @@ export async function addLifeEventItemToTask(input: {
   const { error } = await supabase.from("tasks").insert({
     id: taskId,
     family_id: member.familyId,
-    title,
+    title: taskTitle,
     note,
     url,
     due_on: dueOn === "" ? null : dueOn,
@@ -139,7 +142,15 @@ export async function addLifeEventItemToTask(input: {
     life_event_item_id: itemId,
   });
 
-  if (error) return { ok: false, error: "タスクへの追加に失敗しました" };
+  if (error) {
+    if (createdItem) {
+      await supabase
+        .from("life_event_items")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", itemId);
+    }
+    return { ok: false, error: "タスクへの追加に失敗しました" };
+  }
   return { ok: true, taskId };
 }
 

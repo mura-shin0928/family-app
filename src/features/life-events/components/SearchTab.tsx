@@ -75,6 +75,10 @@ export function SearchTab({
         )
       : [];
 
+  // 検索中は制度の結果が出るまで「見つかりませんでした」を出さない。
+  const programsPending =
+    searching && ((showPrograms && area.isPending) || programList.length > 0);
+
   function renderRow(item: CatalogItem) {
     const state = itemStateFor(item.key, child.id, items);
     return (
@@ -133,7 +137,7 @@ export function SearchTab({
 
       <Box>
         {catalogList.map(renderRow)}
-        {catalogList.length === 0 && (
+        {catalogList.length === 0 && !programsPending && (
           <Typography variant="body2" sx={{ color: "text.secondary", py: 2 }}>
             {searching
               ? "見つかりませんでした"

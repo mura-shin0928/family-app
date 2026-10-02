@@ -1,5 +1,6 @@
 "use client";
 
+import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
@@ -17,11 +18,13 @@ import { useState } from "react";
 export function AddToTaskDialog({
   target,
   busy,
+  error,
   onClose,
   onSubmit,
 }: {
   target: { title: string; presetDueOn: string } | null;
   busy: boolean;
+  error: string | null;
   onClose: () => void;
   onSubmit: (title: string, dueOn: string) => void;
 }) {
@@ -55,6 +58,7 @@ export function AddToTaskDialog({
                 : "この項目は目安日が出せないので空です。任意で入れられます。"
             }
           />
+          {error && <Alert severity="error">{error}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>

@@ -9,11 +9,13 @@ import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { Child } from "@/features/children/types";
 import { deleteTask } from "@/features/tasks/actions";
+import { TASKS_QUERY_KEY } from "@/features/tasks/types";
 import { todayInJst } from "@/lib/date";
 import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
 import {
@@ -38,6 +40,7 @@ export function LifeEventsScreen({
   showPrograms: boolean;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [activeChildId, setActiveChildId] = useState(
     familyChildren[0]?.id ?? "",
   );
@@ -90,6 +93,7 @@ export function LifeEventsScreen({
       }
       setTaskDialog(null);
       setToast({ taskId: result.taskId });
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
       router.refresh();
     });
   }
@@ -101,6 +105,7 @@ export function LifeEventsScreen({
     startTransition(async () => {
       const result = await deleteTask({ taskId });
       if (!result.ok) setError(result.error);
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
       router.refresh();
     });
   }
@@ -121,6 +126,7 @@ export function LifeEventsScreen({
         return;
       }
       setDoneDialog(null);
+      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
       router.refresh();
     });
   }
@@ -155,7 +161,7 @@ export function LifeEventsScreen({
           <ToggleButton value="record">記録</ToggleButton>
         </ToggleButtonGroup>
 
-        {error && (
+        {error && !taskDialog && !doneDialog && (
           <Alert severity="error" onClose={() => setError(null)}>
             {error}
           </Alert>
@@ -198,6 +204,7 @@ export function LifeEventsScreen({
             : null
         }
         busy={isPending}
+        error={error}
         onClose={() => setTaskDialog(null)}
         onSubmit={handleSubmitAddToTask}
       />

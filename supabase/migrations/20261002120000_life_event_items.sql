@@ -124,7 +124,7 @@ create trigger tasks_sync_life_event_item
   execute function public.sync_life_event_item_from_task();
 
 -- 旧 life_event_procedures の済んだ項目だけを記録として移す。
--- catalog_key は (種別, 項目名) でカタログに引く。引けないものは null。
+-- catalog_key は template_key で、'legacy' の行は (種別, 項目名) でカタログに引く。引けないものは null。
 -- 同じ子・同じ key が重なったら、やった日が早い1行だけに key を付ける（部分ユニークのため）。
 insert into public.life_event_items
   (family_id, child_id, catalog_key, title, note, status, done_on, created_by)
@@ -193,7 +193,8 @@ from (
     ('school', '就学時健康診断を受ける', 'school:school-entrance-health-check'),
     ('school', '小学校入学の準備をする', 'school:prepare-elementary-entry')
   ) as k (kind, title, catalog_key)
-    on k.kind = e.kind and k.title = p.title
+    on (k.kind || ':' || k.title)
+      = coalesce(nullif(p.template_key, 'legacy'), e.kind || ':' || p.title)
   where p.status = 'done'
     and p.deleted_at is null
 ) as m;
