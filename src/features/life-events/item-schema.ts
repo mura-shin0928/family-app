@@ -14,16 +14,18 @@ const catalogKeySchema = z.string().min(1).max(200);
 
 const childIdSchema = z.string().uuid();
 
+// 制度（program:）の公式ページ。空文字列 = なし
+const urlSchema = z
+  .union([z.url("URLの形式が正しくありません").max(2000), z.literal("")])
+  .optional();
+
 export const addLifeEventItemToTaskSchema = z.object({
   childId: childIdSchema,
   catalogKey: catalogKeySchema,
   title: titleSchema,
   // 空文字列 = 期限なし
   dueOn: z.union([dateStringSchema, z.literal("")]),
-  // 制度（program:）の公式ページ。空文字列 = なし
-  url: z
-    .union([z.url("URLの形式が正しくありません").max(2000), z.literal("")])
-    .optional(),
+  url: urlSchema,
 });
 
 export const recordLifeEventItemDoneSchema = z.object({
@@ -31,6 +33,7 @@ export const recordLifeEventItemDoneSchema = z.object({
   catalogKey: catalogKeySchema,
   title: titleSchema,
   doneOn: dateStringSchema,
+  url: urlSchema,
 });
 
 export const updateLifeEventItemDoneOnSchema = z.object({

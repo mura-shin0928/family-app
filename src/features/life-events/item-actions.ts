@@ -88,6 +88,8 @@ export async function addLifeEventItemToTask(input: {
   const taskTitle = parsed.data.title;
   const note = template?.note ?? null;
   const url = template ? template.url : parsed.data.url || null;
+  // 制度は記録のメモに公式ページを残す。タスク完了で記録になったときも残る
+  const itemNote = template ? null : url;
 
   let itemId: string;
   let createdItem = false;
@@ -98,6 +100,7 @@ export async function addLifeEventItemToTask(input: {
       child_id: childId,
       catalog_key: catalogKey,
       title: itemTitle,
+      note: itemNote,
       status: "in_task",
       created_by: member.id,
     })
@@ -159,6 +162,7 @@ export async function recordLifeEventItemDone(input: {
   catalogKey: string;
   title: string;
   doneOn: string;
+  url?: string;
 }): Promise<ActionResult> {
   const parsed = recordLifeEventItemDoneSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
@@ -171,7 +175,10 @@ export async function recordLifeEventItemDone(input: {
     return { ok: false, error: "子供が見つかりません" };
   }
 
-  const title = findCatalogItem(catalogKey)?.title ?? parsed.data.title;
+  const template = findCatalogItem(catalogKey);
+  const title = template?.title ?? parsed.data.title;
+  // 制度は記録のメモに公式ページを残す
+  const note = template ? null : parsed.data.url || null;
   const failure = "記録に失敗しました";
 
   const { error: insertError } = await supabase
@@ -181,6 +188,7 @@ export async function recordLifeEventItemDone(input: {
       child_id: childId,
       catalog_key: catalogKey,
       title,
+      note,
       status: "done",
       done_on: doneOn,
       created_by: member.id,
