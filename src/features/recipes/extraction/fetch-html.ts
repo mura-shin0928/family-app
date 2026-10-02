@@ -34,7 +34,7 @@ function isDisallowedIPv6(ip: string): boolean {
   return false;
 }
 
-// procedures/robots.ts でもrobots.txt取得先のSSRFガードに再利用する。
+// 他の取得処理でもrobots.txt取得先のSSRFガードに再利用する。
 export async function isSafeHost(hostname: string): Promise<boolean> {
   const lower = hostname.toLowerCase();
   if (lower === "localhost" || lower.endsWith(".local")) return false;
