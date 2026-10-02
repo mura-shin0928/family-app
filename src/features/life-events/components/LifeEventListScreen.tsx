@@ -413,7 +413,7 @@ export function LifeEventListScreen({
         target={
           doneDialog
             ? {
-                procedure: doneDialog.procedure,
+                title: doneDialog.procedure.title,
                 initialDate:
                   doneDialog.mode === "edit"
                     ? (doneDialog.procedure.doneOn ?? todayInJst())
