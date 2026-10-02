@@ -23,6 +23,7 @@ import {
 import type { CatalogItem, LifeEventItem } from "../types";
 import { AddToTaskDialog } from "./AddToTaskDialog";
 import { RecordDoneDialog } from "./RecordDoneDialog";
+import { RecordTab } from "./RecordTab";
 import { SearchTab } from "./SearchTab";
 
 type Mode = "search" | "record";
@@ -175,8 +176,15 @@ export function LifeEventsScreen({
               setDoneDialog(item);
             }}
           />
-        ) : // Task 8 で <RecordTab items={子の done 項目} /> に差し替える
-        null}
+        ) : (
+          <RecordTab
+            key={activeChild.id}
+            items={items.filter(
+              (item) =>
+                item.childId === activeChild.id && item.status === "done",
+            )}
+          />
+        )}
       </Stack>
 
       <AddToTaskDialog
