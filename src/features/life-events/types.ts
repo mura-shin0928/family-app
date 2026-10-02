@@ -1,3 +1,5 @@
+import type { DateString } from "@/lib/date";
+
 /** 家族が選んで足せるライフイベントの種別（DBのcheck制約と同じ語彙）。 */
 export type LifeEventKind =
   | "preconception"
@@ -68,4 +70,15 @@ export type CatalogItem = {
   aliases: string[];
   timing: CatalogTiming | null;
   url: string | null;
+};
+
+/** 子ごとの記録（life_event_items の1行）。catalogKey が null なら自分たちで足した項目。 */
+export type LifeEventItem = {
+  id: string;
+  childId: string;
+  catalogKey: string | null;
+  title: string;
+  note: string | null;
+  status: "in_task" | "done";
+  doneOn: DateString | null;
 };
