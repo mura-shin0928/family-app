@@ -10,7 +10,6 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
-import type { LifeEventProcedure } from "../types";
 
 /**
  * やった日を入れて記録する。記録のときも日付の直しのときも同じ形で、初期値と見出しだけ
@@ -24,7 +23,7 @@ export function RecordDoneDialog({
   onSubmit,
 }: {
   target: {
-    procedure: LifeEventProcedure;
+    title: string;
     initialDate: string;
     heading: string;
   } | null;
@@ -40,7 +39,7 @@ export function RecordDoneDialog({
       <DialogTitle>{target?.heading}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
-          <Typography variant="body2">{target?.procedure.title}</Typography>
+          <Typography variant="body2">{target?.title}</Typography>
           <TextField
             label="やった日"
             type="date"

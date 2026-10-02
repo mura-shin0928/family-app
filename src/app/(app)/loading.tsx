@@ -4,7 +4,7 @@ import { AppHeaderSkeleton } from "./AppHeaderSkeleton";
 
 /**
  * 自前の loading.tsx を持たない (app) 配下セグメント
- * (family / procedures / recipes/new / tasks/settings ...) 共通のフォールバック。
+ * (family / life-events / recipes/new / tasks/settings ...) 共通のフォールバック。
  * より近い loading.tsx（tasks/loading.tsx など）があればそちらが優先される。
  * 画面名はこの時点で確定しないので AppHeaderSkeleton には title を渡さない。
  */

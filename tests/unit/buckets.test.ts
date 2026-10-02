@@ -19,6 +19,7 @@ function makeTask(overrides: Partial<TaskDTO> & { id: string }): TaskDTO {
     url: null,
     note: null,
     purchaseLocationId: null,
+    recordChildId: null,
     ...overrides,
   };
 }

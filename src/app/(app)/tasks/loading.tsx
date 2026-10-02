@@ -8,7 +8,7 @@ export default function Loading() {
       component="main"
       sx={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}
     >
-      <AppHeaderSkeleton title="一覧" />
+      <AppHeaderSkeleton title="タスク" />
       <Box
         sx={{
           flex: 1,

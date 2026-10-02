@@ -23,6 +23,7 @@ import Link from "next/link";
 import { type ReactNode, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { Mascot } from "@/components/Mascot";
+import type { Child } from "@/features/children/types";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { SOON_DAYS } from "@/lib/constants";
 import { todayInJst } from "@/lib/date";
@@ -333,11 +334,13 @@ export function TaskListScreen({
   initialTasks,
   familyId,
   locations,
+  familyChildren,
 }: {
   initialTasks: TaskDTO[];
   familyId: string;
   // 買う場所の候補。RSC の props で受け取るだけ（TanStack Query も Realtime も使わない）。
   locations: PurchaseLocation[];
+  familyChildren: Child[];
 }) {
   const { data: tasks = [] } = useQuery({
     queryKey: TASKS_QUERY_KEY,
@@ -378,6 +381,7 @@ export function TaskListScreen({
       dueOn: string;
       isPurchase: boolean;
       purchaseLocationId: string;
+      recordChildId: string;
     }): Action => ({
       type: "add",
       task: {
@@ -392,6 +396,7 @@ export function TaskListScreen({
         note: null,
         purchaseLocationId:
           input.purchaseLocationId === "" ? null : input.purchaseLocationId,
+        recordChildId: input.recordChildId === "" ? null : input.recordChildId,
       },
     }),
     { onFail: (error) => showToast({ message: error }) },
@@ -526,6 +531,7 @@ export function TaskListScreen({
     dueOn: string | null;
     isPurchase: boolean;
     purchaseLocationId: string | null;
+    recordChildId: string | null;
   }) {
     createMutation.mutate({
       id: crypto.randomUUID(),
@@ -533,6 +539,7 @@ export function TaskListScreen({
       dueOn: input.dueOn ?? "",
       isPurchase: input.isPurchase,
       purchaseLocationId: input.purchaseLocationId ?? "",
+      recordChildId: input.recordChildId ?? "",
     });
   }
 
@@ -584,6 +591,16 @@ export function TaskListScreen({
   const visibleBuckets = TASK_BUCKET_ORDER.filter(
     (key) => !COLLAPSIBLE_BUCKETS.includes(key),
   );
+
+  const childNameById = new Map(
+    familyChildren.map((child) => [child.id, child.displayName]),
+  );
+
+  function recordChildNameOf(task: TaskDTO): string | null {
+    return task.recordChildId
+      ? (childNameById.get(task.recordChildId) ?? null)
+      : null;
+  }
 
   const rowProps = {
     locations,
@@ -674,6 +691,7 @@ export function TaskListScreen({
                     key={task.id}
                     task={task}
                     today={today}
+                    recordChildName={recordChildNameOf(task)}
                     {...rowProps}
                   />
                 ))}
@@ -687,6 +705,7 @@ export function TaskListScreen({
                     key={task.id}
                     task={task}
                     today={today}
+                    recordChildName={recordChildNameOf(task)}
                     {...rowProps}
                   />
                 ))}
@@ -721,6 +740,7 @@ export function TaskListScreen({
                       key={task.id}
                       task={task}
                       today={today}
+                      recordChildName={recordChildNameOf(task)}
                       {...rowProps}
                     />
                   ))}
@@ -741,6 +761,7 @@ export function TaskListScreen({
                       key={task.id}
                       task={task}
                       today={today}
+                      recordChildName={recordChildNameOf(task)}
                       {...rowProps}
                     />
                   ))}
@@ -761,6 +782,7 @@ export function TaskListScreen({
                     key={task.id}
                     task={task}
                     today={today}
+                    recordChildName={recordChildNameOf(task)}
                     {...rowProps}
                   />
                 ))}
@@ -776,7 +798,11 @@ export function TaskListScreen({
         )}
       </Stack>
 
-      <QuickCaptureBar locations={locations} onSubmit={handleCreate} />
+      <QuickCaptureBar
+        locations={locations}
+        familyChildren={familyChildren}
+        onSubmit={handleCreate}
+      />
 
       <Snackbar
         open={!!toast}

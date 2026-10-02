@@ -16,4 +16,6 @@ export type TaskDTO = {
   note: string | null;
   // 場所の論理削除後もidは残る。UI側で「登録済みの場所に無いid = 未設定」として描画する。
   purchaseLocationId: string | null;
+  // 子の記録に残すタスクのとき、その子のid。
+  recordChildId: string | null;
 };

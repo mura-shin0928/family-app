@@ -1,17 +1,21 @@
 "use client";
 
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
+import ChildCareIcon from "@mui/icons-material/ChildCare";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
+import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
 import { type FormEvent, useId, useState } from "react";
+import type { Child } from "@/features/children/types";
 import { PurchaseLocationOptions } from "@/features/purchase-locations/components/PurchaseLocationOptions";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { addDaysToDateString, todayInJst } from "@/lib/date";
@@ -19,11 +23,13 @@ import { BOTTOM_NAV_HEIGHT } from "@/lib/layout";
 
 type Props = {
   locations: PurchaseLocation[];
+  familyChildren: Child[];
   onSubmit: (input: {
     title: string;
     dueOn: string | null;
     isPurchase: boolean;
     purchaseLocationId: string | null;
+    recordChildId: string | null;
   }) => void;
 };
 
@@ -42,13 +48,19 @@ function preventBlur(event: { preventDefault: () => void }) {
  * 「期限」チップをタップすると、今日/明日のワンタップ選択とカレンダーからの
  * 任意選択をまとめたパネルが開く（タグUIは意図的に置かない）。
  */
-export function QuickCaptureBar({ locations, onSubmit }: Props) {
+export function QuickCaptureBar({
+  locations,
+  familyChildren,
+  onSubmit,
+}: Props) {
   const [title, setTitle] = useState("");
   const [dueOn, setDueOn] = useState<string | null>(null);
   const [isPurchase, setIsPurchase] = useState(false);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [dueOpen, setDueOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
+  const [recordChildId, setRecordChildId] = useState<string | null>(null);
+  const [recordOpen, setRecordOpen] = useState(false);
   const inputId = useId();
 
   const today = todayInJst();
@@ -65,7 +77,12 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
   const selectedLocation =
     locations.find((location) => location.id === locationId) ?? null;
 
+  const recordChild =
+    familyChildren.find((child) => child.id === recordChildId) ?? null;
+
   function resetForm() {
+    setRecordChildId(null);
+    setRecordOpen(false);
     setTitle("");
     setDueOn(null);
     setIsPurchase(false);
@@ -84,6 +101,7 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
       isPurchase,
       // 「買うもの」OFF なら場所は付けない。
       purchaseLocationId: isPurchase ? locationId : null,
+      recordChildId: recordChild?.id ?? null,
     });
     resetForm();
   }
@@ -102,6 +120,27 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
       }
       return next;
     });
+  }
+
+  function toggleRecord() {
+    setDueOpen(false);
+    setLocationOpen(false);
+    // オンのときに押したら外す。オフのときは子が1人ならその子、複数なら選ばせる。
+    if (recordChildId !== null) {
+      setRecordChildId(null);
+      setRecordOpen(false);
+      return;
+    }
+    if (familyChildren.length === 1) {
+      setRecordChildId(familyChildren[0]?.id ?? null);
+      return;
+    }
+    setRecordOpen((current) => !current);
+  }
+
+  function selectRecordChild(value: string) {
+    setRecordChildId(value);
+    setRecordOpen(false);
   }
 
   function selectLocation(value: string | null) {
@@ -173,6 +212,7 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
           onClickAway={() => {
             setDueOpen(false);
             setLocationOpen(false);
+            setRecordOpen(false);
           }}
         >
           <Stack
@@ -197,6 +237,7 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
               onMouseDown={preventBlur}
               onClick={() => {
                 setLocationOpen(false);
+                setRecordOpen(false);
                 setDueOpen((current) => !current);
               }}
             />
@@ -221,8 +262,27 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
                 onMouseDown={preventBlur}
                 onClick={() => {
                   setDueOpen(false);
+                  setRecordOpen(false);
                   setLocationOpen((current) => !current);
                 }}
+              />
+            )}
+
+            {familyChildren.length > 0 && (
+              <Chip
+                size="small"
+                icon={<ChildCareIcon sx={{ width: 15, height: 15 }} />}
+                label={recordChild ? recordChild.displayName : "イベント"}
+                aria-label={
+                  recordChild
+                    ? `${recordChild.displayName}のライフイベントに記録する（押すと外す）`
+                    : "ライフイベントに記録する"
+                }
+                clickable
+                color={recordChild || recordOpen ? "primary" : "default"}
+                variant={recordChild || recordOpen ? "filled" : "outlined"}
+                onMouseDown={preventBlur}
+                onClick={toggleRecord}
               />
             )}
 
@@ -305,6 +365,44 @@ export function QuickCaptureBar({ locations, onSubmit }: Props) {
                     selectedId={selectedLocation?.id ?? null}
                     onSelect={selectLocation}
                   />
+                </MenuList>
+              </Paper>
+            )}
+
+            {recordOpen && (
+              <Paper
+                elevation={1}
+                sx={{
+                  position: "absolute",
+                  insetInlineStart: 0,
+                  bottom: "100%",
+                  mb: 1,
+                  width: "16rem",
+                  maxWidth: "100%",
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: "block",
+                    px: 2,
+                    pt: 1,
+                    color: "text.secondary",
+                  }}
+                >
+                  どの子のライフイベントに記録する？
+                </Typography>
+                <MenuList disablePadding>
+                  {familyChildren.map((child) => (
+                    <MenuItem
+                      key={child.id}
+                      selected={child.id === recordChildId}
+                      onMouseDown={preventBlur}
+                      onClick={() => selectRecordChild(child.id)}
+                    >
+                      {child.displayName}
+                    </MenuItem>
+                  ))}
                 </MenuList>
               </Paper>
             )}

@@ -18,8 +18,8 @@ export function BottomNav() {
     ? "/tasks"
     : pathname.startsWith("/recipes")
       ? "/recipes"
-      : pathname.startsWith("/procedures")
-        ? "/procedures"
+      : pathname.startsWith("/life-events")
+        ? "/life-events"
         : false;
 
   return (
@@ -64,7 +64,7 @@ export function BottomNav() {
           component={Link}
           href="/tasks"
           value="/tasks"
-          aria-label="一覧"
+          aria-label="タスク"
           icon={<ChecklistOutlinedIcon />}
         />
         <BottomNavigationAction
@@ -76,9 +76,9 @@ export function BottomNav() {
         />
         <BottomNavigationAction
           component={Link}
-          href="/procedures"
-          value="/procedures"
-          aria-label="手続き"
+          href="/life-events"
+          value="/life-events"
+          aria-label="ライフイベント"
           icon={<ChildCareIcon />}
         />
       </BottomNavigation>

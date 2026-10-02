@@ -30,7 +30,7 @@ function formatChildDates(child: Child): string {
 }
 
 /**
- * 子供の情報の登録場所。procedures(手続き)画面ではなく家族全体の設定である
+ * 子供の情報の登録場所。ライフイベント画面ではなく家族全体の設定である
  * 「家族」画面に置く（メンバー一覧と同じ画面）— 子供は家族に紐づく情報であり、
  * 手続きテンプレートはそれを読むだけの一利用者に過ぎないため。
  */
@@ -75,7 +75,7 @@ export function ChildrenSection({
 
       {familyChildren.length === 0 ? (
         <Alert severity="info">
-          登録すると、「手続き」タブで出産予定日・出生日からの目安期限が表示されます。
+          登録すると、「ライフイベント」タブで出産予定日・出生日からの目安期限が表示されます。
         </Alert>
       ) : (
         <List dense disablePadding>

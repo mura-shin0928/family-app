@@ -20,7 +20,7 @@ import type { FamilyMunicipality } from "../queries";
 import type { Area } from "../types";
 
 /**
- * 家族の自治体。「手続き」画面の制度一覧（その自治体＋都道府県の制度）に使う。
+ * 家族の自治体。自治体と都道府県の子育て支援制度を引くための地域設定。
  * 子供と同じく家族全体の設定なので「家族」画面に置く。
  * areas が null（seido-data-hub に届かない・未設定）のときは変更できない。
  */
@@ -123,7 +123,7 @@ function MunicipalityForm({
                 {...params}
                 label="市区町村"
                 size="small"
-                helperText="「手続き」画面で、この自治体と都道府県の子育て支援制度を一覧できます（いまは東京都内のみ）"
+                helperText="この自治体と都道府県の子育て支援制度を探すときに使います（いまは東京都内のみ）"
               />
             )}
           />

@@ -19,6 +19,9 @@ const noteSchema = z.union([
 // 空文字列 = 未設定（tasks.dueOn と同じ規約）。所有チェックは Server Action 側で行う。
 const purchaseLocationIdSchema = z.union([z.string().uuid(), z.literal("")]);
 
+// 空文字列 = 記録しない。子が自家族のものかは Server Action 側で確かめる。
+const recordChildIdSchema = z.union([z.string().uuid(), z.literal("")]);
+
 export const createTaskSchema = z.object({
   id: z.string().uuid(),
   title: z
@@ -30,6 +33,7 @@ export const createTaskSchema = z.object({
   dueOn: z.union([dateStringSchema, z.literal("")]),
   isPurchase: z.boolean(),
   purchaseLocationId: purchaseLocationIdSchema,
+  recordChildId: recordChildIdSchema,
 });
 
 export const taskIdSchema = z.object({

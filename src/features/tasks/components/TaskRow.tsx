@@ -1,6 +1,7 @@
 "use client";
 
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
+import ChildCareIcon from "@mui/icons-material/ChildCare";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import LinkIcon from "@mui/icons-material/Link";
 import NotesIcon from "@mui/icons-material/Notes";
@@ -30,6 +31,7 @@ type Props = {
   task: TaskDTO;
   today: string;
   locations: PurchaseLocation[];
+  recordChildName: string | null;
   onToggle: (task: TaskDTO) => void;
   onDueDateChange: (task: TaskDTO, dueOn: string | null) => void;
   onTitleChange: (task: TaskDTO, title: string) => void;
@@ -44,6 +46,7 @@ export function TaskRow({
   task,
   today,
   locations,
+  recordChildName,
   onToggle,
   onDueDateChange,
   onTitleChange,
@@ -326,6 +329,37 @@ export function TaskRow({
               </Box>
             )}
           </Button>
+        )}
+
+        {recordChildName && (
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.25,
+              minWidth: 0,
+              p: 0.5,
+              color: "text.secondary",
+              typography: "body2",
+              overflow: "hidden",
+            }}
+          >
+            <ChildCareIcon
+              sx={{ fontSize: 16, flexShrink: 0 }}
+              aria-label="ライフイベントに記録"
+            />
+            <Box
+              component="span"
+              sx={{
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {recordChildName}
+            </Box>
+          </Box>
         )}
       </Box>
 
