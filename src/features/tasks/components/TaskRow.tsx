@@ -1,8 +1,8 @@
 "use client";
 
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
+import ChildCareIcon from "@mui/icons-material/ChildCare";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
-import EditNoteOutlinedIcon from "@mui/icons-material/EditNoteOutlined";
 import LinkIcon from "@mui/icons-material/Link";
 import NotesIcon from "@mui/icons-material/Notes";
 import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
@@ -344,7 +344,10 @@ export function TaskRow({
               overflow: "hidden",
             }}
           >
-            <EditNoteOutlinedIcon sx={{ fontSize: 16, flexShrink: 0 }} />
+            <ChildCareIcon
+              sx={{ fontSize: 16, flexShrink: 0 }}
+              aria-label="ライフイベントに記録"
+            />
             <Box
               component="span"
               sx={{

@@ -1,7 +1,7 @@
 "use client";
 
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
-import EditNoteOutlinedIcon from "@mui/icons-material/EditNoteOutlined";
+import ChildCareIcon from "@mui/icons-material/ChildCare";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import Box from "@mui/material/Box";
@@ -271,9 +271,12 @@ export function QuickCaptureBar({
             {familyChildren.length > 0 && (
               <Chip
                 size="small"
-                icon={<EditNoteOutlinedIcon sx={{ width: 15, height: 15 }} />}
-                label={
-                  recordChild ? `${recordChild.displayName}の記録` : "記録"
+                icon={<ChildCareIcon sx={{ width: 15, height: 15 }} />}
+                label={recordChild ? recordChild.displayName : "イベント"}
+                aria-label={
+                  recordChild
+                    ? `${recordChild.displayName}のライフイベントに記録する（押すと外す）`
+                    : "ライフイベントに記録する"
                 }
                 clickable
                 color={recordChild || recordOpen ? "primary" : "default"}
@@ -387,7 +390,7 @@ export function QuickCaptureBar({
                     color: "text.secondary",
                   }}
                 >
-                  どの子の記録に残す？
+                  どの子のライフイベントに記録する？
                 </Typography>
                 <MenuList disablePadding>
                   {familyChildren.map((child) => (
