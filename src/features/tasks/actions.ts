@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -41,6 +42,18 @@ async function resolvePurchaseLocationId(
   }
 
   return { ok: true, value: data.id };
+}
+
+/**
+ * ライフイベント項目につながるタスクの完了・削除は、トリガーで項目の状態も変わる。
+ * ライフイベント画面のクライアントキャッシュ（staleTimes）に古い状態が残らないよう捨てる。
+ */
+function revalidateLifeEventsIfLinked(
+  rows: { life_event_item_id: string | null }[] | null,
+) {
+  if (rows?.some((row) => row.life_event_item_id !== null)) {
+    revalidatePath("/life-events");
+  }
 }
 
 export async function createTask(input: {
@@ -154,7 +167,7 @@ export async function setTaskDone(input: {
   const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("tasks")
     .update(
       parsed.data.done
@@ -166,12 +179,14 @@ export async function setTaskDone(input: {
         : { status: "open", completed_at: null, completed_by: null },
     )
     .eq("id", parsed.data.taskId)
-    .eq("family_id", member.familyId);
+    .eq("family_id", member.familyId)
+    .select("life_event_item_id");
 
   if (error) {
     return { ok: false, error: "更新に失敗しました" };
   }
 
+  revalidateLifeEventsIfLinked(data);
   return { ok: true };
 }
 
@@ -353,15 +368,17 @@ export async function deleteTask(input: {
   const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("tasks")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", parsed.data.taskId)
-    .eq("family_id", member.familyId);
+    .eq("family_id", member.familyId)
+    .select("life_event_item_id");
 
   if (error) {
     return { ok: false, error: "削除に失敗しました" };
   }
 
+  revalidateLifeEventsIfLinked(data);
   return { ok: true };
 }

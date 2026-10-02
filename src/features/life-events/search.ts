@@ -1,4 +1,5 @@
-import { addDaysToDateString, type DateString } from "@/lib/date";
+import { ageInMonths } from "@/features/programs/filter";
+import { addDaysToDateString, type DateString, daysUntil } from "@/lib/date";
 import { formatSlashDate } from "./timing";
 import type { CatalogItem, LifeEventItem } from "./types";
 
@@ -87,4 +88,26 @@ export function describeTiming(
   const date = resolveTargetDate(item, child);
   if (date === null || item.timing === null) return null;
   return `${formatSlashDate(date)}${item.timing.kind === "deadline" ? "までが目安" : "ごろが目安"}`;
+}
+
+/**
+ * 「いまの時期」の基準になる子の時期。生まれていれば「出生日 2026/8/20・生後1か月」、
+ * 生まれる前は「予定日 2026/12/10・妊娠8か月」（妊娠月数は4週で1か月の数え方）。
+ */
+export function describeChildStage(
+  child: ChildDates,
+  today: DateString,
+): string | null {
+  if (child.birthDate !== null) {
+    const months = ageInMonths(child.birthDate, today);
+    const base = `出生日 ${formatSlashDate(child.birthDate)}`;
+    return months === null ? base : `${base}・生後${months}か月`;
+  }
+  if (child.expectedBirthDate === null) return null;
+  const base = `予定日 ${formatSlashDate(child.expectedBirthDate)}`;
+  const daysLeft = daysUntil(child.expectedBirthDate, today);
+  const pregnancyDays = 280 - daysLeft;
+  if (daysLeft < 0 || pregnancyDays < 0) return base;
+  const month = Math.floor(Math.floor(pregnancyDays / 7) / 4) + 1;
+  return `${base}・妊娠${month}か月`;
 }

@@ -69,7 +69,7 @@ export function CatalogItemSheet({
           )}
           {state.status === "in_task" && (
             <Box>
-              <Chip label="タスクにある" size="small" />
+              <Chip label="タスク追加済み" size="small" />
             </Box>
           )}
           {state.status === "done" && (
@@ -84,7 +84,7 @@ export function CatalogItemSheet({
                 startIcon={<AddIcon />}
                 onClick={onAdd}
               >
-                やることに追加
+                タスクに追加
               </Button>
               <Button variant="outlined" onClick={onRecord}>
                 もうやった

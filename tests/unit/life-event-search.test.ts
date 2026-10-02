@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  describeChildStage,
   describeTiming,
   itemStateFor,
   matchesQuery,
@@ -168,5 +169,37 @@ describe("describeTiming", () => {
   });
   it("日付が出せなければ null", () => {
     expect(describeTiming(item(), born)).toBeNull();
+  });
+});
+
+describe("describeChildStage", () => {
+  it("生まれていれば出生日と月齢", () => {
+    expect(
+      describeChildStage(
+        { birthDate: "2026-08-20", expectedBirthDate: "2026-08-25" },
+        "2026-10-02",
+      ),
+    ).toBe("出生日 2026/8/20・生後1か月");
+  });
+  it("生まれる前は予定日と妊娠月数（28〜31週＝8か月）", () => {
+    expect(
+      describeChildStage(
+        { birthDate: null, expectedBirthDate: "2026-12-10" },
+        "2026-10-02",
+      ),
+    ).toBe("予定日 2026/12/10・妊娠8か月");
+  });
+  it("予定日を過ぎていれば月数は出さない", () => {
+    expect(
+      describeChildStage(
+        { birthDate: null, expectedBirthDate: "2026-09-30" },
+        "2026-10-02",
+      ),
+    ).toBe("予定日 2026/9/30");
+  });
+  it("日付がなければ null", () => {
+    expect(
+      describeChildStage({ birthDate: null, expectedBirthDate: null }, today),
+    ).toBeNull();
   });
 });

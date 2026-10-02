@@ -9,19 +9,18 @@ import type { ItemState } from "../search";
 import { formatSlashDate } from "../timing";
 import type { CatalogItem } from "../types";
 
+/** 行そのものは押せない。操作は右端の「＋」（詳細シートを開く）に揃える。 */
 export function CatalogItemRow({
   item,
   state,
   timing,
   onOpen,
-  onAdd,
 }: {
   item: CatalogItem;
   state: ItemState;
   /** describeTiming の結果。出せなければ null */
   timing: string | null;
   onOpen: () => void;
-  onAdd: () => void;
 }) {
   return (
     <Box
@@ -34,22 +33,7 @@ export function CatalogItemRow({
         opacity: state.status === "done" ? 0.5 : 1,
       }}
     >
-      <Box
-        component="button"
-        type="button"
-        onClick={onOpen}
-        sx={{
-          flex: 1,
-          minWidth: 0,
-          py: 1.5,
-          textAlign: "left",
-          font: "inherit",
-          color: "inherit",
-          background: "none",
-          border: 0,
-          cursor: "pointer",
-        }}
-      >
+      <Box sx={{ flex: 1, minWidth: 0, py: 1.5 }}>
         <Typography variant="body1">{item.title}</Typography>
         {item.summary !== "" && (
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -71,12 +55,11 @@ export function CatalogItemRow({
           </Typography>
         )}
       </Box>
-      {state.status === "in_task" && <Chip label="タスクにある" size="small" />}
+      {state.status === "in_task" && (
+        <Chip label="タスク追加済み" size="small" />
+      )}
       {state.status === "none" && (
-        <IconButton
-          aria-label={`${item.title}をやることに追加`}
-          onClick={onAdd}
-        >
+        <IconButton aria-label={`${item.title}を開く`} onClick={onOpen}>
           <AddIcon />
         </IconButton>
       )}

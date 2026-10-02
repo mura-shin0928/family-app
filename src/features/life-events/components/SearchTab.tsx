@@ -18,6 +18,7 @@ import { todayInJst } from "@/lib/date";
 import { LIFE_EVENT_CATALOG, LIFE_EVENT_KINDS } from "../catalog";
 import { fetchAreaCatalog } from "../item-actions";
 import {
+  describeChildStage,
   describeTiming,
   itemStateFor,
   matchesQuery,
@@ -52,11 +53,13 @@ export function SearchTab({
     expectedBirthDate: child.expectedBirthDate,
   };
   const searching = query.trim() !== "";
+  const today = todayInJst();
+  const stage = describeChildStage(dates, today);
 
   const catalogList = searching
     ? LIFE_EVENT_CATALOG.filter((item) => matchesQuery(item, query))
     : chip === "current"
-      ? selectCurrentItems(LIFE_EVENT_CATALOG, dates, todayInJst())
+      ? selectCurrentItems(LIFE_EVENT_CATALOG, dates, today)
       : LIFE_EVENT_CATALOG.filter((item) => item.kind === chip);
 
   const area = useQuery({
@@ -88,7 +91,6 @@ export function SearchTab({
         state={state}
         timing={describeTiming(item, dates)}
         onOpen={() => setSheetItem(item)}
-        onAdd={() => onAddToTask(item, resolveTargetDate(item, dates) ?? "")}
       />
     );
   }
@@ -136,6 +138,9 @@ export function SearchTab({
       </Box>
 
       <Box>
+        {!searching && chip === "current" && stage && (
+          <SectionHeading>いまの時期 ─ {stage}</SectionHeading>
+        )}
         {catalogList.map(renderRow)}
         {catalogList.length === 0 && !programsPending && (
           <Typography variant="body2" sx={{ color: "text.secondary", py: 2 }}>
@@ -153,6 +158,7 @@ export function SearchTab({
           loading={area.isPending}
           data={areaData}
           list={programList}
+          collapsed={!searching && chip === "current"}
           renderRow={renderRow}
         />
       )}
@@ -177,17 +183,42 @@ export function SearchTab({
   );
 }
 
+/** 一覧の区分の見出し。テンプレ側と制度側で同じ強さにする。 */
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <Typography
+      variant="subtitle1"
+      component="h2"
+      sx={{
+        fontWeight: 700,
+        pb: 0.5,
+        borderBottom: 2,
+        borderColor: "divider",
+      }}
+    >
+      {children}
+    </Typography>
+  );
+}
+
+/** 「いまの時期」で最初に出す制度の件数。制度は時期を持たず全件が当たるため絞る。 */
+const COLLAPSED_PROGRAM_COUNT = 5;
+
 function ProgramSection({
   loading,
   data,
   list,
+  collapsed,
   renderRow,
 }: {
   loading: boolean;
   data: Awaited<ReturnType<typeof fetchAreaCatalog>> | undefined;
   list: CatalogItem[];
+  collapsed: boolean;
   renderRow: (item: CatalogItem) => React.ReactNode;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   if (loading) {
     return (
       <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -221,10 +252,16 @@ function ProgramSection({
   const { attribution } = data;
   return (
     <Box>
-      <Typography variant="subtitle2" sx={{ color: "text.secondary", mb: 0.5 }}>
-        {data.municipalityName}の制度
-      </Typography>
-      {list.map(renderRow)}
+      <SectionHeading>{data.municipalityName}の制度</SectionHeading>
+      {(collapsed && !expanded
+        ? list.slice(0, COLLAPSED_PROGRAM_COUNT)
+        : list
+      ).map(renderRow)}
+      {collapsed && !expanded && list.length > COLLAPSED_PROGRAM_COUNT && (
+        <Button size="small" onClick={() => setExpanded(true)} sx={{ mt: 1 }}>
+          すべて見る（{list.length}件）
+        </Button>
+      )}
       {list.length === 0 && (
         <Typography variant="body2" sx={{ color: "text.secondary", py: 1 }}>
           該当する制度はありません
