@@ -98,7 +98,7 @@ uuid null、`life_event_items(id)` への FK。
 
 ## 3. 同期ルール
 
-すべて Server Action で、tasks の更新と同じ処理の中で行う。
+タスクの完了・完了解除・削除に伴う同期は、tasks の DB トリガーで行う（タスクの更新と同じトランザクションで揃えるため）。それ以外は Server Action で行う。
 
 | 操作 | `life_event_items` 側 |
 |---|---|
