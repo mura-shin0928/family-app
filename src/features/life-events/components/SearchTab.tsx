@@ -263,7 +263,15 @@ function ProgramSection({
       <Typography
         variant="caption"
         component="p"
-        sx={{ color: "text.secondary", mt: 0.5 }}
+        sx={{
+          color: "text.secondary",
+          mt: 1,
+          mb: 0.5,
+          px: 1.5,
+          py: 1,
+          bgcolor: "action.hover",
+          borderRadius: 1,
+        }}
       >
         出典: {attribution.source}（
         <MuiLink
