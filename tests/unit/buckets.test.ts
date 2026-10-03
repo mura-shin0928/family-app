@@ -3,6 +3,7 @@ import {
   bucketKeyForDueOn,
   bucketOpenTasks,
   splitOpenAndCompletedToday,
+  todayProgress,
 } from "@/features/tasks/buckets";
 import type { TaskDTO } from "@/features/tasks/types";
 
@@ -82,5 +83,40 @@ describe("splitOpenAndCompletedToday", () => {
 
     expect(open.map((t) => t.id)).toEqual(["open-1", "open-2"]);
     expect(completedToday.map((t) => t.id)).toEqual(["done-1"]);
+  });
+});
+
+describe("todayProgress", () => {
+  const progressOf = (open: TaskDTO[], completedTodayCount: number) =>
+    todayProgress(bucketOpenTasks(open, TODAY), completedTodayCount);
+
+  it("is remaining while an overdue or today task remains", () => {
+    expect(progressOf([makeTask({ id: "a", dueOn: "2026-08-16" })], 1)).toBe(
+      "remaining",
+    );
+    expect(progressOf([makeTask({ id: "a", dueOn: TODAY })], 0)).toBe(
+      "remaining",
+    );
+  });
+
+  it("is todayDone when only later tasks remain and something was completed today", () => {
+    expect(
+      progressOf(
+        [makeTask({ id: "a", dueOn: "2026-08-20" }), makeTask({ id: "b" })],
+        1,
+      ),
+    ).toBe("todayDone");
+  });
+
+  it("is nothingToday when only later tasks remain and nothing was completed today", () => {
+    expect(progressOf([makeTask({ id: "a" })], 0)).toBe("nothingToday");
+  });
+
+  it("is allDone when no open task remains and something was completed today", () => {
+    expect(progressOf([], 2)).toBe("allDone");
+  });
+
+  it("is nothingToDo when there is no task at all", () => {
+    expect(progressOf([], 0)).toBe("nothingToDo");
   });
 });

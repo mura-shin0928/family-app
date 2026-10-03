@@ -1,8 +1,21 @@
 import { mascotColors as c } from "@/lib/brand";
 
-export type MascotExpression = "happy" | "sleepy" | "cheer";
+export type MascotExpression =
+  | "happy"
+  | "smile"
+  | "wink"
+  | "surprised"
+  | "sleepy"
+  | "cheer";
 
-/** マスコット「おうちくん」。ふだん・やることが空（カップ）・全部できた（万歳）の3表情。 */
+const EYE_STROKE = "2.4";
+const LEFT_EYE_SMILE = "M34 59q3-3.5 6 0";
+const RIGHT_EYE_SMILE = "M50 59q3-3.5 6 0";
+
+/**
+ * マスコット「おうちくん」。輪郭線なしの面で描く。
+ * ふだん・にっこり・ウインク・きょとん・ひと休み（カップ）・全部できた（万歳）の6表情。
+ */
 export function Mascot({
   expression = "happy",
   size = 110,
@@ -20,84 +33,91 @@ export function Mascot({
       viewBox="0 0 90 90"
       fill="none"
       strokeLinejoin="round"
+      strokeLinecap="round"
       aria-hidden="true"
     >
       {cheer && (
-        <path
-          d="M16 54 6 40M74 54 84 40"
-          stroke={c.line}
-          strokeWidth="3.5"
-          strokeLinecap="round"
-        />
+        <path d="M15 56 5 43M75 56 85 43" stroke={c.roof} strokeWidth="5" />
       )}
-      <rect
-        x="55"
-        y="14"
-        width="10"
-        height="16"
-        rx="2"
-        fill={c.roof}
-        stroke={c.line}
-        strokeWidth="3.5"
-      />
+      <rect x="57" y="16" width="9" height="18" rx="3" fill={c.chimney} />
+      <rect x="16" y="36" width="58" height="43" rx="13" fill={c.body} />
+      {/* 同色の太い線で三角の角を丸める */}
       <path
-        d="M45 12 78 40v32a7 7 0 0 1-7 7H19a7 7 0 0 1-7-7V40z"
-        fill={c.body}
-        stroke={c.line}
-        strokeWidth="3.5"
-      />
-      <path
-        d="M45 12 78 40H12z"
+        d="M45 18 76 40H14z"
         fill={c.roof}
-        stroke={c.line}
-        strokeWidth="3.5"
+        stroke={c.roof}
+        strokeWidth="8"
       />
-      <circle cx="26" cy="63" r="4.5" fill={c.cheek} opacity=".55" />
-      <circle cx="64" cy="63" r="4.5" fill={c.cheek} opacity=".55" />
-      {sleepy ? (
-        <path
-          d="M30 55q4 4 8 0M52 55q4 4 8 0"
-          stroke={c.eye}
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-      ) : (
-        <g>
-          <circle cx="34" cy="55" r="3.2" fill={c.eye} />
-          <circle cx="56" cy="55" r="3.2" fill={c.eye} />
-        </g>
+      <circle cx="29" cy="64" r="4.5" fill={c.cheek} opacity=".6" />
+      {!sleepy && (
+        <circle cx="61" cy="64" r="4.5" fill={c.cheek} opacity=".6" />
       )}
-      {cheer ? (
-        <path d="M40 65q5 9 10 0z" fill={c.eye} />
-      ) : (
-        <path
-          d="M40 65q5 5 10 0"
-          stroke={c.eye}
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-      )}
+      <Eyes expression={expression} />
+      <Mouth expression={expression} />
       {sleepy && (
-        <g transform="translate(56 62)">
+        <g>
+          <path d="M54 64h14v6a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6z" fill={c.cup} />
           <path
-            d="M0 0h18v8a7 7 0 0 1-7 7H7a7 7 0 0 1-7-7z"
-            fill={c.cup}
-            stroke={c.line}
-            strokeWidth="2.5"
-          />
-          <path
-            d="M18 3h2a3.5 3.5 0 0 1 0 7h-3"
-            stroke={c.line}
-            strokeWidth="2.5"
-          />
-          <path
-            d="M5 -4q2-3 0-6M11 -4q2-3 0-6"
-            stroke={c.line}
-            strokeWidth="2"
-            strokeLinecap="round"
+            d="M68 66.5h1.5a2.5 2.5 0 0 1 0 5H68"
+            stroke={c.cup}
+            strokeWidth="2.2"
           />
         </g>
       )}
     </svg>
   );
+}
+
+function Eyes({ expression }: { expression: MascotExpression }) {
+  switch (expression) {
+    case "sleepy":
+      return (
+        <path
+          d="M34 58q3 3 6 0M50 58q3 3 6 0"
+          stroke={c.eye}
+          strokeWidth={EYE_STROKE}
+        />
+      );
+    case "smile":
+      return (
+        <path
+          d={LEFT_EYE_SMILE + RIGHT_EYE_SMILE}
+          stroke={c.eye}
+          strokeWidth={EYE_STROKE}
+        />
+      );
+    case "wink":
+      return (
+        <g>
+          <circle cx="37" cy="58" r="3" fill={c.eye} />
+          <path d={RIGHT_EYE_SMILE} stroke={c.eye} strokeWidth={EYE_STROKE} />
+        </g>
+      );
+    default:
+      return (
+        <g>
+          <circle cx="37" cy="58" r="3" fill={c.eye} />
+          <circle cx="53" cy="58" r="3" fill={c.eye} />
+        </g>
+      );
+  }
+}
+
+function Mouth({ expression }: { expression: MascotExpression }) {
+  switch (expression) {
+    case "cheer":
+      return <path d="M41 64q4 7 8 0z" fill={c.eye} />;
+    case "wink":
+      return <path d="M41 64q4 6 8 0z" fill={c.eye} />;
+    case "surprised":
+      return <circle cx="45" cy="66" r="2.6" fill={c.eye} />;
+    default:
+      return (
+        <path
+          d="M41.5 65q3.5 3.5 7 0"
+          stroke={c.eye}
+          strokeWidth={EYE_STROKE}
+        />
+      );
+  }
 }
