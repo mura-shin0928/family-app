@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { createClient } from "@/lib/supabase/server";
+import type { TaskUpdatePatch } from "./edit-draft";
 import {
   createTaskSchema,
   taskIdSchema,
@@ -11,6 +12,7 @@ import {
   updateDueDateSchema,
   updateNoteSchema,
   updateTaskPurchaseLocationSchema,
+  updateTaskSchema,
   updateTitleSchema,
   updateUrlSchema,
 } from "./schema";
@@ -352,6 +354,64 @@ export async function updateTaskPurchaseLocation(input: {
 
   if (error) {
     return { ok: false, error: "買う場所の更新に失敗しました" };
+  }
+
+  return { ok: true };
+}
+
+export async function updateTask(
+  input: { taskId: string } & TaskUpdatePatch,
+): Promise<ActionResult> {
+  const parsed = updateTaskSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  const { taskId, title, dueOn, isPurchase, purchaseLocationId, url, note } =
+    parsed.data;
+  const update: {
+    title?: string;
+    due_on?: string | null;
+    is_purchase?: boolean;
+    purchase_location_id?: string | null;
+    url?: string | null;
+    note?: string | null;
+  } = {};
+  if (title !== undefined) update.title = title;
+  if (dueOn !== undefined) update.due_on = dueOn || null;
+  if (isPurchase !== undefined) update.is_purchase = isPurchase;
+  if (url !== undefined) update.url = url || null;
+  if (note !== undefined) update.note = note || null;
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  if (purchaseLocationId !== undefined) {
+    const location = await resolvePurchaseLocationId(
+      supabase,
+      purchaseLocationId,
+    );
+    if (!location.ok) {
+      return location;
+    }
+    update.purchase_location_id = location.value;
+  }
+
+  if (Object.keys(update).length === 0) {
+    return { ok: true };
+  }
+
+  const { error } = await supabase
+    .from("tasks")
+    .update(update)
+    .eq("id", taskId)
+    .eq("family_id", member.familyId);
+
+  if (error) {
+    return { ok: false, error: "更新に失敗しました" };
   }
 
   return { ok: true };
