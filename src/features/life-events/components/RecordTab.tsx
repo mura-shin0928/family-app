@@ -16,7 +16,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { TASKS_QUERY_KEY } from "@/features/tasks/types";
 import {
   removeLifeEventItem,
@@ -46,8 +46,65 @@ function monthHeading(doneOn: string): string {
   return `${year}年${Number(month)}月`;
 }
 
-function firstLine(note: string): string {
-  return note.split("\n")[0] ?? "";
+/**
+ * 一覧の行のメモ。1行に収まらないときだけ「続きを見る」で行の中に全文を広げる。
+ * 行全体は詳細シートを開くボタンなので、こちらの操作は行に伝えない。
+ */
+function RowNote({ note }: { note: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || expanded) return;
+    const measure = () =>
+      setOverflowing(element.scrollHeight > element.clientHeight + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [expanded]);
+
+  const stop = (event: React.SyntheticEvent) => event.stopPropagation();
+
+  return (
+    <>
+      <Typography
+        ref={ref}
+        variant="caption"
+        sx={{
+          color: "text.secondary",
+          display: expanded ? "block" : "-webkit-box",
+          whiteSpace: "pre-wrap",
+          overflowWrap: "anywhere",
+          ...(expanded
+            ? {}
+            : {
+                WebkitLineClamp: 1,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }),
+        }}
+      >
+        {note}
+      </Typography>
+      {(overflowing || expanded) && (
+        <Button
+          size="small"
+          onClick={(event) => {
+            stop(event);
+            setExpanded((value) => !value);
+          }}
+          onMouseDown={stop}
+          onTouchStart={stop}
+          sx={{ p: 0, minWidth: 0, fontSize: "0.75rem" }}
+        >
+          {expanded ? "閉じる" : "続きを見る"}
+        </Button>
+      )}
+    </>
+  );
 }
 
 const URL_PATTERN = /(https?:\/\/[^\s]+)/;
@@ -176,15 +233,7 @@ export function RecordTab({ items }: { items: LifeEventItem[] }) {
                 </Typography>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="body1">{item.title}</Typography>
-                  {item.note && (
-                    <Typography
-                      variant="caption"
-                      noWrap
-                      sx={{ color: "text.secondary", display: "block" }}
-                    >
-                      {firstLine(item.note)}
-                    </Typography>
-                  )}
+                  {item.note && <RowNote note={item.note} />}
                 </Box>
               </ButtonBase>
             ))}
