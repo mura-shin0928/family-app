@@ -170,6 +170,17 @@ function TaskEditForm({
         slotProps={{ htmlInput: inputStyle }}
       />
 
+      {/* シートの上端に近く、重ねて出すと切れるので、チップ行の上に差し込む。 */}
+      {dueOpen && (
+        <Paper variant="outlined" sx={{ width: "16rem", maxWidth: "100%" }}>
+          <DuePanel
+            dueOn={draft.dueOn}
+            today={today}
+            onChange={(dueOn) => update({ dueOn })}
+            onSelect={selectDue}
+          />
+        </Paper>
+      )}
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
         <Chip
           icon={<CalendarTodayOutlinedIcon />}
@@ -203,16 +214,6 @@ function TaskEditForm({
           />
         )}
       </Box>
-      {dueOpen && (
-        <Paper variant="outlined" sx={{ width: "16rem", maxWidth: "100%" }}>
-          <DuePanel
-            dueOn={draft.dueOn}
-            today={today}
-            onChange={(dueOn) => update({ dueOn })}
-            onSelect={selectDue}
-          />
-        </Paper>
-      )}
       <Menu
         anchorEl={locationAnchor}
         open={!!locationAnchor}
