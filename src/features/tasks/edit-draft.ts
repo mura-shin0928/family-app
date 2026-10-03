@@ -1,3 +1,4 @@
+import { addDaysToDateString } from "@/lib/date";
 import { updateTaskSchema } from "./schema";
 import type { TaskDTO } from "./types";
 
@@ -94,4 +95,19 @@ export function patchToTaskFields(patch: TaskUpdatePatch): Partial<TaskDTO> {
   if (patch.url !== undefined) fields.url = patch.url || null;
   if (patch.note !== undefined) fields.note = patch.note || null;
   return fields;
+}
+
+export type DueChip = "today" | "tomorrow" | "custom" | "none";
+
+/** 期限チップのうち選択状態にする1つ。日付入力を開いている間は「日付を選ぶ」。 */
+export function selectedDueChip(
+  dueOn: string | null,
+  today: string,
+  pickerOpen: boolean,
+): DueChip {
+  if (pickerOpen) return "custom";
+  if (dueOn === null) return "none";
+  if (dueOn === today) return "today";
+  if (dueOn === addDaysToDateString(today, 1)) return "tomorrow";
+  return "custom";
 }

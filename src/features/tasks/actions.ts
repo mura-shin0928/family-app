@@ -231,14 +231,19 @@ export async function updateTask(
     return { ok: true };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("tasks")
     .update(update)
     .eq("id", taskId)
-    .eq("family_id", member.familyId);
+    .eq("family_id", member.familyId)
+    .is("deleted_at", null)
+    .select("id");
 
   if (error) {
     return { ok: false, error: "更新に失敗しました" };
+  }
+  if (data.length === 0) {
+    return { ok: false, error: "タスクが見つかりません" };
   }
 
   return { ok: true };

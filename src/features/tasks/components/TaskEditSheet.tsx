@@ -29,6 +29,7 @@ import {
   buildTaskPatch,
   draftFromTask,
   isDraftDirty,
+  selectedDueChip,
   type TaskDraft,
   type TaskDraftErrors,
   type TaskUpdatePatch,
@@ -107,9 +108,10 @@ function TaskEditForm({
 
   const today = todayInJst();
   const tomorrow = addDaysToDateString(today, 1);
-  const isCustomDue =
-    draft.dueOn !== null && draft.dueOn !== today && draft.dueOn !== tomorrow;
-  const [showDatePicker, setShowDatePicker] = useState(isCustomDue);
+  const [showDatePicker, setShowDatePicker] = useState(
+    () => selectedDueChip(original.dueOn, today, false) === "custom",
+  );
+  const dueChip = selectedDueChip(draft.dueOn, today, showDatePicker);
   // 論理削除済みの場所idは未設定として扱う（TaskRow と同じ）。
   const selectedLocation =
     locations.find((location) => location.id === draft.purchaseLocationId) ??
@@ -152,7 +154,7 @@ function TaskEditForm({
   }
 
   const customDueLabel =
-    isCustomDue && draft.dueOn
+    dueChip === "custom" && draft.dueOn
       ? `${Number(draft.dueOn.slice(5, 7))}/${Number(draft.dueOn.slice(8, 10))}`
       : "日付を選ぶ";
 
@@ -182,30 +184,30 @@ function TaskEditForm({
             icon={<CalendarTodayOutlinedIcon />}
             label="今日"
             clickable
-            color={draft.dueOn === today ? "primary" : "default"}
-            variant={draft.dueOn === today ? "filled" : "outlined"}
+            color={dueChip === "today" ? "primary" : "default"}
+            variant={dueChip === "today" ? "filled" : "outlined"}
             onClick={() => selectDue(today)}
           />
           <Chip
             icon={<CalendarTodayOutlinedIcon />}
             label="明日"
             clickable
-            color={draft.dueOn === tomorrow ? "primary" : "default"}
-            variant={draft.dueOn === tomorrow ? "filled" : "outlined"}
+            color={dueChip === "tomorrow" ? "primary" : "default"}
+            variant={dueChip === "tomorrow" ? "filled" : "outlined"}
             onClick={() => selectDue(tomorrow)}
           />
           <Chip
             label={customDueLabel}
             clickable
-            color={showDatePicker || isCustomDue ? "primary" : "default"}
-            variant={showDatePicker || isCustomDue ? "filled" : "outlined"}
+            color={dueChip === "custom" ? "primary" : "default"}
+            variant={dueChip === "custom" ? "filled" : "outlined"}
             onClick={() => setShowDatePicker(true)}
           />
           <Chip
             label="期限なし"
             clickable
-            color={draft.dueOn === null ? "primary" : "default"}
-            variant={draft.dueOn === null ? "filled" : "outlined"}
+            color={dueChip === "none" ? "primary" : "default"}
+            variant={dueChip === "none" ? "filled" : "outlined"}
             onClick={() => selectDue(null)}
           />
         </Box>

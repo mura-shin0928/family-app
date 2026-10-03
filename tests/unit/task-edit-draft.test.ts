@@ -4,6 +4,7 @@ import {
   draftFromTask,
   isDraftDirty,
   patchToTaskFields,
+  selectedDueChip,
   validateTaskPatch,
 } from "@/features/tasks/edit-draft";
 import type { TaskDTO } from "@/features/tasks/types";
@@ -138,5 +139,19 @@ describe("patchToTaskFields", () => {
     expect(patchToTaskFields({ isPurchase: true })).toEqual({
       isPurchase: true,
     });
+  });
+});
+
+describe("selectedDueChip", () => {
+  const today = "2026-10-03";
+  it("値に応じて1つだけ選ぶ", () => {
+    expect(selectedDueChip("2026-10-03", today, false)).toBe("today");
+    expect(selectedDueChip("2026-10-04", today, false)).toBe("tomorrow");
+    expect(selectedDueChip("2026-10-20", today, false)).toBe("custom");
+    expect(selectedDueChip(null, today, false)).toBe("none");
+  });
+  it("日付入力を開いている間は「日付を選ぶ」だけ", () => {
+    expect(selectedDueChip("2026-10-03", today, true)).toBe("custom");
+    expect(selectedDueChip(null, today, true)).toBe("custom");
   });
 });
