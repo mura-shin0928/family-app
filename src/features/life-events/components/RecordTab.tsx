@@ -1,5 +1,6 @@
 "use client";
 
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -10,6 +11,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Drawer from "@mui/material/Drawer";
+import IconButton from "@mui/material/IconButton";
 import MuiLink from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
@@ -47,16 +49,16 @@ function monthHeading(doneOn: string): string {
 }
 
 /**
- * 一覧の行のメモ。1行に収まらないときだけ「続きを見る」で行の中に全文を広げる。
- * 行全体は詳細シートを開くボタンなので、こちらの操作は行に伝えない。
+ * 記録の一覧の1行。タップで詳細シートを開く。メモが1行に収まらないときだけ
+ * 右端の開閉ボタンで、行の中にメモ全文を広げられる。
  */
-function RowNote({ note }: { note: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
+function RecordRow({ item, onOpen }: { item: DoneItem; onOpen: () => void }) {
+  const noteRef = useRef<HTMLSpanElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
 
   useEffect(() => {
-    const element = ref.current;
+    const element = noteRef.current;
     if (!element || expanded) return;
     const measure = () =>
       setOverflowing(element.scrollHeight > element.clientHeight + 1);
@@ -66,44 +68,75 @@ function RowNote({ note }: { note: string }) {
     return () => observer.disconnect();
   }, [expanded]);
 
-  const stop = (event: React.SyntheticEvent) => event.stopPropagation();
-
   return (
-    <>
-      <Typography
-        ref={ref}
-        variant="caption"
+    <Box sx={{ display: "flex", alignItems: "center" }}>
+      <ButtonBase
+        component="div"
+        onClick={onOpen}
         sx={{
-          color: "text.secondary",
-          display: expanded ? "block" : "-webkit-box",
-          whiteSpace: "pre-wrap",
-          overflowWrap: "anywhere",
-          ...(expanded
-            ? {}
-            : {
-                WebkitLineClamp: 1,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }),
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          gap: 1.5,
+          alignItems: "center",
+          justifyContent: "flex-start",
+          textAlign: "left",
+          py: 1,
         }}
       >
-        {note}
-      </Typography>
-      {(overflowing || expanded) && (
-        <Button
-          size="small"
-          onClick={(event) => {
-            stop(event);
-            setExpanded((value) => !value);
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            minWidth: 40,
+            fontVariantNumeric: "tabular-nums",
           }}
-          onMouseDown={stop}
-          onTouchStart={stop}
-          sx={{ p: 0, minWidth: 0, fontSize: "0.75rem" }}
         >
-          {expanded ? "閉じる" : "続きを見る"}
-        </Button>
+          {formatSlashDate(item.doneOn).split("/").slice(1).join("/")}
+        </Typography>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="body1">{item.title}</Typography>
+          {item.note && (
+            <Typography
+              ref={noteRef}
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: expanded ? "block" : "-webkit-box",
+                whiteSpace: "pre-wrap",
+                overflowWrap: "anywhere",
+                ...(expanded
+                  ? {}
+                  : {
+                      WebkitLineClamp: 1,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }),
+              }}
+            >
+              {item.note}
+            </Typography>
+          )}
+        </Box>
+      </ButtonBase>
+      {(overflowing || expanded) && (
+        <IconButton
+          size="small"
+          onClick={() => setExpanded((value) => !value)}
+          aria-expanded={expanded}
+          aria-label={expanded ? "メモを閉じる" : "メモを広げる"}
+          sx={{ alignSelf: "flex-start", mt: 1 }}
+        >
+          <ExpandMoreIcon
+            fontSize="small"
+            sx={{
+              transform: expanded ? "rotate(180deg)" : "none",
+              transition: "transform 0.15s",
+            }}
+          />
+        </IconButton>
       )}
-    </>
+    </Box>
   );
 }
 
@@ -205,37 +238,14 @@ export function RecordTab({ items }: { items: LifeEventItem[] }) {
             divider={<Box sx={{ borderTop: 1, borderColor: "divider" }} />}
           >
             {group.rows.map((item) => (
-              <ButtonBase
+              <RecordRow
                 key={item.id}
-                component="div"
-                onClick={() => {
+                item={item}
+                onOpen={() => {
                   setError(null);
                   setSheetItem(item);
                 }}
-                sx={{
-                  display: "flex",
-                  gap: 1.5,
-                  alignItems: "center",
-                  justifyContent: "flex-start",
-                  textAlign: "left",
-                  py: 1,
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: "text.secondary",
-                    minWidth: 40,
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {formatSlashDate(item.doneOn).split("/").slice(1).join("/")}
-                </Typography>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="body1">{item.title}</Typography>
-                  {item.note && <RowNote note={item.note} />}
-                </Box>
-              </ButtonBase>
+              />
             ))}
           </Stack>
         </Box>
