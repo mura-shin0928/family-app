@@ -11,6 +11,7 @@ import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import ClickAwayListener from "@mui/material/ClickAwayListener";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -18,6 +19,7 @@ import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
 import Paper from "@mui/material/Paper";
+import Popper from "@mui/material/Popper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -109,6 +111,7 @@ function TaskEditForm({
 
   const today = todayInJst();
   const [dueOpen, setDueOpen] = useState(false);
+  const dueChipRef = useRef<HTMLDivElement>(null);
   // 論理削除済みの場所idは未設定として扱う（TaskRow と同じ）。
   const selectedLocation =
     locations.find((location) => location.id === draft.purchaseLocationId) ??
@@ -170,50 +173,65 @@ function TaskEditForm({
         slotProps={{ htmlInput: inputStyle }}
       />
 
-      {/* シートの上端に近く、重ねて出すと切れるので、チップ行の上に差し込む。 */}
-      {dueOpen && (
-        <Paper variant="outlined" sx={{ width: "16rem", maxWidth: "100%" }}>
-          <DuePanel
-            dueOn={draft.dueOn}
-            today={today}
-            onChange={(dueOn) => update({ dueOn })}
-            onSelect={selectDue}
-          />
-        </Paper>
-      )}
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-        <Chip
-          icon={<CalendarTodayOutlinedIcon />}
-          label={dueChipLabel(draft.dueOn, today)}
-          clickable
-          color={draft.dueOn || dueOpen ? "primary" : "default"}
-          variant={draft.dueOn || dueOpen ? "filled" : "outlined"}
-          onClick={() => setDueOpen((current) => !current)}
-        />
-        <Chip
-          icon={
-            draft.isPurchase ? (
-              <ShoppingCartIcon />
-            ) : (
-              <ShoppingCartOutlinedIcon />
-            )
-          }
-          label="買うもの"
-          clickable
-          color={draft.isPurchase ? "primary" : "default"}
-          variant={draft.isPurchase ? "filled" : "outlined"}
-          onClick={() => update({ isPurchase: !draft.isPurchase })}
-        />
-        {draft.isPurchase && (
+      <ClickAwayListener onClickAway={() => setDueOpen(false)}>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
           <Chip
-            icon={<PlaceOutlinedIcon />}
-            label={selectedLocation?.name ?? "場所"}
+            ref={dueChipRef}
+            icon={<CalendarTodayOutlinedIcon />}
+            label={dueChipLabel(draft.dueOn, today)}
             clickable
-            variant="outlined"
-            onClick={(event) => setLocationAnchor(event.currentTarget)}
+            color={draft.dueOn || dueOpen ? "primary" : "default"}
+            variant={draft.dueOn || dueOpen ? "filled" : "outlined"}
+            onClick={() => setDueOpen((current) => !current)}
           />
-        )}
-      </Box>
+          <Chip
+            icon={
+              draft.isPurchase ? (
+                <ShoppingCartIcon />
+              ) : (
+                <ShoppingCartOutlinedIcon />
+              )
+            }
+            label="買うもの"
+            clickable
+            color={draft.isPurchase ? "primary" : "default"}
+            variant={draft.isPurchase ? "filled" : "outlined"}
+            onClick={() => update({ isPurchase: !draft.isPurchase })}
+          />
+          {draft.isPurchase && (
+            <Chip
+              icon={<PlaceOutlinedIcon />}
+              label={selectedLocation?.name ?? "場所"}
+              clickable
+              variant="outlined"
+              onClick={(event) => setLocationAnchor(event.currentTarget)}
+            />
+          )}
+          {/*
+          シートの上端より上まで重ねて出す。シートは overflow でスクロールするため、
+          absolute だと切れる。fixed 配置ならシートの外まで出せ、Portal を使わないので
+          Drawer のフォーカス制御からも外れない。
+        */}
+          <Popper
+            open={dueOpen}
+            anchorEl={dueChipRef.current}
+            placement="top-start"
+            disablePortal
+            popperOptions={{ strategy: "fixed" }}
+            modifiers={[{ name: "offset", options: { offset: [0, 8] } }]}
+            sx={{ zIndex: 1, width: "16rem", maxWidth: "calc(100vw - 32px)" }}
+          >
+            <Paper elevation={1}>
+              <DuePanel
+                dueOn={draft.dueOn}
+                today={today}
+                onChange={(dueOn) => update({ dueOn })}
+                onSelect={selectDue}
+              />
+            </Paper>
+          </Popper>
+        </Box>
+      </ClickAwayListener>
       <Menu
         anchorEl={locationAnchor}
         open={!!locationAnchor}
