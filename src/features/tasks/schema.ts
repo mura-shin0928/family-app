@@ -78,3 +78,19 @@ export const updateTaskPurchaseLocationSchema = z.object({
   taskId: z.string().uuid(),
   purchaseLocationId: purchaseLocationIdSchema,
 });
+
+// 編集シートの保存。含まれる項目だけを更新する（空文字列 = 未設定）。
+export const updateTaskSchema = z.object({
+  taskId: z.string().uuid(),
+  title: z
+    .string()
+    .trim()
+    .min(1, "タイトルを入力してください")
+    .max(200, "タイトルは200文字以内で入力してください")
+    .optional(),
+  dueOn: z.union([dateStringSchema, z.literal("")]).optional(),
+  isPurchase: z.boolean().optional(),
+  purchaseLocationId: purchaseLocationIdSchema.optional(),
+  url: urlSchema.optional(),
+  note: noteSchema.optional(),
+});
