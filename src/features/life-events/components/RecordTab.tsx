@@ -308,8 +308,8 @@ export function RecordTab({ items }: { items: LifeEventItem[] }) {
               </Button>
               <Button
                 color="error"
-                // 枠線付きのボタンと文字の位置を揃える（枠1px + 左右15px）
-                sx={{ px: 2 }}
+                // 折り返したとき、上の行のボタンの左端に文字を揃える
+                sx={{ pl: "2px", pr: 2 }}
                 onClick={() => {
                   setError(null);
                   setRemoveTarget(sheetItem);
