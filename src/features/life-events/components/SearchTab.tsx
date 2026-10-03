@@ -184,7 +184,12 @@ export function SearchTab({
             </Tooltip>
           </Typography>
         )}
-        {catalogList.map(renderRow)}
+        <CollapsibleRows
+          // チップや検索語が変わったら「もっと見る」を閉じた状態に戻す
+          key={searching ? `query:${query}` : chip}
+          list={catalogList}
+          renderRow={renderRow}
+        />
         {catalogList.length === 0 && !programsPending && (
           <Typography variant="body2" sx={{ color: "text.secondary", py: 2 }}>
             {searching
@@ -244,8 +249,29 @@ function SectionHeading({
   );
 }
 
-/** 最初に出す制度の件数。 */
-const COLLAPSED_PROGRAM_COUNT = 5;
+/** 最初に出す件数。制度も一般的な手続き・行事も同じ。 */
+const COLLAPSED_COUNT = 5;
+
+/** 最初の数件だけ出し、「もっと見る」で全件にする一覧。 */
+function CollapsibleRows({
+  list,
+  renderRow,
+}: {
+  list: CatalogItem[];
+  renderRow: (item: CatalogItem) => React.ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <>
+      {(expanded ? list : list.slice(0, COLLAPSED_COUNT)).map(renderRow)}
+      {!expanded && list.length > COLLAPSED_COUNT && (
+        <Button size="small" onClick={() => setExpanded(true)} sx={{ mt: 1 }}>
+          もっと見る（全{list.length}件）
+        </Button>
+      )}
+    </>
+  );
+}
 
 function ProgramSection({
   loading,
@@ -261,8 +287,6 @@ function ProgramSection({
   listHidden: boolean;
   renderRow: (item: CatalogItem) => React.ReactNode;
 }) {
-  const [expanded, setExpanded] = useState(false);
-
   if (loading) {
     return (
       <Typography variant="body2" sx={{ color: "text.secondary" }}>
@@ -336,14 +360,7 @@ function ProgramSection({
         </MuiLink>
         ）。{attribution.notice}
       </Typography>
-      {(expanded ? list : list.slice(0, COLLAPSED_PROGRAM_COUNT)).map(
-        renderRow,
-      )}
-      {!expanded && list.length > COLLAPSED_PROGRAM_COUNT && (
-        <Button size="small" onClick={() => setExpanded(true)} sx={{ mt: 1 }}>
-          もっと見る（全{list.length}件）
-        </Button>
-      )}
+      <CollapsibleRows list={list} renderRow={renderRow} />
       {list.length === 0 && (
         <Typography variant="body2" sx={{ color: "text.secondary", py: 1 }}>
           該当する制度はありません
