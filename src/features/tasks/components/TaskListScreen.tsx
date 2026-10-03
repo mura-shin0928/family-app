@@ -17,8 +17,6 @@ import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { type ReactNode, useRef, useState } from "react";
-import { EmptyState } from "@/components/EmptyState";
-import { Mascot } from "@/components/Mascot";
 import type { Child } from "@/features/children/types";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { SOON_DAYS } from "@/lib/constants";
@@ -35,6 +33,7 @@ import {
   splitOpenAndCompletedToday,
   TASK_BUCKET_ORDER,
   type TaskBucketKey,
+  todayProgress,
 } from "../buckets";
 import { patchToTaskFields, type TaskUpdatePatch } from "../edit-draft";
 import {
@@ -43,6 +42,7 @@ import {
 } from "../purchase-filter";
 import { fetchTasks } from "../query-actions";
 import { TASKS_QUERY_KEY, type TaskDTO } from "../types";
+import { MascotSpeech } from "./MascotSpeech";
 import { QuickCaptureBar } from "./QuickCaptureBar";
 import { TaskEditSheet } from "./TaskEditSheet";
 import { TaskRow } from "./TaskRow";
@@ -408,7 +408,7 @@ export function TaskListScreen({
   const today = todayInJst();
   const { open, completedToday } = splitOpenAndCompletedToday(tasks);
   const buckets = bucketOpenTasks(open, today);
-  const isEmpty = open.length === 0 && completedToday.length === 0;
+  const progress = todayProgress(buckets, completedToday.length);
 
   // 買うものだけ表示: 期限の緊急度ではなく、売り場を回る順（sort_order）で見せる。
   const purchaseOpen = open
@@ -601,6 +601,12 @@ export function TaskListScreen({
           </>
         ) : (
           <>
+            <MascotSpeech
+              key={progress}
+              progress={progress}
+              large={open.length === 0}
+            />
+
             {visibleBuckets.map((key) =>
               buckets[key].length > 0 ? (
                 <BucketSection
@@ -642,12 +648,6 @@ export function TaskListScreen({
               ) : null,
             )}
 
-            {open.length === 0 && completedToday.length > 0 && (
-              <EmptyState illustration={<Mascot expression="cheer" />} py={3}>
-                全部できた！おつかれさま。
-              </EmptyState>
-            )}
-
             {completedToday.length > 0 && (
               <CompletedSection count={completedToday.length}>
                 {completedToday.map((task) => (
@@ -660,12 +660,6 @@ export function TaskListScreen({
                   />
                 ))}
               </CompletedSection>
-            )}
-
-            {isEmpty && (
-              <EmptyState illustration={<Mascot expression="sleepy" />}>
-                今やることはありません。ゆっくりどうぞ。
-              </EmptyState>
             )}
           </>
         )}

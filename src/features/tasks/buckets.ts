@@ -69,3 +69,29 @@ export function splitOpenAndCompletedToday(tasks: readonly TaskDTO[]): {
   }
   return { open, completedToday };
 }
+
+export type TodayProgress =
+  | "remaining"
+  | "allDone"
+  | "todayDone"
+  | "nothingToDo"
+  | "nothingToday";
+
+/**
+ * 今日のぶん（「期限超過」と「今日」）の進み具合。
+ * 先の期限・期限なしが残っていても、今日のぶんが片付いていれば区切りとして扱う。
+ */
+export function todayProgress(
+  buckets: Record<TaskBucketKey, readonly TaskDTO[]>,
+  completedTodayCount: number,
+): TodayProgress {
+  if (buckets.overdue.length > 0 || buckets.today.length > 0) {
+    return "remaining";
+  }
+  const hasLater =
+    buckets.soon.length > 0 ||
+    buckets.upcoming.length > 0 ||
+    buckets.none.length > 0;
+  if (completedTodayCount > 0) return hasLater ? "todayDone" : "allDone";
+  return hasLater ? "nothingToday" : "nothingToDo";
+}
