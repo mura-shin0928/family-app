@@ -143,10 +143,19 @@ export const brand = { light, dark };
 
 /** マスコット「おうちくん」の色。ライト・ダークで変えない（背景に載せる絵なので）。 */
 export const mascotColors = {
-  line: "#93400a",
-  body: "#ffc999",
-  roof: "#f3a570",
+  body: "#ffd9b5",
+  roof: "#ec7f43",
+  chimney: "#d9652b",
   cheek: "#f59a7a",
-  eye: "#2b2926",
+  eye: "#5a2a0a",
   cup: "#ffffff",
+} as const;
+
+/** アプリアイコン（屋根の下に大・中・小の家族）の色。屋根はおうちくんと同じ色にする。 */
+export const appIconColors = {
+  background: light.tagBg,
+  roof: mascotColors.roof,
+  large: "#b84f05",
+  medium: "#d9652b",
+  small: "#f3a570",
 } as const;
