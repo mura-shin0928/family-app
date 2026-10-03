@@ -57,16 +57,22 @@ function RecordRow({ item, onOpen }: { item: DoneItem; onOpen: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
 
+  const note = item.note;
+
   useEffect(() => {
     const element = noteRef.current;
-    if (!element || expanded) return;
+    if (!note || !element) {
+      setOverflowing(false);
+      return;
+    }
+    if (expanded) return;
     const measure = () =>
       setOverflowing(element.scrollHeight > element.clientHeight + 1);
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [expanded]);
+  }, [note, expanded]);
 
   return (
     <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -119,7 +125,7 @@ function RecordRow({ item, onOpen }: { item: DoneItem; onOpen: () => void }) {
           )}
         </Box>
       </ButtonBase>
-      {(overflowing || expanded) && (
+      {note && (overflowing || expanded) && (
         <IconButton
           size="small"
           onClick={() => setExpanded((value) => !value)}
@@ -275,7 +281,12 @@ export function RecordTab({ items }: { items: LifeEventItem[] }) {
                 メモはありません
               </Typography>
             )}
-            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              useFlexGap
+              sx={{ flexWrap: "wrap" }}
+            >
               <Button
                 variant="outlined"
                 onClick={() => {
@@ -297,6 +308,8 @@ export function RecordTab({ items }: { items: LifeEventItem[] }) {
               </Button>
               <Button
                 color="error"
+                // 枠線付きのボタンと文字の位置を揃える（枠1px + 左右15px）
+                sx={{ px: 2 }}
                 onClick={() => {
                   setError(null);
                   setRemoveTarget(sheetItem);
