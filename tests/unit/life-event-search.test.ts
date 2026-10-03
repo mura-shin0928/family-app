@@ -57,12 +57,12 @@ describe("resolveTargetDate", () => {
 });
 
 describe("selectCurrentItems", () => {
-  it("窓は今日の30日前〜90日後を両端含む", () => {
+  it("窓は今日の30日前〜60日後を両端含む", () => {
     const at = (offsetDays: number) => item({ anchor: "birth", offsetDays });
     expect(selectCurrentItems([at(13)], born, today)).toHaveLength(1); // 09-02
     expect(selectCurrentItems([at(12)], born, today)).toHaveLength(0); // 09-01
-    expect(selectCurrentItems([at(133)], born, today)).toHaveLength(1); // 12-31
-    expect(selectCurrentItems([at(134)], born, today)).toHaveLength(0); // 2027-01-01
+    expect(selectCurrentItems([at(103)], born, today)).toHaveLength(1); // 12-01
+    expect(selectCurrentItems([at(104)], born, today)).toHaveLength(0); // 12-02
   });
   it("目安日の昇順に並べる", () => {
     const a = item({ key: "a", anchor: "birth", offsetDays: 60 });

@@ -9,8 +9,8 @@ export type ChildDates = {
 };
 
 /** 「いまの時期」の窓: 今日の何日前から何日後まで（両端を含む）。 */
-const WINDOW_DAYS_BEFORE = 30;
-const WINDOW_DAYS_AFTER = 90;
+export const WINDOW_DAYS_BEFORE = 30;
+export const WINDOW_DAYS_AFTER = 60;
 
 /** 項目の目安日。時期がない、または基準日が未入力なら null。 */
 export function resolveTargetDate(

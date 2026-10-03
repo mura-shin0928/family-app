@@ -1,16 +1,19 @@
 "use client";
 
 import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import MuiLink from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -26,6 +29,8 @@ import {
   matchesQuery,
   resolveTargetDate,
   selectCurrentItems,
+  WINDOW_DAYS_AFTER,
+  WINDOW_DAYS_BEFORE,
 } from "../search";
 import type { CatalogItem, LifeEventItem, LifeEventKind } from "../types";
 import { CatalogItemRow } from "./CatalogItemRow";
@@ -139,6 +144,18 @@ export function SearchTab({
         ))}
       </Box>
 
+      {showPrograms && (
+        <ProgramSection
+          // チップや検索語が変わったら「もっと見る」を閉じた状態に戻す
+          key={searching ? `query:${query}` : chip}
+          loading={area.isPending}
+          data={areaData}
+          list={programList}
+          listHidden={!searching && chip === "current"}
+          renderRow={renderRow}
+        />
+      )}
+
       <Box>
         <SectionHeading icon={<MenuBookOutlinedIcon fontSize="small" />}>
           一般的な手続き・行事
@@ -147,9 +164,24 @@ export function SearchTab({
           <Typography
             variant="caption"
             component="p"
-            sx={{ color: "text.secondary", mt: 0.5 }}
+            sx={{
+              color: "text.secondary",
+              mt: 0.5,
+              display: "flex",
+              alignItems: "center",
+              gap: 0.25,
+            }}
           >
             いまの時期 ─ {stage}
+            <Tooltip
+              title={`目安日が今日の${WINDOW_DAYS_BEFORE}日前〜${WINDOW_DAYS_AFTER}日後の項目`}
+              enterTouchDelay={0}
+              leaveTouchDelay={3000}
+            >
+              <IconButton size="small" aria-label="いまの時期の範囲">
+                <InfoOutlinedIcon sx={{ fontSize: "1rem" }} />
+              </IconButton>
+            </Tooltip>
           </Typography>
         )}
         {catalogList.map(renderRow)}
@@ -163,16 +195,6 @@ export function SearchTab({
           </Typography>
         )}
       </Box>
-
-      {showPrograms && (
-        <ProgramSection
-          loading={area.isPending}
-          data={areaData}
-          list={programList}
-          collapsed={!searching && chip === "current"}
-          renderRow={renderRow}
-        />
-      )}
 
       <CatalogItemSheet
         item={sheetItem}
@@ -222,20 +244,21 @@ function SectionHeading({
   );
 }
 
-/** 「いまの時期」で最初に出す制度の件数。制度は時期を持たず全件が当たるため絞る。 */
+/** 最初に出す制度の件数。 */
 const COLLAPSED_PROGRAM_COUNT = 5;
 
 function ProgramSection({
   loading,
   data,
   list,
-  collapsed,
+  listHidden,
   renderRow,
 }: {
   loading: boolean;
   data: Awaited<ReturnType<typeof fetchAreaCatalog>> | undefined;
   list: CatalogItem[];
-  collapsed: boolean;
+  /** 制度は時期を持たず「いまの時期」で絞れないため、一覧の代わりに案内を出す。 */
+  listHidden: boolean;
   renderRow: (item: CatalogItem) => React.ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -270,12 +293,26 @@ function ProgramSection({
     );
   }
 
+  const heading = (
+    <SectionHeading icon={<AccountBalanceOutlinedIcon fontSize="small" />}>
+      {data.municipalityName}の制度
+    </SectionHeading>
+  );
+  if (listHidden) {
+    return (
+      <Box>
+        {heading}
+        <Typography variant="body2" sx={{ color: "text.secondary", py: 1 }}>
+          制度には時期の目安がありません。イベントのチップや検索から探せます
+        </Typography>
+      </Box>
+    );
+  }
+
   const { attribution } = data;
   return (
     <Box>
-      <SectionHeading icon={<AccountBalanceOutlinedIcon fontSize="small" />}>
-        {data.municipalityName}の制度
-      </SectionHeading>
+      {heading}
       <Typography
         variant="caption"
         component="p"
@@ -299,13 +336,12 @@ function ProgramSection({
         </MuiLink>
         ）。{attribution.notice}
       </Typography>
-      {(collapsed && !expanded
-        ? list.slice(0, COLLAPSED_PROGRAM_COUNT)
-        : list
-      ).map(renderRow)}
-      {collapsed && !expanded && list.length > COLLAPSED_PROGRAM_COUNT && (
+      {(expanded ? list : list.slice(0, COLLAPSED_PROGRAM_COUNT)).map(
+        renderRow,
+      )}
+      {!expanded && list.length > COLLAPSED_PROGRAM_COUNT && (
         <Button size="small" onClick={() => setExpanded(true)} sx={{ mt: 1 }}>
-          すべて見る（{list.length}件）
+          もっと見る（全{list.length}件）
         </Button>
       )}
       {list.length === 0 && (

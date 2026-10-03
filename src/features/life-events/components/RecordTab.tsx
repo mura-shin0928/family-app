@@ -1,5 +1,6 @@
 "use client";
 
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -10,13 +11,14 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Drawer from "@mui/material/Drawer";
+import IconButton from "@mui/material/IconButton";
 import MuiLink from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { TASKS_QUERY_KEY } from "@/features/tasks/types";
 import {
   removeLifeEventItem,
@@ -46,8 +48,102 @@ function monthHeading(doneOn: string): string {
   return `${year}年${Number(month)}月`;
 }
 
-function firstLine(note: string): string {
-  return note.split("\n")[0] ?? "";
+/**
+ * 記録の一覧の1行。タップで詳細シートを開く。メモが1行に収まらないときだけ
+ * 右端の開閉ボタンで、行の中にメモ全文を広げられる。
+ */
+function RecordRow({ item, onOpen }: { item: DoneItem; onOpen: () => void }) {
+  const noteRef = useRef<HTMLSpanElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+
+  const note = item.note;
+
+  useEffect(() => {
+    const element = noteRef.current;
+    if (!note || !element) {
+      setOverflowing(false);
+      return;
+    }
+    if (expanded) return;
+    const measure = () =>
+      setOverflowing(element.scrollHeight > element.clientHeight + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [note, expanded]);
+
+  return (
+    <Box sx={{ display: "flex", alignItems: "center" }}>
+      <ButtonBase
+        component="div"
+        onClick={onOpen}
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          gap: 1.5,
+          alignItems: "center",
+          justifyContent: "flex-start",
+          textAlign: "left",
+          py: 1,
+        }}
+      >
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            minWidth: 40,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {formatSlashDate(item.doneOn).split("/").slice(1).join("/")}
+        </Typography>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="body1">{item.title}</Typography>
+          {item.note && (
+            <Typography
+              ref={noteRef}
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: expanded ? "block" : "-webkit-box",
+                whiteSpace: "pre-wrap",
+                overflowWrap: "anywhere",
+                ...(expanded
+                  ? {}
+                  : {
+                      WebkitLineClamp: 1,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }),
+              }}
+            >
+              {item.note}
+            </Typography>
+          )}
+        </Box>
+      </ButtonBase>
+      {note && (overflowing || expanded) && (
+        <IconButton
+          size="small"
+          onClick={() => setExpanded((value) => !value)}
+          aria-expanded={expanded}
+          aria-label={expanded ? "メモを閉じる" : "メモを広げる"}
+          sx={{ alignSelf: "flex-start", mt: 1 }}
+        >
+          <ExpandMoreIcon
+            fontSize="small"
+            sx={{
+              transform: expanded ? "rotate(180deg)" : "none",
+              transition: "transform 0.15s",
+            }}
+          />
+        </IconButton>
+      )}
+    </Box>
+  );
 }
 
 const URL_PATTERN = /(https?:\/\/[^\s]+)/;
@@ -148,45 +244,14 @@ export function RecordTab({ items }: { items: LifeEventItem[] }) {
             divider={<Box sx={{ borderTop: 1, borderColor: "divider" }} />}
           >
             {group.rows.map((item) => (
-              <ButtonBase
+              <RecordRow
                 key={item.id}
-                component="div"
-                onClick={() => {
+                item={item}
+                onOpen={() => {
                   setError(null);
                   setSheetItem(item);
                 }}
-                sx={{
-                  display: "flex",
-                  gap: 1.5,
-                  alignItems: "center",
-                  justifyContent: "flex-start",
-                  textAlign: "left",
-                  py: 1,
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: "text.secondary",
-                    minWidth: 40,
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {formatSlashDate(item.doneOn).split("/").slice(1).join("/")}
-                </Typography>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="body1">{item.title}</Typography>
-                  {item.note && (
-                    <Typography
-                      variant="caption"
-                      noWrap
-                      sx={{ color: "text.secondary", display: "block" }}
-                    >
-                      {firstLine(item.note)}
-                    </Typography>
-                  )}
-                </Box>
-              </ButtonBase>
+              />
             ))}
           </Stack>
         </Box>
@@ -216,7 +281,12 @@ export function RecordTab({ items }: { items: LifeEventItem[] }) {
                 メモはありません
               </Typography>
             )}
-            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              useFlexGap
+              sx={{ flexWrap: "wrap" }}
+            >
               <Button
                 variant="outlined"
                 onClick={() => {
@@ -238,6 +308,8 @@ export function RecordTab({ items }: { items: LifeEventItem[] }) {
               </Button>
               <Button
                 color="error"
+                // 折り返したとき、上の行のボタンの左端に文字を揃える
+                sx={{ pl: "2px", pr: 2 }}
                 onClick={() => {
                   setError(null);
                   setRemoveTarget(sheetItem);
