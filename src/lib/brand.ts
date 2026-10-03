@@ -150,12 +150,3 @@ export const mascotColors = {
   eye: "#5a2a0a",
   cup: "#ffffff",
 } as const;
-
-/** アプリアイコン（屋根の下に大・中・小の家族）の色。屋根はおうちくんと同じ色にする。 */
-export const appIconColors = {
-  background: light.tagBg,
-  roof: mascotColors.roof,
-  large: "#b84f05",
-  medium: "#d9652b",
-  small: "#f3a570",
-} as const;
