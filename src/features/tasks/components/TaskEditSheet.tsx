@@ -17,25 +17,26 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
+import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRef, useState } from "react";
-import { DateField } from "@/components/DateField";
 import { PurchaseLocationOptions } from "@/features/purchase-locations/components/PurchaseLocationOptions";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
-import { addDaysToDateString, todayInJst } from "@/lib/date";
+import { todayInJst } from "@/lib/date";
 import {
   buildTaskPatch,
   draftFromTask,
+  dueChipLabel,
   isDraftDirty,
-  selectedDueChip,
   type TaskDraft,
   type TaskDraftErrors,
   type TaskUpdatePatch,
   validateTaskPatch,
 } from "../edit-draft";
 import type { TaskDTO } from "../types";
+import { DuePanel } from "./DuePanel";
 
 type Props = {
   task: TaskDTO | null;
@@ -107,11 +108,7 @@ function TaskEditForm({
   );
 
   const today = todayInJst();
-  const tomorrow = addDaysToDateString(today, 1);
-  const [showDatePicker, setShowDatePicker] = useState(
-    () => selectedDueChip(original.dueOn, today, false) === "custom",
-  );
-  const dueChip = selectedDueChip(draft.dueOn, today, showDatePicker);
+  const [dueOpen, setDueOpen] = useState(false);
   // 論理削除済みの場所idは未設定として扱う（TaskRow と同じ）。
   const selectedLocation =
     locations.find((location) => location.id === draft.purchaseLocationId) ??
@@ -126,7 +123,7 @@ function TaskEditForm({
   }
 
   function selectDue(dueOn: string | null) {
-    setShowDatePicker(false);
+    setDueOpen(false);
     update({ dueOn });
   }
 
@@ -153,11 +150,6 @@ function TaskEditForm({
     onSave(task, patch);
   }
 
-  const customDueLabel =
-    dueChip === "custom" && draft.dueOn
-      ? `${Number(draft.dueOn.slice(5, 7))}/${Number(draft.dueOn.slice(8, 10))}`
-      : "日付を選ぶ";
-
   return (
     <Stack
       spacing={2}
@@ -178,54 +170,15 @@ function TaskEditForm({
         slotProps={{ htmlInput: inputStyle }}
       />
 
-      <Box>
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-          <Chip
-            icon={<CalendarTodayOutlinedIcon />}
-            label="今日"
-            clickable
-            color={dueChip === "today" ? "primary" : "default"}
-            variant={dueChip === "today" ? "filled" : "outlined"}
-            onClick={() => selectDue(today)}
-          />
-          <Chip
-            icon={<CalendarTodayOutlinedIcon />}
-            label="明日"
-            clickable
-            color={dueChip === "tomorrow" ? "primary" : "default"}
-            variant={dueChip === "tomorrow" ? "filled" : "outlined"}
-            onClick={() => selectDue(tomorrow)}
-          />
-          <Chip
-            label={customDueLabel}
-            clickable
-            color={dueChip === "custom" ? "primary" : "default"}
-            variant={dueChip === "custom" ? "filled" : "outlined"}
-            onClick={() => setShowDatePicker(true)}
-          />
-          <Chip
-            label="期限なし"
-            clickable
-            color={dueChip === "none" ? "primary" : "default"}
-            variant={dueChip === "none" ? "filled" : "outlined"}
-            onClick={() => selectDue(null)}
-          />
-        </Box>
-        {showDatePicker && (
-          <DateField
-            size="small"
-            variant="standard"
-            value={draft.dueOn ?? ""}
-            onChange={(event) => {
-              if (event.target.value) update({ dueOn: event.target.value });
-            }}
-            sx={{ mt: 1 }}
-            slotProps={{ htmlInput: inputStyle }}
-          />
-        )}
-      </Box>
-
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+        <Chip
+          icon={<CalendarTodayOutlinedIcon />}
+          label={dueChipLabel(draft.dueOn, today)}
+          clickable
+          color={draft.dueOn || dueOpen ? "primary" : "default"}
+          variant={draft.dueOn || dueOpen ? "filled" : "outlined"}
+          onClick={() => setDueOpen((current) => !current)}
+        />
         <Chip
           icon={
             draft.isPurchase ? (
@@ -250,6 +203,16 @@ function TaskEditForm({
           />
         )}
       </Box>
+      {dueOpen && (
+        <Paper variant="outlined" sx={{ width: "16rem", maxWidth: "100%" }}>
+          <DuePanel
+            dueOn={draft.dueOn}
+            today={today}
+            onChange={(dueOn) => update({ dueOn })}
+            onSelect={selectDue}
+          />
+        </Paper>
+      )}
       <Menu
         anchorEl={locationAnchor}
         open={!!locationAnchor}

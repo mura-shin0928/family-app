@@ -97,17 +97,10 @@ export function patchToTaskFields(patch: TaskUpdatePatch): Partial<TaskDTO> {
   return fields;
 }
 
-export type DueChip = "today" | "tomorrow" | "custom" | "none";
-
-/** 期限チップのうち選択状態にする1つ。日付入力を開いている間は「日付を選ぶ」。 */
-export function selectedDueChip(
-  dueOn: string | null,
-  today: string,
-  pickerOpen: boolean,
-): DueChip {
-  if (pickerOpen) return "custom";
-  if (dueOn === null) return "none";
-  if (dueOn === today) return "today";
-  if (dueOn === addDaysToDateString(today, 1)) return "tomorrow";
-  return "custom";
+/** 期限チップのラベル。チップが横に伸びないよう、日付は M/D で出す。 */
+export function dueChipLabel(dueOn: string | null, today: string): string {
+  if (dueOn === null) return "期限";
+  if (dueOn === today) return "今日";
+  if (dueOn === addDaysToDateString(today, 1)) return "明日";
+  return `${Number(dueOn.slice(5, 7))}/${Number(dueOn.slice(8, 10))}`;
 }
