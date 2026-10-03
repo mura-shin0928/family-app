@@ -62,10 +62,10 @@ export function Mascot({
           strokeLinecap="round"
         />
       ) : (
-        <>
+        <g>
           <circle cx="34" cy="55" r="3.2" fill={c.eye} />
           <circle cx="56" cy="55" r="3.2" fill={c.eye} />
-        </>
+        </g>
       )}
       {cheer ? (
         <path d="M40 65q5 9 10 0z" fill={c.eye} />
