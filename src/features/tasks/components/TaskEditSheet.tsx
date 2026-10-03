@@ -218,7 +218,11 @@ function TaskEditForm({
             placement="top-start"
             disablePortal
             popperOptions={{ strategy: "fixed" }}
-            modifiers={[{ name: "offset", options: { offset: [0, 8] } }]}
+            // 反転の判定がシートの枠で行われ、上に入らないとみなされて下に回るため止める。
+            modifiers={[
+              { name: "offset", options: { offset: [0, 8] } },
+              { name: "flip", enabled: false },
+            ]}
             sx={{ zIndex: 1, width: "16rem", maxWidth: "calc(100vw - 32px)" }}
           >
             <Paper elevation={1}>
