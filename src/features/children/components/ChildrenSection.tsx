@@ -1,24 +1,18 @@
 "use client";
 
-import AddIcon from "@mui/icons-material/Add";
-import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
+import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { AddIconButton } from "@/components/AddIconButton";
 import { DateField } from "@/components/DateField";
+import { EditSheet, EditSheetForm } from "@/components/EditSheet";
 import { createChild, deleteChild, updateChild } from "../actions";
 import type { Child } from "../types";
 
@@ -41,21 +35,11 @@ export function ChildrenSection({
   familyChildren: Child[];
 }) {
   const router = useRouter();
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingChild, setEditingChild] = useState<Child | null>(null);
-
-  function openAdd() {
-    setEditingChild(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(child: Child) {
-    setEditingChild(child);
-    setFormOpen(true);
-  }
+  // "new" = 追加、null = 閉じている。
+  const [sheetTarget, setSheetTarget] = useState<Child | "new" | null>(null);
 
   function handleDone() {
-    setFormOpen(false);
+    setSheetTarget(null);
     router.refresh();
   }
 
@@ -65,13 +49,10 @@ export function ChildrenSection({
         <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
           子供
         </Typography>
-        <Button
-          size="small"
-          startIcon={<AddIcon fontSize="small" />}
-          onClick={openAdd}
-        >
-          追加
-        </Button>
+        <AddIconButton
+          aria-label="子供を追加"
+          onClick={() => setSheetTarget("new")}
+        />
       </Stack>
 
       {familyChildren.length === 0 ? (
@@ -81,40 +62,34 @@ export function ChildrenSection({
       ) : (
         <List dense disablePadding>
           {familyChildren.map((child) => (
-            <ListItem
+            <ListItemButton
               key={child.id}
-              disableGutters
-              secondaryAction={
-                <IconButton
-                  size="small"
-                  aria-label={`${child.displayName}の情報を編集`}
-                  onClick={() => openEdit(child)}
-                >
-                  <EditOutlinedIcon fontSize="small" />
-                </IconButton>
-              }
+              onClick={() => setSheetTarget(child)}
+              aria-label={`${child.displayName}の情報を編集`}
+              sx={{ mx: -1, px: 1, borderRadius: 1 }}
             >
               <ListItemText
                 primary={child.displayName}
                 secondary={formatChildDates(child)}
               />
-            </ListItem>
+            </ListItemButton>
           ))}
         </List>
       )}
 
-      <Dialog
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        fullWidth
-        maxWidth="xs"
+      <EditSheet
+        open={sheetTarget !== null}
+        onClose={() => setSheetTarget(null)}
       >
-        <ChildForm
-          child={editingChild}
-          onDone={handleDone}
-          onCancel={() => setFormOpen(false)}
-        />
-      </Dialog>
+        {sheetTarget && (
+          <ChildForm
+            key={sheetTarget === "new" ? "new" : sheetTarget.id}
+            child={sheetTarget === "new" ? null : sheetTarget}
+            onDone={handleDone}
+            onCancel={() => setSheetTarget(null)}
+          />
+        )}
+      </EditSheet>
     </Box>
   );
 }
@@ -134,7 +109,6 @@ function ChildForm({
   );
   const [birthDate, setBirthDate] = useState(child?.birthDate ?? "");
   const [error, setError] = useState<string | null>(null);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit() {
@@ -157,11 +131,10 @@ function ChildForm({
     });
   }
 
-  function handleDelete() {
-    if (!child) return;
+  function handleDelete(target: Child) {
     setError(null);
     startTransition(async () => {
-      const result = await deleteChild({ childId: child.id });
+      const result = await deleteChild({ childId: target.id });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -170,76 +143,53 @@ function ChildForm({
     });
   }
 
+  const dirty =
+    displayName.trim() !== (child?.displayName ?? "") ||
+    expectedBirthDate !== (child?.expectedBirthDate ?? "") ||
+    birthDate !== (child?.birthDate ?? "");
+
   return (
-    <>
-      <DialogTitle>
-        {child ? "子供の情報を編集" : "子供の情報を登録"}
-      </DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          <TextField
-            label="名前（あだ名でも可）"
-            value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
-            size="small"
-            fullWidth
-          />
-          <DateField
-            label="出産予定日"
-            value={expectedBirthDate}
-            onChange={(event) => setExpectedBirthDate(event.target.value)}
-            size="small"
-            fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
-            helperText="妊活中などまだ分からなければ空のままでOK"
-          />
-          <DateField
-            label="出生日（生まれたら入力）"
-            value={birthDate}
-            onChange={(event) => setBirthDate(event.target.value)}
-            size="small"
-            fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
-          />
-          {error && <Alert severity="error">{error}</Alert>}
-          {confirmingDelete && (
-            <Alert
-              severity="warning"
-              action={
-                <Button
-                  color="error"
-                  size="small"
-                  onClick={handleDelete}
-                  disabled={isPending}
-                >
-                  削除する
-                </Button>
-              }
-            >
-              {displayName}の情報を削除します。よろしいですか？
-            </Alert>
-          )}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        {child && !confirmingDelete && (
-          <Button
-            color="error"
-            onClick={() => setConfirmingDelete(true)}
-            sx={{ mr: "auto" }}
-          >
-            削除
-          </Button>
-        )}
-        <Button onClick={onCancel}>キャンセル</Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={isPending || displayName.trim() === ""}
-        >
-          保存
-        </Button>
-      </DialogActions>
-    </>
+    <EditSheetForm
+      title={child ? "子供の情報を編集" : "子供の情報を登録"}
+      dirty={dirty}
+      busy={isPending}
+      saveDisabled={displayName.trim() === ""}
+      onSave={handleSubmit}
+      onClose={onCancel}
+      deleteConfirm={
+        child
+          ? {
+              message: `${child.displayName}の情報を削除します。よろしいですか？`,
+              onConfirm: () => handleDelete(child),
+            }
+          : undefined
+      }
+    >
+      <TextField
+        label="名前（あだ名でも可）"
+        value={displayName}
+        onChange={(event) => setDisplayName(event.target.value)}
+        size="small"
+        fullWidth
+      />
+      <DateField
+        label="出産予定日"
+        value={expectedBirthDate}
+        onChange={(event) => setExpectedBirthDate(event.target.value)}
+        size="small"
+        fullWidth
+        slotProps={{ inputLabel: { shrink: true } }}
+        helperText="妊活中などまだ分からなければ空のままでOK"
+      />
+      <DateField
+        label="出生日（生まれたら入力）"
+        value={birthDate}
+        onChange={(event) => setBirthDate(event.target.value)}
+        size="small"
+        fullWidth
+        slotProps={{ inputLabel: { shrink: true } }}
+      />
+      {error && <Alert severity="error">{error}</Alert>}
+    </EditSheetForm>
   );
 }

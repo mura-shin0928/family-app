@@ -9,21 +9,16 @@ import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogTitle from "@mui/material/DialogTitle";
-import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
 import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
-import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRef, useState } from "react";
+import { EditSheet, EditSheetForm } from "@/components/EditSheet";
 import { PurchaseLocationOptions } from "@/features/purchase-locations/components/PurchaseLocationOptions";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { todayInJst } from "@/lib/date";
@@ -60,18 +55,8 @@ export function TaskEditSheet({
   onDelete,
   onClose,
 }: Props) {
-  // 背景タップ・Escape でも未保存の変更を確かめるため、閉じる判断はフォームに任せる。
-  const requestCloseRef = useRef<() => void>(onClose);
-
   return (
-    <Drawer
-      anchor="bottom"
-      open={task !== null}
-      onClose={() => requestCloseRef.current()}
-      slotProps={{
-        paper: { sx: { borderRadius: "16px 16px 0 0", maxHeight: "85dvh" } },
-      }}
-    >
+    <EditSheet open={task !== null} onClose={onClose}>
       {task && (
         <TaskEditForm
           key={task.id}
@@ -81,10 +66,9 @@ export function TaskEditSheet({
           onSave={onSave}
           onDelete={onDelete}
           onClose={onClose}
-          requestCloseRef={requestCloseRef}
         />
       )}
-    </Drawer>
+    </EditSheet>
   );
 }
 
@@ -95,16 +79,11 @@ function TaskEditForm({
   onSave,
   onDelete,
   onClose,
-  requestCloseRef,
-}: Omit<Props, "task"> & {
-  task: TaskDTO;
-  requestCloseRef: { current: () => void };
-}) {
+}: Omit<Props, "task"> & { task: TaskDTO }) {
   // 開いた時点の値を固定する。他の人の更新は下書きに反映しない。
   const [original] = useState(() => draftFromTask(task));
   const [draft, setDraft] = useState<TaskDraft>(original);
   const [errors, setErrors] = useState<TaskDraftErrors>({});
-  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [locationAnchor, setLocationAnchor] = useState<HTMLElement | null>(
     null,
   );
@@ -130,15 +109,6 @@ function TaskEditForm({
     update({ dueOn });
   }
 
-  function requestClose() {
-    if (isDraftDirty(original, draft)) {
-      setConfirmDiscard(true);
-    } else {
-      onClose();
-    }
-  }
-  requestCloseRef.current = requestClose;
-
   function save() {
     const patch = buildTaskPatch(original, draft);
     if (Object.keys(patch).length === 0) {
@@ -154,9 +124,14 @@ function TaskEditForm({
   }
 
   return (
-    <Stack
-      spacing={2}
-      sx={{ p: 2, pb: "calc(16px + env(safe-area-inset-bottom))" }}
+    <EditSheetForm
+      dirty={isDraftDirty(original, draft)}
+      onSave={save}
+      onClose={onClose}
+      deleteConfirm={{
+        message: `「${task.title}」を削除しますか？`,
+        onConfirm: () => onDelete(task),
+      }}
     >
       <TextField
         multiline
@@ -330,34 +305,6 @@ function TaskEditForm({
           <Typography variant="body2">{recordChildName}の記録に残す</Typography>
         </Box>
       )}
-
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <Button color="error" onClick={() => onDelete(task)}>
-          削除
-        </Button>
-        <Stack direction="row" spacing={1}>
-          <Button onClick={requestClose}>キャンセル</Button>
-          <Button variant="contained" onClick={save}>
-            保存
-          </Button>
-        </Stack>
-      </Box>
-
-      <Dialog open={confirmDiscard} onClose={() => setConfirmDiscard(false)}>
-        <DialogTitle>変更を破棄しますか？</DialogTitle>
-        <DialogActions>
-          <Button onClick={() => setConfirmDiscard(false)}>編集に戻る</Button>
-          <Button color="error" onClick={onClose}>
-            破棄
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Stack>
+    </EditSheetForm>
   );
 }

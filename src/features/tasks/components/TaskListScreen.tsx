@@ -9,10 +9,6 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import Collapse from "@mui/material/Collapse";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
@@ -320,9 +316,6 @@ export function TaskListScreen({
 
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [taskPendingDelete, setTaskPendingDelete] = useState<TaskDTO | null>(
-    null,
-  );
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [showPurchaseOnly, setShowPurchaseOnly] = useState(false);
   const [locationSelection, setLocationSelection] =
@@ -714,36 +707,11 @@ export function TaskListScreen({
           setEditingTaskId(null);
         }}
         onDelete={(task) => {
+          performDelete(task);
           setEditingTaskId(null);
-          setTaskPendingDelete(task);
         }}
         onClose={() => setEditingTaskId(null)}
       />
-
-      <Dialog
-        open={!!taskPendingDelete}
-        onClose={() => setTaskPendingDelete(null)}
-      >
-        <DialogTitle>削除しますか？</DialogTitle>
-        <DialogContent>
-          <Typography variant="body1">
-            「{taskPendingDelete?.title}」を削除しますか？
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setTaskPendingDelete(null)}>キャンセル</Button>
-          <Button
-            color="error"
-            variant="contained"
-            onClick={() => {
-              if (taskPendingDelete) performDelete(taskPendingDelete);
-              setTaskPendingDelete(null);
-            }}
-          >
-            削除
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }

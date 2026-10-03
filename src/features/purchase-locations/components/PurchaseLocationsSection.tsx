@@ -1,23 +1,17 @@
 "use client";
 
-import AddIcon from "@mui/icons-material/Add";
-import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
+import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { AddIconButton } from "@/components/AddIconButton";
+import { EditSheet, EditSheetForm } from "@/components/EditSheet";
 import {
   createPurchaseLocation,
   deletePurchaseLocation,
@@ -35,21 +29,13 @@ export function PurchaseLocationsSection({
   locations: PurchaseLocation[];
 }) {
   const router = useRouter();
-  const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<PurchaseLocation | null>(null);
-
-  function openAdd() {
-    setEditing(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(location: PurchaseLocation) {
-    setEditing(location);
-    setFormOpen(true);
-  }
+  // "new" = 追加、null = 閉じている。
+  const [sheetTarget, setSheetTarget] = useState<
+    PurchaseLocation | "new" | null
+  >(null);
 
   function handleDone() {
-    setFormOpen(false);
+    setSheetTarget(null);
     router.refresh();
   }
 
@@ -59,13 +45,10 @@ export function PurchaseLocationsSection({
         <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
           買う場所
         </Typography>
-        <Button
-          size="small"
-          startIcon={<AddIcon fontSize="small" />}
-          onClick={openAdd}
-        >
-          追加
-        </Button>
+        <AddIconButton
+          aria-label="買う場所を追加"
+          onClick={() => setSheetTarget("new")}
+        />
       </Stack>
 
       {locations.length === 0 ? (
@@ -75,37 +58,31 @@ export function PurchaseLocationsSection({
       ) : (
         <List dense disablePadding>
           {locations.map((location) => (
-            <ListItem
+            <ListItemButton
               key={location.id}
-              disableGutters
-              secondaryAction={
-                <IconButton
-                  size="small"
-                  aria-label={`${location.name}を編集`}
-                  onClick={() => openEdit(location)}
-                >
-                  <EditOutlinedIcon fontSize="small" />
-                </IconButton>
-              }
+              onClick={() => setSheetTarget(location)}
+              aria-label={`${location.name}を編集`}
+              sx={{ mx: -1, px: 1, borderRadius: 1 }}
             >
               <ListItemText primary={location.name} />
-            </ListItem>
+            </ListItemButton>
           ))}
         </List>
       )}
 
-      <Dialog
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        fullWidth
-        maxWidth="xs"
+      <EditSheet
+        open={sheetTarget !== null}
+        onClose={() => setSheetTarget(null)}
       >
-        <PurchaseLocationForm
-          location={editing}
-          onDone={handleDone}
-          onCancel={() => setFormOpen(false)}
-        />
-      </Dialog>
+        {sheetTarget && (
+          <PurchaseLocationForm
+            key={sheetTarget === "new" ? "new" : sheetTarget.id}
+            location={sheetTarget === "new" ? null : sheetTarget}
+            onDone={handleDone}
+            onCancel={() => setSheetTarget(null)}
+          />
+        )}
+      </EditSheet>
     </Box>
   );
 }
@@ -121,7 +98,6 @@ function PurchaseLocationForm({
 }) {
   const [name, setName] = useState(location?.name ?? "");
   const [error, setError] = useState<string | null>(null);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit() {
@@ -139,11 +115,10 @@ function PurchaseLocationForm({
     });
   }
 
-  function handleDelete() {
-    if (!location) return;
+  function handleDelete(target: PurchaseLocation) {
     setError(null);
     startTransition(async () => {
-      const result = await deletePurchaseLocation({ id: location.id });
+      const result = await deletePurchaseLocation({ id: target.id });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -153,61 +128,32 @@ function PurchaseLocationForm({
   }
 
   return (
-    <>
-      <DialogTitle>
-        {location ? "買う場所を編集" : "買う場所を追加"}
-      </DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          <TextField
-            label="場所の名前"
-            placeholder="スーパー、ドラッグストアなど"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            size="small"
-            fullWidth
-            autoFocus
-          />
-          {error && <Alert severity="error">{error}</Alert>}
-          {confirmingDelete && (
-            <Alert
-              severity="warning"
-              action={
-                <Button
-                  color="error"
-                  size="small"
-                  onClick={handleDelete}
-                  disabled={isPending}
-                >
-                  削除する
-                </Button>
-              }
-            >
-              「{location?.name}
-              」を削除します。この場所が付いた買うものは「未設定」に戻ります。
-            </Alert>
-          )}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        {location && !confirmingDelete && (
-          <Button
-            color="error"
-            onClick={() => setConfirmingDelete(true)}
-            sx={{ mr: "auto" }}
-          >
-            削除
-          </Button>
-        )}
-        <Button onClick={onCancel}>キャンセル</Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={isPending || name.trim() === ""}
-        >
-          保存
-        </Button>
-      </DialogActions>
-    </>
+    <EditSheetForm
+      title={location ? "買う場所を編集" : "買う場所を追加"}
+      dirty={name.trim() !== (location?.name ?? "")}
+      busy={isPending}
+      saveDisabled={name.trim() === ""}
+      onSave={handleSubmit}
+      onClose={onCancel}
+      deleteConfirm={
+        location
+          ? {
+              message: `「${location.name}」を削除します。この場所が付いた買うものは「未設定」に戻ります。`,
+              onConfirm: () => handleDelete(location),
+            }
+          : undefined
+      }
+    >
+      <TextField
+        label="場所の名前"
+        placeholder="スーパー、ドラッグストアなど"
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        size="small"
+        fullWidth
+        autoFocus={!location}
+      />
+      {error && <Alert severity="error">{error}</Alert>}
+    </EditSheetForm>
   );
 }
