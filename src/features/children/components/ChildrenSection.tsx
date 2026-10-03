@@ -1,9 +1,7 @@
 "use client";
 
-import AddIcon from "@mui/icons-material/Add";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
@@ -12,6 +10,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { AddIconButton } from "@/components/AddIconButton";
 import { DateField } from "@/components/DateField";
 import { EditSheet, EditSheetForm } from "@/components/EditSheet";
 import { createChild, deleteChild, updateChild } from "../actions";
@@ -50,13 +49,10 @@ export function ChildrenSection({
         <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
           子供
         </Typography>
-        <IconButton
-          size="small"
+        <AddIconButton
           aria-label="子供を追加"
           onClick={() => setSheetTarget("new")}
-        >
-          <AddIcon fontSize="small" />
-        </IconButton>
+        />
       </Stack>
 
       {familyChildren.length === 0 ? (
