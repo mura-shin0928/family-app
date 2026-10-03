@@ -186,16 +186,6 @@ export const LIFE_EVENT_CATALOG: readonly CatalogItem[] = [
     url: null,
   },
   {
-    key: "pregnancy:prepare-baby-goods-car-seat",
-    kind: "pregnancy",
-    title: "チャイルドシートを用意する",
-    summary: "6歳未満を車に乗せるときに使う義務がある座席。",
-    note: "退院するとき車で帰るなら、その時から必要。新生児に対応した型を選ぶ。",
-    aliases: ["ベビーシート"],
-    timing: { kind: "around", anchor: "expected_birth", offsetDays: -30 },
-    url: null,
-  },
-  {
     key: "birth:birth-registration",
     kind: "birth",
     title: "出生届を出す",
