@@ -9,6 +9,9 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogTitle from "@mui/material/DialogTitle";
 import Divider from "@mui/material/Divider";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
@@ -34,8 +37,10 @@ import {
   updateRecipe,
 } from "../actions";
 import type { RecipeDraft } from "../extraction/types";
+import { formValuesFromRecipe, isRecipeFormDirty } from "../form-values";
 import { compressImage } from "../image/compress";
 import { RECIPES_QUERY_KEY, type RecipeDetailDTO } from "../types";
+import { useLeaveConfirm } from "./useLeaveConfirm";
 
 type IngredientRow = {
   key: string;
@@ -87,6 +92,16 @@ export function RecipeEditor({
     mimeType: string;
   } | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [originalValues] = useState(() => formValuesFromRecipe(recipe));
+  const leaveConfirm = useLeaveConfirm(
+    isRecipeFormDirty(originalValues, {
+      title,
+      sourceUrl,
+      sourceText,
+      note,
+      ingredients,
+    }),
+  );
 
   function addIngredientRow() {
     setIngredients((current) => [
@@ -507,6 +522,16 @@ export function RecipeEditor({
       <Button type="submit" variant="contained" disabled={isPending}>
         {mode === "create" ? "登録する" : "保存する"}
       </Button>
+
+      <Dialog open={leaveConfirm.confirmOpen} onClose={leaveConfirm.stay}>
+        <DialogTitle>変更を破棄しますか？</DialogTitle>
+        <DialogActions>
+          <Button onClick={leaveConfirm.stay}>編集に戻る</Button>
+          <Button color="error" onClick={leaveConfirm.leave}>
+            破棄
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }
