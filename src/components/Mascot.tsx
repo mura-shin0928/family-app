@@ -52,8 +52,9 @@ export function Mascot({
       {!sleepy && (
         <circle cx="61" cy="64" r="4.5" fill={c.cheek} opacity=".6" />
       )}
-      <Eyes expression={expression} />
-      <Mouth expression={expression} />
+      {/* satori（アイコン生成）はSVG内の関数コンポーネントを描かないので直接呼ぶ */}
+      {Eyes({ expression })}
+      {Mouth({ expression })}
       {sleepy && (
         <g>
           <path d="M54 64h14v6a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6z" fill={c.cup} />
