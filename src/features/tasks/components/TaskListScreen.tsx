@@ -32,12 +32,7 @@ import {
   createTask,
   deleteTask,
   setTaskDone,
-  setTaskPurchase,
-  updateTaskDueDate,
-  updateTaskNote,
-  updateTaskPurchaseLocation,
-  updateTaskTitle,
-  updateTaskUrl,
+  updateTask,
 } from "../actions";
 import {
   bucketOpenTasks,
@@ -45,6 +40,7 @@ import {
   TASK_BUCKET_ORDER,
   type TaskBucketKey,
 } from "../buckets";
+import { patchToTaskFields, type TaskUpdatePatch } from "../edit-draft";
 import {
   filterByPurchaseLocation,
   type PurchaseLocationSelection,
@@ -52,6 +48,7 @@ import {
 import { fetchTasks } from "../query-actions";
 import { TASKS_QUERY_KEY, type TaskDTO } from "../types";
 import { QuickCaptureBar } from "./QuickCaptureBar";
+import { TaskEditSheet } from "./TaskEditSheet";
 import { TaskRow } from "./TaskRow";
 import { useTasksRealtime } from "./useTasksRealtime";
 
@@ -71,12 +68,7 @@ const COMPLETED_TASK_HINT =
 type Action =
   | { type: "add"; task: TaskDTO }
   | { type: "toggle"; id: string; done: boolean }
-  | { type: "dueDate"; id: string; dueOn: string | null }
-  | { type: "purchase"; id: string; isPurchase: boolean }
-  | { type: "title"; id: string; title: string }
-  | { type: "url"; id: string; url: string | null }
-  | { type: "note"; id: string; note: string | null }
-  | { type: "purchaseLocation"; id: string; purchaseLocationId: string | null }
+  | { type: "update"; id: string; fields: Partial<TaskDTO> }
   | { type: "remove"; id: string };
 
 function applyAction(tasks: TaskDTO[], action: Action): TaskDTO[] {
@@ -93,33 +85,9 @@ function applyAction(tasks: TaskDTO[], action: Action): TaskDTO[] {
             }
           : task,
       );
-    case "dueDate":
+    case "update":
       return tasks.map((task) =>
-        task.id === action.id ? { ...task, dueOn: action.dueOn } : task,
-      );
-    case "purchase":
-      return tasks.map((task) =>
-        task.id === action.id
-          ? { ...task, isPurchase: action.isPurchase }
-          : task,
-      );
-    case "title":
-      return tasks.map((task) =>
-        task.id === action.id ? { ...task, title: action.title } : task,
-      );
-    case "url":
-      return tasks.map((task) =>
-        task.id === action.id ? { ...task, url: action.url } : task,
-      );
-    case "note":
-      return tasks.map((task) =>
-        task.id === action.id ? { ...task, note: action.note } : task,
-      );
-    case "purchaseLocation":
-      return tasks.map((task) =>
-        task.id === action.id
-          ? { ...task, purchaseLocationId: action.purchaseLocationId }
-          : task,
+        task.id === action.id ? { ...task, ...action.fields } : task,
       );
     case "remove":
       return tasks.filter((task) => task.id !== action.id);
@@ -131,7 +99,7 @@ type Toast = { message: string; actionLabel?: string; onAction?: () => void };
 type OptimisticMutationContext = { previous: TaskDTO[] | undefined };
 
 /**
- * 5つのタスク操作に共通する「楽観更新→サーバー呼び出し→失敗時ロールバック→
+ * タスク操作に共通する「楽観更新→サーバー呼び出し→失敗時ロールバック→
  * 完了後invalidate」の骨格。サーバーをsource of truthとして扱うため、
  * 成功時もローカルの楽観値を確定値として使い続けず、必ず再取得させる。
  */
@@ -355,6 +323,7 @@ export function TaskListScreen({
   const [taskPendingDelete, setTaskPendingDelete] = useState<TaskDTO | null>(
     null,
   );
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [showPurchaseOnly, setShowPurchaseOnly] = useState(false);
   const [locationSelection, setLocationSelection] =
     useState<PurchaseLocationSelection>("all");
@@ -424,63 +393,12 @@ export function TaskListScreen({
     },
   );
 
-  const dueDateMutation = useOptimisticTasksMutation(
-    updateTaskDueDate,
-    (input: { taskId: string; dueOn: string }): Action => ({
-      type: "dueDate",
-      id: input.taskId,
-      dueOn: input.dueOn === "" ? null : input.dueOn,
-    }),
-    { onFail: (error) => showToast({ message: error }) },
-  );
-
-  const titleMutation = useOptimisticTasksMutation(
-    updateTaskTitle,
-    (input: { taskId: string; title: string }): Action => ({
-      type: "title",
-      id: input.taskId,
-      title: input.title,
-    }),
-    { onFail: (error) => showToast({ message: error }) },
-  );
-
-  const urlMutation = useOptimisticTasksMutation(
-    updateTaskUrl,
-    (input: { taskId: string; url: string }): Action => ({
-      type: "url",
-      id: input.taskId,
-      url: input.url === "" ? null : input.url,
-    }),
-    { onFail: (error) => showToast({ message: error }) },
-  );
-
-  const noteMutation = useOptimisticTasksMutation(
-    updateTaskNote,
-    (input: { taskId: string; note: string }): Action => ({
-      type: "note",
-      id: input.taskId,
-      note: input.note === "" ? null : input.note,
-    }),
-    { onFail: (error) => showToast({ message: error }) },
-  );
-
-  const purchaseMutation = useOptimisticTasksMutation(
-    setTaskPurchase,
-    (input: { taskId: string; isPurchase: boolean }): Action => ({
-      type: "purchase",
-      id: input.taskId,
-      isPurchase: input.isPurchase,
-    }),
-    { onFail: (error) => showToast({ message: error }) },
-  );
-
-  const purchaseLocationMutation = useOptimisticTasksMutation(
-    updateTaskPurchaseLocation,
-    (input: { taskId: string; purchaseLocationId: string }): Action => ({
-      type: "purchaseLocation",
-      id: input.taskId,
-      purchaseLocationId:
-        input.purchaseLocationId === "" ? null : input.purchaseLocationId,
+  const updateMutation = useOptimisticTasksMutation(
+    updateTask,
+    ({ taskId, ...patch }: { taskId: string } & TaskUpdatePatch): Action => ({
+      type: "update",
+      id: taskId,
+      fields: patchToTaskFields(patch),
     }),
     { onFail: (error) => showToast({ message: error }) },
   );
@@ -547,43 +465,6 @@ export function TaskListScreen({
     toggleMutation.mutate({ taskId: task.id, done: task.status !== "done" });
   }
 
-  function handleDueDateChange(task: TaskDTO, dueOn: string | null) {
-    dueDateMutation.mutate({ taskId: task.id, dueOn: dueOn ?? "" });
-  }
-
-  function handleTitleChange(task: TaskDTO, title: string) {
-    if (title === task.title) return;
-    titleMutation.mutate({ taskId: task.id, title });
-  }
-
-  function handleUrlChange(task: TaskDTO, url: string) {
-    if (url === (task.url ?? "")) return;
-    urlMutation.mutate({ taskId: task.id, url });
-  }
-
-  function handleNoteChange(task: TaskDTO, note: string) {
-    if (note === (task.note ?? "")) return;
-    noteMutation.mutate({ taskId: task.id, note });
-  }
-
-  function handlePurchaseToggle(task: TaskDTO) {
-    purchaseMutation.mutate({
-      taskId: task.id,
-      isPurchase: !task.isPurchase,
-    });
-  }
-
-  function handlePurchaseLocationChange(
-    task: TaskDTO,
-    locationId: string | null,
-  ) {
-    if (locationId === task.purchaseLocationId) return;
-    purchaseLocationMutation.mutate({
-      taskId: task.id,
-      purchaseLocationId: locationId ?? "",
-    });
-  }
-
   function performDelete(task: TaskDTO) {
     deleteMutation.mutate({ taskId: task.id });
   }
@@ -605,14 +486,13 @@ export function TaskListScreen({
   const rowProps = {
     locations,
     onToggle: handleToggle,
-    onDueDateChange: handleDueDateChange,
-    onTitleChange: handleTitleChange,
-    onUrlChange: handleUrlChange,
-    onNoteChange: handleNoteChange,
-    onPurchaseToggle: handlePurchaseToggle,
-    onPurchaseLocationChange: handlePurchaseLocationChange,
-    onDelete: setTaskPendingDelete,
+    onOpen: (task: TaskDTO) => setEditingTaskId(task.id),
   };
+
+  // 開いている間に削除された（Realtime 等）ら見つからなくなり、シートは閉じる。
+  const editingTask = editingTaskId
+    ? (tasks.find((task) => task.id === editingTaskId) ?? null)
+    : null;
 
   return (
     <Box sx={{ flex: 1, display: "flex", flexDirection: "column", pb: 27 }}>
@@ -823,6 +703,21 @@ export function TaskListScreen({
             </Button>
           ) : undefined
         }
+      />
+
+      <TaskEditSheet
+        task={editingTask}
+        locations={locations}
+        recordChildName={editingTask ? recordChildNameOf(editingTask) : null}
+        onSave={(task, patch) => {
+          updateMutation.mutate({ taskId: task.id, ...patch });
+          setEditingTaskId(null);
+        }}
+        onDelete={(task) => {
+          setEditingTaskId(null);
+          setTaskPendingDelete(task);
+        }}
+        onClose={() => setEditingTaskId(null)}
       />
 
       <Dialog

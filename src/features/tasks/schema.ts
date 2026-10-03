@@ -29,7 +29,7 @@ export const createTaskSchema = z.object({
     .trim()
     .min(1, "タイトルを入力してください")
     .max(200, "タイトルは200文字以内で入力してください"),
-  // 空文字列 = 期限なし（updateDueDateSchema と同じ規約）。
+  // 空文字列 = 期限なし（updateTaskSchema と同じ規約）。
   dueOn: z.union([dateStringSchema, z.literal("")]),
   isPurchase: z.boolean(),
   purchaseLocationId: purchaseLocationIdSchema,
@@ -45,36 +45,18 @@ export const toggleDoneSchema = z.object({
   done: z.boolean(),
 });
 
-export const togglePurchaseSchema = z.object({
-  taskId: z.string().uuid(),
-  isPurchase: z.boolean(),
-});
-
-export const updateDueDateSchema = z.object({
-  taskId: z.string().uuid(),
-  dueOn: z.union([dateStringSchema, z.literal("")]),
-});
-
-export const updateTitleSchema = z.object({
+// 編集シートの保存。含まれる項目だけを更新する（空文字列 = 未設定）。
+export const updateTaskSchema = z.object({
   taskId: z.string().uuid(),
   title: z
     .string()
     .trim()
     .min(1, "タイトルを入力してください")
-    .max(200, "タイトルは200文字以内で入力してください"),
-});
-
-export const updateUrlSchema = z.object({
-  taskId: z.string().uuid(),
-  url: urlSchema,
-});
-
-export const updateNoteSchema = z.object({
-  taskId: z.string().uuid(),
-  note: noteSchema,
-});
-
-export const updateTaskPurchaseLocationSchema = z.object({
-  taskId: z.string().uuid(),
-  purchaseLocationId: purchaseLocationIdSchema,
+    .max(200, "タイトルは200文字以内で入力してください")
+    .optional(),
+  dueOn: z.union([dateStringSchema, z.literal("")]).optional(),
+  isPurchase: z.boolean().optional(),
+  purchaseLocationId: purchaseLocationIdSchema.optional(),
+  url: urlSchema.optional(),
+  note: noteSchema.optional(),
 });

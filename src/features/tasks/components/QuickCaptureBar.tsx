@@ -15,12 +15,13 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { type FormEvent, useId, useState } from "react";
-import { DateField } from "@/components/DateField";
 import type { Child } from "@/features/children/types";
 import { PurchaseLocationOptions } from "@/features/purchase-locations/components/PurchaseLocationOptions";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
-import { addDaysToDateString, todayInJst } from "@/lib/date";
+import { todayInJst } from "@/lib/date";
 import { BOTTOM_NAV_HEIGHT } from "@/lib/layout";
+import { dueChipLabel } from "../edit-draft";
+import { DuePanel } from "./DuePanel";
 
 type Props = {
   locations: PurchaseLocation[];
@@ -65,16 +66,7 @@ export function QuickCaptureBar({
   const inputId = useId();
 
   const today = todayInJst();
-  const tomorrow = addDaysToDateString(today, 1);
-  const dueLabel =
-    dueOn === today
-      ? "今日"
-      : dueOn === tomorrow
-        ? "明日"
-        : dueOn
-          ? // "2026-09-30" → "9/30"（チップが横に伸びて3つ目が折り返すのを防ぐ）
-            `${Number(dueOn.slice(5, 7))}/${Number(dueOn.slice(8, 10))}`
-          : "期限";
+  const dueLabel = dueChipLabel(dueOn, today);
   const selectedLocation =
     locations.find((location) => location.id === locationId) ?? null;
 
@@ -304,44 +296,12 @@ export function QuickCaptureBar({
                   maxWidth: "100%",
                 }}
               >
-                <Stack spacing={1} sx={{ p: 1.5 }}>
-                  <DateField
-                    size="small"
-                    fullWidth
-                    value={dueOn ?? ""}
-                    onChange={(event) => setDueOn(event.target.value || null)}
-                  />
-                  <Stack direction="row" spacing={1}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      fullWidth
-                      onMouseDown={preventBlur}
-                      onClick={() => selectDue(today)}
-                    >
-                      今日
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      fullWidth
-                      onMouseDown={preventBlur}
-                      onClick={() => selectDue(tomorrow)}
-                    >
-                      明日
-                    </Button>
-                  </Stack>
-                  {dueOn && (
-                    <Button
-                      size="small"
-                      fullWidth
-                      onMouseDown={preventBlur}
-                      onClick={() => selectDue(null)}
-                    >
-                      期限なしにする
-                    </Button>
-                  )}
-                </Stack>
+                <DuePanel
+                  dueOn={dueOn}
+                  today={today}
+                  onChange={setDueOn}
+                  onSelect={selectDue}
+                />
               </Paper>
             )}
 

@@ -3,16 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { createClient } from "@/lib/supabase/server";
+import type { TaskUpdatePatch } from "./edit-draft";
 import {
   createTaskSchema,
   taskIdSchema,
   toggleDoneSchema,
-  togglePurchaseSchema,
-  updateDueDateSchema,
-  updateNoteSchema,
-  updateTaskPurchaseLocationSchema,
-  updateTitleSchema,
-  updateUrlSchema,
+  updateTaskSchema,
 } from "./schema";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -190,168 +186,64 @@ export async function setTaskDone(input: {
   return { ok: true };
 }
 
-export async function setTaskPurchase(input: {
-  taskId: string;
-  isPurchase: boolean;
-}): Promise<ActionResult> {
-  const parsed = togglePurchaseSchema.safeParse(input);
+export async function updateTask(
+  input: { taskId: string } & TaskUpdatePatch,
+): Promise<ActionResult> {
+  const parsed = updateTaskSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: "不正な操作です" };
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
+    };
   }
+
+  const { taskId, title, dueOn, isPurchase, purchaseLocationId, url, note } =
+    parsed.data;
+  const update: {
+    title?: string;
+    due_on?: string | null;
+    is_purchase?: boolean;
+    purchase_location_id?: string | null;
+    url?: string | null;
+    note?: string | null;
+  } = {};
+  if (title !== undefined) update.title = title;
+  if (dueOn !== undefined) update.due_on = dueOn || null;
+  if (isPurchase !== undefined) update.is_purchase = isPurchase;
+  if (url !== undefined) update.url = url || null;
+  if (note !== undefined) update.note = note || null;
 
   const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
-  const { error } = await supabase
+  if (purchaseLocationId !== undefined) {
+    const location = await resolvePurchaseLocationId(
+      supabase,
+      purchaseLocationId,
+    );
+    if (!location.ok) {
+      return location;
+    }
+    update.purchase_location_id = location.value;
+  }
+
+  if (Object.keys(update).length === 0) {
+    return { ok: true };
+  }
+
+  const { data, error } = await supabase
     .from("tasks")
-    .update({ is_purchase: parsed.data.isPurchase })
-    .eq("id", parsed.data.taskId)
-    .eq("family_id", member.familyId);
+    .update(update)
+    .eq("id", taskId)
+    .eq("family_id", member.familyId)
+    .is("deleted_at", null)
+    .select("id");
 
   if (error) {
     return { ok: false, error: "更新に失敗しました" };
   }
-
-  return { ok: true };
-}
-
-export async function updateTaskDueDate(input: {
-  taskId: string;
-  dueOn: string;
-}): Promise<ActionResult> {
-  const parsed = updateDueDateSchema.safeParse(input);
-  if (!parsed.success) {
-    return { ok: false, error: "不正な日付です" };
-  }
-
-  const { member } = await requireFamilyMember();
-  const supabase = await createClient();
-
-  const { error } = await supabase
-    .from("tasks")
-    .update({ due_on: parsed.data.dueOn === "" ? null : parsed.data.dueOn })
-    .eq("id", parsed.data.taskId)
-    .eq("family_id", member.familyId);
-
-  if (error) {
-    return { ok: false, error: "期限の更新に失敗しました" };
-  }
-
-  return { ok: true };
-}
-
-export async function updateTaskTitle(input: {
-  taskId: string;
-  title: string;
-}): Promise<ActionResult> {
-  const parsed = updateTitleSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
-    };
-  }
-
-  const { member } = await requireFamilyMember();
-  const supabase = await createClient();
-
-  const { error } = await supabase
-    .from("tasks")
-    .update({ title: parsed.data.title })
-    .eq("id", parsed.data.taskId)
-    .eq("family_id", member.familyId);
-
-  if (error) {
-    return { ok: false, error: "タイトルの更新に失敗しました" };
-  }
-
-  return { ok: true };
-}
-
-export async function updateTaskUrl(input: {
-  taskId: string;
-  url: string;
-}): Promise<ActionResult> {
-  const parsed = updateUrlSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "URLの形式が正しくありません",
-    };
-  }
-
-  const { member } = await requireFamilyMember();
-  const supabase = await createClient();
-
-  const { error } = await supabase
-    .from("tasks")
-    .update({ url: parsed.data.url === "" ? null : parsed.data.url })
-    .eq("id", parsed.data.taskId)
-    .eq("family_id", member.familyId);
-
-  if (error) {
-    return { ok: false, error: "URLの更新に失敗しました" };
-  }
-
-  return { ok: true };
-}
-
-export async function updateTaskNote(input: {
-  taskId: string;
-  note: string;
-}): Promise<ActionResult> {
-  const parsed = updateNoteSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "入力内容を確認してください",
-    };
-  }
-
-  const { member } = await requireFamilyMember();
-  const supabase = await createClient();
-
-  const { error } = await supabase
-    .from("tasks")
-    .update({ note: parsed.data.note === "" ? null : parsed.data.note })
-    .eq("id", parsed.data.taskId)
-    .eq("family_id", member.familyId);
-
-  if (error) {
-    return { ok: false, error: "メモの更新に失敗しました" };
-  }
-
-  return { ok: true };
-}
-
-export async function updateTaskPurchaseLocation(input: {
-  taskId: string;
-  purchaseLocationId: string;
-}): Promise<ActionResult> {
-  const parsed = updateTaskPurchaseLocationSchema.safeParse(input);
-  if (!parsed.success) {
-    return { ok: false, error: "不正な操作です" };
-  }
-
-  const { member } = await requireFamilyMember();
-  const supabase = await createClient();
-
-  const location = await resolvePurchaseLocationId(
-    supabase,
-    parsed.data.purchaseLocationId,
-  );
-  if (!location.ok) {
-    return location;
-  }
-
-  const { error } = await supabase
-    .from("tasks")
-    .update({ purchase_location_id: location.value })
-    .eq("id", parsed.data.taskId)
-    .eq("family_id", member.familyId);
-
-  if (error) {
-    return { ok: false, error: "買う場所の更新に失敗しました" };
+  if (data.length === 0) {
+    return { ok: false, error: "タスクが見つかりません" };
   }
 
   return { ok: true };
