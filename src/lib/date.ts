@@ -68,6 +68,12 @@ export function formatRelativeDue(
   return `${Math.abs(diff)}日超過`;
 }
 
+/** 一覧用の「期限:8/20(あと3日)」表示。 */
+export function formatDueLabel(dueOn: DateString, today: DateString): string {
+  const date = `${Number(dueOn.slice(5, 7))}/${Number(dueOn.slice(8, 10))}`;
+  return `期限:${date}(${formatRelativeDue(dueOn, today)})`;
+}
+
 function toUtcEpochDay(dateString: DateString): number {
   const [year, month, day] = dateString.split("-").map(Number);
   return Date.UTC(year, month - 1, day) / 86_400_000;

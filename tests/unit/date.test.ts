@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addDaysToDateString,
   daysUntil,
+  formatDueLabel,
   formatRelativeDue,
   startOfTodayJstUtc,
   todayInJst,
@@ -97,5 +98,18 @@ describe("formatRelativeDue", () => {
 
   it("labels overdue by several days", () => {
     expect(formatRelativeDue("2026-08-10", today)).toBe("7日超過");
+  });
+});
+
+describe("formatDueLabel", () => {
+  const today = "2026-08-17";
+
+  it("shows date followed by remaining days", () => {
+    expect(formatDueLabel("2026-08-20", today)).toBe("期限:8/20(あと3日)");
+  });
+
+  it("keeps relative wording for today and overdue", () => {
+    expect(formatDueLabel("2026-08-17", today)).toBe("期限:8/17(今日)");
+    expect(formatDueLabel("2026-08-10", today)).toBe("期限:8/10(7日超過)");
   });
 });

@@ -10,7 +10,7 @@ import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import type { ReactNode } from "react";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
-import { formatRelativeDue } from "@/lib/date";
+import { formatDueLabel } from "@/lib/date";
 import type { TaskDTO } from "../types";
 
 type Props = {
@@ -145,7 +145,7 @@ export function TaskRow({
         >
           {task.dueOn && (
             <MetaItem icon={<CalendarTodayOutlinedIcon sx={metaIconSx} />}>
-              {formatRelativeDue(task.dueOn, today)}
+              {formatDueLabel(task.dueOn, today)}
             </MetaItem>
           )}
           {selectedLocation && (
