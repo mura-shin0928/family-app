@@ -49,15 +49,6 @@ export function BottomNav() {
           "& .Mui-selected .MuiSvgIcon-root": {
             bgcolor: "var(--mui-palette-brand-tagBg)",
           },
-          // アイコンだけのナビなので、選択中は色に加えて上端のバーでも示す。
-          "& .Mui-selected::before": {
-            content: '""',
-            position: "absolute",
-            top: 0,
-            insetInline: 0,
-            height: 4,
-            bgcolor: "primary.main",
-          },
         }}
       >
         <BottomNavigationAction
