@@ -21,6 +21,11 @@ describe("tasks RLS", () => {
   let memberCId: string;
   let taskF1: string;
   let taskF2: string;
+  let locationF1: string;
+  let locationF2: string;
+  let deletedLocationF1: string;
+  let itemF1: string;
+  let itemF2: string;
 
   const userA = { email: `a-${runId}@example.test` };
   const userB = { email: `b-${runId}@example.test` };
@@ -115,10 +120,78 @@ describe("tasks RLS", () => {
     if (t2Error || !t2)
       throw new Error(`failed to seed F2 task: ${t2Error?.message}`);
     taskF2 = t2.id;
+
+    const { data: locations, error: locationsError } = await admin
+      .from("purchase_locations")
+      .insert([
+        { family_id: familyF1, name: "スーパー", created_by: memberAId },
+        { family_id: familyF2, name: "スーパー", created_by: memberCId },
+        {
+          family_id: familyF1,
+          name: "閉店した店",
+          created_by: memberAId,
+          deleted_at: new Date().toISOString(),
+        },
+      ])
+      .select("id");
+    if (locationsError || !locations)
+      throw new Error(
+        `failed to seed purchase_locations: ${locationsError?.message}`,
+      );
+    [locationF1, locationF2, deletedLocationF1] = locations.map((l) => l.id);
+
+    const { data: children, error: childrenError } = await admin
+      .from("children")
+      .insert([
+        {
+          family_id: familyF1,
+          display_name: "長女",
+          birth_date: "2026-08-01",
+          created_by: memberAId,
+        },
+        {
+          family_id: familyF2,
+          display_name: "長男",
+          birth_date: "2026-08-01",
+          created_by: memberCId,
+        },
+      ])
+      .select("id");
+    if (childrenError || !children)
+      throw new Error(`failed to seed children: ${childrenError?.message}`);
+
+    const { data: items, error: itemsError } = await admin
+      .from("life_event_items")
+      .insert([
+        {
+          family_id: familyF1,
+          child_id: children[0].id,
+          title: "F1の項目",
+          status: "in_task",
+          created_by: memberAId,
+        },
+        {
+          family_id: familyF2,
+          child_id: children[1].id,
+          title: "F2の項目",
+          status: "in_task",
+          created_by: memberCId,
+        },
+      ])
+      .select("id");
+    if (itemsError || !items)
+      throw new Error(
+        `failed to seed life_event_items: ${itemsError?.message}`,
+      );
+    [itemF1, itemF2] = items.map((i) => i.id);
   });
 
   afterAll(async () => {
-    await admin.from("tasks").delete().in("family_id", [familyF1, familyF2]);
+    const families = [familyF1, familyF2];
+    await admin.from("tasks").delete().in("family_id", families);
+    await admin.from("life_event_items").delete().in("family_id", families);
+    await admin.from("children").delete().in("family_id", families);
+    await admin.from("purchase_locations").delete().in("family_id", families);
     await Promise.all(
       Object.values(userIds).map((id) => deleteUser(admin, id)),
     );
@@ -310,6 +383,123 @@ describe("tasks RLS", () => {
       .eq("id", created.id)
       .single();
     expect(check?.deleted_at).not.toBeNull();
+  });
+
+  it("a member can point a task at their own family's purchase location and life event item", async () => {
+    const clientA = await signInAsClient(userA.email, PASSWORD);
+
+    const { data: inserted, error: insertError } = await clientA
+      .from("tasks")
+      .insert({
+        family_id: familyF1,
+        title: "自家族の参照つき",
+        sort_order: 5,
+        created_by: memberAId,
+        is_purchase: true,
+        purchase_location_id: locationF1,
+        life_event_item_id: itemF1,
+      })
+      .select("id")
+      .single();
+    expect(insertError).toBeNull();
+    expect(inserted?.id).toBeTruthy();
+
+    const { error: updateError } = await clientA
+      .from("tasks")
+      .update({ purchase_location_id: locationF1, life_event_item_id: itemF1 })
+      .eq("id", taskF1);
+    expect(updateError).toBeNull();
+
+    await admin
+      .from("tasks")
+      .update({ purchase_location_id: null, life_event_item_id: null })
+      .eq("id", taskF1);
+  });
+
+  it("cannot insert with purchase_location_id pointing at another family's location", async () => {
+    const clientA = await signInAsClient(userA.email, PASSWORD);
+
+    const { error } = await clientA.from("tasks").insert({
+      family_id: familyF1,
+      title: "他家族の場所",
+      sort_order: 6,
+      created_by: memberAId,
+      is_purchase: true,
+      purchase_location_id: locationF2,
+    });
+
+    expect(error).not.toBeNull();
+  });
+
+  it("cannot insert with life_event_item_id pointing at another family's item", async () => {
+    const clientA = await signInAsClient(userA.email, PASSWORD);
+
+    const { error } = await clientA.from("tasks").insert({
+      family_id: familyF1,
+      title: "他家族の項目",
+      sort_order: 7,
+      created_by: memberAId,
+      life_event_item_id: itemF2,
+    });
+
+    expect(error).not.toBeNull();
+  });
+
+  it("cannot update purchase_location_id / life_event_item_id to another family's row", async () => {
+    const clientA = await signInAsClient(userA.email, PASSWORD);
+
+    const { error: locationError } = await clientA
+      .from("tasks")
+      .update({ purchase_location_id: locationF2 })
+      .eq("id", taskF1);
+    expect(locationError).not.toBeNull();
+
+    const { error: itemError } = await clientA
+      .from("tasks")
+      .update({ life_event_item_id: itemF2 })
+      .eq("id", taskF1);
+    expect(itemError).not.toBeNull();
+
+    const { data: check } = await admin
+      .from("tasks")
+      .select("purchase_location_id, life_event_item_id")
+      .eq("id", taskF1)
+      .single();
+    expect(check?.purchase_location_id).toBeNull();
+    expect(check?.life_event_item_id).toBeNull();
+  });
+
+  it("can still update a task that points at a soft-deleted purchase location", async () => {
+    const clientA = await signInAsClient(userA.email, PASSWORD);
+
+    const { data: created, error: createError } = await admin
+      .from("tasks")
+      .insert({
+        family_id: familyF1,
+        title: "消した場所を指すタスク",
+        sort_order: 8,
+        created_by: memberAId,
+        is_purchase: true,
+        purchase_location_id: deletedLocationF1,
+      })
+      .select("id")
+      .single();
+    if (createError || !created)
+      throw new Error(`failed to seed task: ${createError?.message}`);
+
+    const { error } = await clientA
+      .from("tasks")
+      .update({ title: "名前だけ変える" })
+      .eq("id", created.id);
+    expect(error).toBeNull();
+
+    const { data: check } = await admin
+      .from("tasks")
+      .select("title, purchase_location_id")
+      .eq("id", created.id)
+      .single();
+    expect(check?.title).toBe("名前だけ変える");
+    expect(check?.purchase_location_id).toBe(deletedLocationF1);
   });
 
   it("no client can hard-delete a task (no delete policy)", async () => {
