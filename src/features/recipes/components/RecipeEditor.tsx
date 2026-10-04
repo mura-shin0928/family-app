@@ -1,63 +1,34 @@
 "use client";
 
-import AddIcon from "@mui/icons-material/Add";
-import AssistantIcon from "@mui/icons-material/Assistant";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import NotesIcon from "@mui/icons-material/Notes";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import CircularProgress from "@mui/material/CircularProgress";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogTitle from "@mui/material/DialogTitle";
 import Divider from "@mui/material/Divider";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import IconButton from "@mui/material/IconButton";
-import Radio from "@mui/material/Radio";
-import RadioGroup from "@mui/material/RadioGroup";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import {
-  type ChangeEvent,
-  type FormEvent,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { type FormEvent, useState, useTransition } from "react";
 import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
-import {
-  analyzeRecipeImage,
-  analyzeRecipeSource,
-  createRecipe,
-  updateRecipe,
-} from "../actions";
+import { createRecipe, updateRecipe } from "../actions";
 import type { RecipeDraft } from "../extraction/types";
-import { formValuesFromRecipe, isRecipeFormDirty } from "../form-values";
-import { compressImage } from "../image/compress";
+import {
+  appendServingsToNote,
+  formValuesFromRecipe,
+  type IngredientRow,
+  ingredientRowsFromRecipe,
+  isRecipeFormDirty,
+  toSubmittedIngredients,
+} from "../form-values";
 import { RECIPES_QUERY_KEY, type RecipeDetailDTO } from "../types";
+import { IngredientRowsEditor } from "./IngredientRowsEditor";
+import { RecipeAnalyzePanel } from "./RecipeAnalyzePanel";
 import { useLeaveConfirm } from "./useLeaveConfirm";
-
-type IngredientRow = {
-  key: string;
-  id?: string;
-  name: string;
-  quantity: string;
-};
-
-function toRows(recipe?: RecipeDetailDTO): IngredientRow[] {
-  if (!recipe) return [];
-  return recipe.ingredients.map((ingredient) => ({
-    key: ingredient.id,
-    id: ingredient.id,
-    name: ingredient.name,
-    quantity: ingredient.quantity ?? "",
-  }));
-}
 
 export function RecipeEditor({
   mode,
@@ -69,29 +40,14 @@ export function RecipeEditor({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
-  const [isAnalyzing, startAnalyzeTransition] = useTransition();
-  const [isAnalyzingImage, startImageTransition] = useTransition();
   const [title, setTitle] = useState(recipe?.title ?? "");
   const [sourceUrl, setSourceUrl] = useState(recipe?.sourceUrl ?? "");
   const [sourceText, setSourceText] = useState(recipe?.sourceText ?? "");
   const [note, setNote] = useState(recipe?.note ?? "");
   const [ingredients, setIngredients] = useState<IngredientRow[]>(() =>
-    toRows(recipe),
+    ingredientRowsFromRecipe(recipe),
   );
   const [error, setError] = useState<string | null>(null);
-  // URL・テキストと画像は同時に表示せず切り替える（縦に伸ばさないため）。
-  const [inputMode, setInputMode] = useState<"text" | "image">("text");
-  const [analyzeMessage, setAnalyzeMessage] = useState<{
-    severity: "success" | "warning";
-    text: string;
-  } | null>(null);
-  // 解析に失敗したときだけ保持し、「もう一度解析」で選び直しなしに再送する。
-  // 保存後は不要になるため、handleSubmit成功時に破棄する。
-  const [pendingImage, setPendingImage] = useState<{
-    blob: Blob;
-    mimeType: string;
-  } | null>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
   const [originalValues] = useState(() => formValuesFromRecipe(recipe));
   const leaveConfirm = useLeaveConfirm(
     isRecipeFormDirty(originalValues, {
@@ -103,32 +59,8 @@ export function RecipeEditor({
     }),
   );
 
-  function addIngredientRow() {
-    setIngredients((current) => [
-      ...current,
-      { key: crypto.randomUUID(), name: "", quantity: "" },
-    ]);
-  }
-
-  function updateIngredientRow(
-    key: string,
-    field: "name" | "quantity",
-    value: string,
-  ) {
-    setIngredients((current) =>
-      current.map((row) =>
-        row.key === key ? { ...row, [field]: value } : row,
-      ),
-    );
-  }
-
-  function removeIngredientRow(key: string) {
-    setIngredients((current) => current.filter((row) => row.key !== key));
-  }
-
-  // URL/テキスト解析・画像解析の両方から呼ぶ、フォームへのdraft反映処理だけを
-  // 切り出したもの。成功/失敗メッセージの組み立ては呼び出し元ごとに異なる
-  // （画像解析だけ材料0件をwarning扱いにする等）ため、ここには含めない。
+  // 読み取った下書きをフォームに足す。入力済みのタイトルは上書きせず、
+  // 材料は末尾に追加する。
   function addDraftToForm(draft: RecipeDraft, sourceUrlFromDraft?: string) {
     if (!title.trim() && draft.title) {
       setTitle(draft.title);
@@ -146,11 +78,7 @@ export function RecipeEditor({
     }
 
     if (draft.servings && !note.includes(draft.servings)) {
-      setNote((current) =>
-        current.trim() === ""
-          ? draft.servings
-          : `${current}\n${draft.servings}`,
-      );
+      setNote((current) => appendServingsToNote(current, draft.servings));
     }
 
     if (sourceUrlFromDraft) {
@@ -160,106 +88,10 @@ export function RecipeEditor({
     }
   }
 
-  function handleAnalyze() {
-    const trimmedText = sourceText.trim();
-    if (!trimmedText) return;
-
-    setAnalyzeMessage(null);
-    startAnalyzeTransition(async () => {
-      const result = await analyzeRecipeSource({ text: trimmedText });
-
-      if (!result.ok) {
-        if (result.detectedUrl && !sourceUrl.trim()) {
-          setSourceUrl(result.detectedUrl);
-        }
-        setAnalyzeMessage({ severity: "warning", text: result.error });
-        return;
-      }
-
-      addDraftToForm(result.draft, result.sourceUrl);
-
-      const via =
-        result.via === "jsonld"
-          ? "ページから"
-          : result.sourceUrl
-            ? "ページの本文をAIで読み取り"
-            : "AIで読み取り";
-
-      setAnalyzeMessage({
-        severity: "success",
-        text: `${via}${result.draft.ingredients.length}件の材料を読み取りました。内容を確認して保存してください。`,
-      });
-    });
-  }
-
-  async function runImageAnalysis(blob: Blob, mimeType: string) {
-    const formData = new FormData();
-    const extension =
-      mimeType === "image/jpeg" ? "jpg" : (mimeType.split("/")[1] ?? "bin");
-    formData.append("images", blob, `recipe.${extension}`);
-
-    const result = await analyzeRecipeImage(formData);
-
-    if (!result.ok) {
-      setAnalyzeMessage({ severity: "warning", text: result.error });
-      return;
+  function fillSourceUrlIfEmpty(url: string) {
+    if (!sourceUrl.trim()) {
+      setSourceUrl(url);
     }
-
-    addDraftToForm(result.draft);
-    setPendingImage(null);
-
-    if (result.draft.ingredients.length === 0) {
-      setAnalyzeMessage({
-        severity: "warning",
-        text: "画像から材料を読み取れませんでした。材料は手入力で追加してください。",
-      });
-      return;
-    }
-
-    setAnalyzeMessage({
-      severity: "success",
-      text: `画像から${result.draft.ingredients.length}件の材料を読み取りました。内容を確認して保存してください。`,
-    });
-  }
-
-  function handleImagePick(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    // 同じファイルを選び直せるようにする（inputはchangeイベントが2回目以降
-    // 発火しないため、値を毎回リセットする）。
-    event.target.value = "";
-    if (!file) return;
-
-    setAnalyzeMessage(null);
-    setPendingImage(null);
-    startImageTransition(async () => {
-      const compressed = await compressImage(file);
-
-      if (compressed.kind === "unsupported") {
-        setAnalyzeMessage({
-          severity: "warning",
-          text: "この画像は読み取れませんでした。スクリーンショットを撮り直すか、タイトル・材料を手入力してください。",
-        });
-        return;
-      }
-      if (compressed.kind === "too-large") {
-        setAnalyzeMessage({
-          severity: "warning",
-          text: "画像が大きすぎます。撮り直すか、手入力で保存してください。",
-        });
-        return;
-      }
-
-      setPendingImage({ blob: compressed.blob, mimeType: compressed.mimeType });
-      await runImageAnalysis(compressed.blob, compressed.mimeType);
-    });
-  }
-
-  function handleRetryImageAnalysis() {
-    if (!pendingImage) return;
-    setAnalyzeMessage(null);
-    startImageTransition(() =>
-      runImageAnalysis(pendingImage.blob, pendingImage.mimeType),
-    );
   }
 
   function handleSubmit(event: FormEvent) {
@@ -272,13 +104,7 @@ export function RecipeEditor({
       return;
     }
 
-    const submittedIngredients = ingredients
-      .map((row) => ({
-        id: row.id,
-        name: row.name.trim(),
-        quantity: row.quantity.trim(),
-      }))
-      .filter((row) => row.name !== "");
+    const submittedIngredients = toSubmittedIngredients(ingredients);
 
     startTransition(async () => {
       const result =
@@ -305,7 +131,6 @@ export function RecipeEditor({
         return;
       }
 
-      setPendingImage(null);
       // Server Action + router.pushでの遷移はTanStack Queryのキャッシュに
       // 関知しないため、遷移先が古いキャッシュ（staleTime内）を表示し続け
       // ないよう明示的に無効化する。["recipes"]は一覧・詳細どちらの
@@ -330,116 +155,12 @@ export function RecipeEditor({
         mx: "auto",
       }}
     >
-      <Box component="section">
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
-          <AssistantIcon color="primary" fontSize="small" />
-          <Typography variant="subtitle1" component="h2">
-            レシピの簡単読み取り
-          </Typography>
-        </Box>
-        <RadioGroup
-          row
-          value={inputMode}
-          onChange={(event) => {
-            setInputMode(event.target.value as "text" | "image");
-            setAnalyzeMessage(null);
-          }}
-          sx={{ mb: 1 }}
-        >
-          <FormControlLabel
-            value="text"
-            control={<Radio size="small" />}
-            label="URL・テキスト"
-          />
-          <FormControlLabel
-            value="image"
-            control={<Radio size="small" />}
-            label="画像"
-          />
-        </RadioGroup>
-
-        {/* modeに関わらず常時マウントしておき、ラジオボタン切り替えでもrefが
-            外れないようにする（hiddenなので表示には影響しない）。 */}
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={handleImagePick}
-        />
-
-        {inputMode === "text" ? (
-          <Stack spacing={1}>
-            <TextField
-              label="URL または テキストを貼り付け"
-              value={sourceText}
-              onChange={(event) => setSourceText(event.target.value)}
-              multiline
-              minRows={4}
-              maxRows={4}
-            />
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleAnalyze}
-              disabled={isAnalyzing || sourceText.trim() === ""}
-              startIcon={
-                isAnalyzing ? (
-                  <CircularProgress size={14} />
-                ) : (
-                  <AutoAwesomeIcon fontSize="small" />
-                )
-              }
-              sx={{ alignSelf: "flex-start" }}
-            >
-              読み取り
-            </Button>
-          </Stack>
-        ) : (
-          <Stack spacing={1}>
-            <Button
-              variant="outlined"
-              onClick={() => imageInputRef.current?.click()}
-              disabled={isAnalyzingImage}
-              startIcon={
-                isAnalyzingImage ? (
-                  <CircularProgress size={16} />
-                ) : (
-                  <AutoAwesomeIcon fontSize="small" />
-                )
-              }
-              sx={{ alignSelf: "flex-start" }}
-            >
-              画像選択・読み取り
-            </Button>
-            <Typography variant="caption" color="textSecondary">
-              画像はGoogle Gemini
-              APIへ送信して解析します。なお、画像は保存されません。
-            </Typography>
-          </Stack>
-        )}
-
-        {analyzeMessage && (
-          <Alert
-            severity={analyzeMessage.severity}
-            sx={{ mt: 1.5 }}
-            action={
-              pendingImage && analyzeMessage.severity === "warning" ? (
-                <Button
-                  color="inherit"
-                  size="small"
-                  onClick={handleRetryImageAnalysis}
-                  disabled={isAnalyzingImage}
-                >
-                  もう一度解析
-                </Button>
-              ) : undefined
-            }
-          >
-            {analyzeMessage.text}
-          </Alert>
-        )}
-      </Box>
+      <RecipeAnalyzePanel
+        sourceText={sourceText}
+        onSourceTextChange={setSourceText}
+        onDraft={addDraftToForm}
+        onDetectedUrl={fillSourceUrlIfEmpty}
+      />
 
       <Divider />
 
@@ -473,49 +194,7 @@ export function RecipeEditor({
         </Stack>
       </Box>
 
-      <Box component="section">
-        <Stack spacing={1.5}>
-          {ingredients.map((row) => (
-            <Stack
-              key={row.key}
-              direction="row"
-              spacing={1}
-              sx={{ alignItems: "center" }}
-            >
-              <TextField
-                label="材料名"
-                value={row.name}
-                onChange={(event) =>
-                  updateIngredientRow(row.key, "name", event.target.value)
-                }
-                sx={{ flex: 1, minWidth: 0 }}
-              />
-              <TextField
-                label="分量"
-                value={row.quantity}
-                onChange={(event) =>
-                  updateIngredientRow(row.key, "quantity", event.target.value)
-                }
-                sx={{ width: 104, flexShrink: 0 }}
-              />
-              <IconButton
-                onClick={() => removeIngredientRow(row.key)}
-                aria-label="材料を削除"
-                sx={{ flexShrink: 0 }}
-              >
-                <DeleteOutlineIcon fontSize="small" />
-              </IconButton>
-            </Stack>
-          ))}
-        </Stack>
-        <Button
-          onClick={addIngredientRow}
-          startIcon={<AddIcon fontSize="small" />}
-          sx={{ mt: 1.5 }}
-        >
-          材料を追加
-        </Button>
-      </Box>
+      <IngredientRowsEditor rows={ingredients} setRows={setIngredients} />
 
       {error && <Alert severity="error">{error}</Alert>}
 
