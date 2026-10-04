@@ -44,9 +44,22 @@ describe("loginReturnPath", () => {
     expect(loginReturnPath("/tasks/share", "")).toBeNull();
   });
 
-  it("3000文字を超えるなら null（Cookie に収まらない）", () => {
+  it("Cookie に入れるとき膨らむ %XX が多いクエリは、短くても null", () => {
     expect(
-      loginReturnPath("/tasks/share", `?text=${"a".repeat(3000)}`),
+      loginReturnPath("/tasks/share", `?text=${"%E3%81%82".repeat(300)}`),
+    ).toBeNull();
+  });
+
+  it("X の投稿程度の日本語（140文字）は返す", () => {
+    const search = `?text=${"%E3%81%82".repeat(140)}`;
+    expect(loginReturnPath("/tasks/share", search)).toBe(
+      `/tasks/share${search}`,
+    );
+  });
+
+  it("Cookie に収まらない長さなら null", () => {
+    expect(
+      loginReturnPath("/tasks/share", `?text=${"a".repeat(4000)}`),
     ).toBeNull();
   });
 });

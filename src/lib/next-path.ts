@@ -21,8 +21,8 @@ export const LOGIN_REDIRECT_COOKIE_OPTIONS = {
 const INVITE_PATH_PATTERN = /^\/invite\/[A-Za-z0-9_-]+$/;
 const SHARE_PATH_PATTERN = /^\/tasks\/share\?[^#\s]+$/;
 
-// Cookie 1つの上限（約4KB）に、エンコード後も収まる長さ。
-const RETURN_PATH_MAX = 3000;
+// Cookie 1つの上限（約4KB）に、名前と属性を足しても収まる値の長さ。
+const COOKIE_VALUE_MAX = 3800;
 
 export function sanitizeNextPath(
   value: string | null | undefined,
@@ -39,8 +39,7 @@ export function loginReturnPath(
   search: string,
 ): string | null {
   const path = `${pathname}${search}`;
-  if (path.length > RETURN_PATH_MAX || !SHARE_PATH_PATTERN.test(path)) {
-    return null;
-  }
-  return path;
+  if (!SHARE_PATH_PATTERN.test(path)) return null;
+  // Cookie の値はもう一度エンコードされて保存される。
+  return encodeURIComponent(path).length <= COOKIE_VALUE_MAX ? path : null;
 }

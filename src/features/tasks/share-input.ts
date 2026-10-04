@@ -11,7 +11,7 @@ const NOTE_MAX = 2000;
 
 // 日本語の文に続けて書かれたURLを文ごと拾わないよう、ASCIIの範囲だけを見る。
 const URL_IN_TEXT = /https?:\/\/[\x21-\x7e]+/i;
-const TRAILING_PUNCTUATION = /[.,!?)\]}]+$/;
+const TRAILING_PUNCTUATION = ".,!?)]}";
 
 function first(value: ShareParam): string {
   return (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
@@ -21,11 +21,27 @@ function isAcceptableUrl(value: string): boolean {
   return value.length <= URL_MAX && isHttpUrl(value);
 }
 
+function count(value: string, char: string): number {
+  return value.split(char).length - 1;
+}
+
+// 文の句読点や括弧を落とす。URL自身の括弧（Wikipedia の `Foo_(bar)` など）は残す。
+function stripTrailingPunctuation(url: string): string {
+  let result = url;
+  while (TRAILING_PUNCTUATION.includes(result.slice(-1)) && result !== "") {
+    if (result.endsWith(")") && count(result, ")") <= count(result, "(")) {
+      break;
+    }
+    result = result.slice(0, -1);
+  }
+  return result;
+}
+
 function findUrlInText(text: string): string | null {
-  const candidate = text
-    .match(URL_IN_TEXT)?.[0]
-    .replace(TRAILING_PUNCTUATION, "");
-  return candidate && isAcceptableUrl(candidate) ? candidate : null;
+  const match = text.match(URL_IN_TEXT)?.[0];
+  if (!match) return null;
+  const candidate = stripTrailingPunctuation(match);
+  return isAcceptableUrl(candidate) ? candidate : null;
 }
 
 /** 共有シートやショートカットから届いたクエリを、確認画面の初期値にする。 */

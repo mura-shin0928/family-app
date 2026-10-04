@@ -35,6 +35,14 @@ describe("parseShareInput", () => {
     ["(https://example.com/a)", "https://example.com/a"],
     ["https://example.com/a?b=1&c=2 です", "https://example.com/a?b=1&c=2"],
     ["https://example.com/aです", "https://example.com/a"],
+    [
+      "https://ja.wikipedia.org/wiki/Foo_(bar)",
+      "https://ja.wikipedia.org/wiki/Foo_(bar)",
+    ],
+    [
+      "(https://ja.wikipedia.org/wiki/Foo_(bar))",
+      "https://ja.wikipedia.org/wiki/Foo_(bar)",
+    ],
   ])("URL の前後の文字を含めない: %s", (text, expected) => {
     expect(parseShareInput({ text }).url).toBe(expected);
   });
