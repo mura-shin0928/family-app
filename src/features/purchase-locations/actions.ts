@@ -2,6 +2,7 @@
 
 import { requireFamilyMember } from "@/features/auth/guard";
 import type { ActionResult } from "@/lib/action-result";
+import { logActionError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import {
   createPurchaseLocationSchema,
@@ -37,6 +38,7 @@ export async function createPurchaseLocation(input: {
     if (error.code === UNIQUE_VIOLATION) {
       return { ok: false, error: DUPLICATE_NAME_MESSAGE };
     }
+    logActionError("createPurchaseLocation", error);
     return { ok: false, error: "登録に失敗しました" };
   }
 
@@ -55,18 +57,20 @@ export async function updatePurchaseLocation(input: {
     };
   }
 
-  await requireFamilyMember();
+  const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
   const { error } = await supabase
     .from("purchase_locations")
     .update({ name: parsed.data.name })
-    .eq("id", parsed.data.id);
+    .eq("id", parsed.data.id)
+    .eq("family_id", member.familyId);
 
   if (error) {
     if (error.code === UNIQUE_VIOLATION) {
       return { ok: false, error: DUPLICATE_NAME_MESSAGE };
     }
+    logActionError("updatePurchaseLocation", error);
     return { ok: false, error: "更新に失敗しました" };
   }
 
@@ -85,15 +89,17 @@ export async function deletePurchaseLocation(input: {
     return { ok: false, error: "不正な操作です" };
   }
 
-  await requireFamilyMember();
+  const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
   const { error } = await supabase
     .from("purchase_locations")
     .update({ deleted_at: new Date().toISOString() })
-    .eq("id", parsed.data.id);
+    .eq("id", parsed.data.id)
+    .eq("family_id", member.familyId);
 
   if (error) {
+    logActionError("deletePurchaseLocation", error);
     return { ok: false, error: "削除に失敗しました" };
   }
 

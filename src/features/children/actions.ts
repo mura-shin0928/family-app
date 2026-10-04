@@ -2,6 +2,7 @@
 
 import { requireFamilyMember } from "@/features/auth/guard";
 import type { ActionResult } from "@/lib/action-result";
+import { logActionError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import {
   createChildSchema,
@@ -37,6 +38,7 @@ export async function createChild(input: {
   });
 
   if (error) {
+    logActionError("createChild", error);
     return { ok: false, error: "登録に失敗しました" };
   }
 
@@ -57,7 +59,7 @@ export async function updateChild(input: {
     };
   }
 
-  await requireFamilyMember();
+  const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -70,9 +72,11 @@ export async function updateChild(input: {
           : parsed.data.expectedBirthDate,
       birth_date: parsed.data.birthDate === "" ? null : parsed.data.birthDate,
     })
-    .eq("id", parsed.data.childId);
+    .eq("id", parsed.data.childId)
+    .eq("family_id", member.familyId);
 
   if (error) {
+    logActionError("updateChild", error);
     return { ok: false, error: "更新に失敗しました" };
   }
 
@@ -91,15 +95,17 @@ export async function deleteChild(input: {
     return { ok: false, error: "不正な操作です" };
   }
 
-  await requireFamilyMember();
+  const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
   const { error } = await supabase
     .from("children")
     .update({ deleted_at: new Date().toISOString() })
-    .eq("id", parsed.data.childId);
+    .eq("id", parsed.data.childId)
+    .eq("family_id", member.familyId);
 
   if (error) {
+    logActionError("deleteChild", error);
     return { ok: false, error: "削除に失敗しました" };
   }
 
