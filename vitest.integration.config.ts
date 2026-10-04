@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 // `supabase start` でローカルDBが起動している状態で実行する。
-// CI では動かさないため vitest.config.ts (npm test) には含めない。
+// CI では .github/workflows/db.yml だけが実行する。vitest.config.ts (npm test) には含めない。
 export default defineConfig({
   test: {
     environment: "node",

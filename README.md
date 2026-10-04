@@ -87,7 +87,7 @@ npm run lint              # biome check
 npm run lint:ci           # biome ci（CI用）
 npm run format            # biome format --write
 npm run test              # vitest run（unit）
-npm run test:integration  # vitest run（RLS等、supabase start が必要。CIでは動かさない）
+npm run test:integration  # vitest run（RLS等、supabase start が必要）
 npm run db:types          # ローカルDBから型を生成（supabase start が必要）
 npm run admin             # 管理用CLI（下記）
 npm run dev:login         # ローカル用ログイン準備（上記）
@@ -95,7 +95,7 @@ npm run dev:login         # ローカル用ログイン準備（上記）
 
 migration を足したら `make db-reset` のあとに `npm run db:types` を実行し、
 `src/lib/supabase/database.types.ts` を一緒にコミットする。CLI は CI と同じ版
-（`.github/workflows/db-types.yml` の `version`）を使う。
+（`.github/workflows/db.yml` の `version`）を使う。
 
 Gemini の疎通確認用に `scripts/gemini-smoke.mjs` / `scripts/gemini-image-smoke.mjs` がある
 （`node --env-file=.env.local scripts/gemini-smoke.mjs`）。
@@ -104,8 +104,9 @@ Gemini の疎通確認用に `scripts/gemini-smoke.mjs` / `scripts/gemini-image-
 
 - `.github/workflows/ci.yml` が PR と main への push で typecheck / lint / unit test / build を実行する
   （`*.md` だけの変更では動かない）。
-- `.github/workflows/db-types.yml` が、`supabase/` か型ファイルを変更した PR で、migration を空の DB に
-  当てて型を生成し直し、コミット済みの `database.types.ts` と一致するかを確認する。
+- `.github/workflows/db.yml` が、`supabase/`・`tests/integration/`・型ファイルを変更した PR で、migration を
+  空の DB に当てて統合テスト（RLS と DB 関数）を実行し、型を生成し直してコミット済みの
+  `database.types.ts` と一致するかを確認する。
 - main への push では、続けて `supabase db push` で本番DBに migration を適用する。
 - デプロイは Vercel が main から行う。
 
