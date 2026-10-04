@@ -1,4 +1,4 @@
-import { decodeHtmlEntities } from "./html-text";
+import { metaContent } from "./html-text";
 import { findRecipeNodes } from "./jsonld";
 
 // recipes.image_url のDB制約と揃える。
@@ -20,21 +20,8 @@ function collectImageCandidates(value: unknown, into: string[]) {
   }
 }
 
-function extractOgImage(html: string): string | null {
-  const match = html.match(
-    /<meta[^>]+property\s*=\s*["']og:image["'][^>]*content\s*=\s*["']([^"']*)["'][^>]*>/i,
-  );
-  if (match?.[1]) return match[1];
-
-  // property/content の順が逆のパターンにも対応。
-  const reversed = html.match(
-    /<meta[^>]+content\s*=\s*["']([^"']*)["'][^>]+property\s*=\s*["']og:image["'][^>]*>/i,
-  );
-  return reversed?.[1] ?? null;
-}
-
 function toHttpsUrl(candidate: string, pageUrl: string): string | null {
-  const trimmed = decodeHtmlEntities(candidate).trim();
+  const trimmed = candidate.trim();
   if (trimmed === "") return null;
 
   let url: URL;
@@ -58,7 +45,7 @@ export function extractImageUrl(html: string, pageUrl: string): string | null {
     collectImageCandidates(recipe.image, candidates);
   }
 
-  const ogImage = extractOgImage(html);
+  const ogImage = metaContent(html, "og:image");
   if (ogImage) candidates.push(ogImage);
 
   for (const candidate of candidates) {
