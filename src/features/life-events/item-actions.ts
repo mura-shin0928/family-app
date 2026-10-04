@@ -20,7 +20,7 @@ import {
   updateLifeEventItemNoteSchema,
 } from "./item-schema";
 import { programsToCatalog } from "./program-catalog";
-import type { CatalogItem } from "./types";
+import type { CatalogItem, LifeEventItem } from "./types";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -61,7 +61,9 @@ async function findActiveItem(
     .eq("catalog_key", catalogKey)
     .is("deleted_at", null)
     .maybeSingle();
-  return data as { id: string; status: "in_task" | "done" } | null;
+  return (
+    data && { id: data.id, status: data.status as LifeEventItem["status"] }
+  );
 }
 
 export async function addLifeEventItemToTask(input: {

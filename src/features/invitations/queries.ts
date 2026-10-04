@@ -120,7 +120,7 @@ export async function previewInvitation(
 
   const { data, error } = await supabase
     .rpc("invitation_preview", { p_token_hash: tokenHash })
-    .single<{ family_name: string | null; status: string }>();
+    .single();
 
   if (error) {
     throw new Error(`failed to preview invitation: ${error.message}`);
@@ -145,7 +145,7 @@ export async function checkInviteEmail(
 
   const { data, error } = await supabase
     .rpc("check_invite_email", { p_token_hash: tokenHash, p_email: email })
-    .single<{ family_name: string | null; status: string }>();
+    .single();
 
   if (error) {
     throw new Error(`failed to check invite email: ${error.message}`);
