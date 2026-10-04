@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { noteSchema } from "@/lib/schema";
 import { httpUrlSchema } from "@/lib/url";
 
 // 空文字列 = 未入力。tasks/schema.ts の dueOn と同じ規約（"" | 値 の union）。
@@ -22,11 +23,6 @@ const titleSchema = z
   .max(200, "タイトルは200文字以内で入力してください");
 
 const sourceUrlSchema = z.union([httpUrlSchema, z.literal("")]);
-
-const noteSchema = z.union([
-  z.string().trim().max(2000, "メモは2000文字以内で入力してください"),
-  z.literal(""),
-]);
 
 // recipes.source_text のDB制約（20000字）と揃える。
 const sourceTextSchema = z.union([

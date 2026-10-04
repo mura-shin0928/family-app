@@ -2,10 +2,10 @@
 
 import { z } from "zod";
 import { requireFamilyMember } from "@/features/auth/guard";
+import type { ActionResult } from "@/lib/action-result";
+import { logActionError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { getAreas } from "./api";
-
-export type ActionResult = { ok: true } | { ok: false; error: string };
 
 // 空文字列 = 設定を外す（children.schema と同じ規約）。
 const updateFamilyMunicipalitySchema = z.object({
@@ -52,6 +52,7 @@ export async function updateFamilyMunicipality(input: {
     .eq("id", member.familyId);
 
   if (error) {
+    logActionError("updateFamilyMunicipality", error);
     return { ok: false, error: "自治体の保存に失敗しました" };
   }
 

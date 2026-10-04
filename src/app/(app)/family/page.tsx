@@ -7,18 +7,15 @@ import { BackButton } from "@/components/BackButton";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { ChildrenSection } from "@/features/children/components/ChildrenSection";
 import { getChildren } from "@/features/children/queries";
+import { removeMember } from "@/features/family/actions";
+import { getFamily, getFamilyMembers } from "@/features/family/queries";
 import {
   createInvitation,
   deleteInvitation,
-  removeMember,
   revokeInvitation,
 } from "@/features/invitations/actions";
 import { InvitationsScreen } from "@/features/invitations/components/InvitationsScreen";
-import {
-  getFamily,
-  getFamilyMembers,
-  getInvitations,
-} from "@/features/invitations/queries";
+import { getInvitations } from "@/features/invitations/queries";
 import { getAreas, isSeidoDataHubConfigured } from "@/features/programs/api";
 import { MunicipalitySection } from "@/features/programs/components/MunicipalitySection";
 import { getFamilyMunicipality } from "@/features/programs/queries";

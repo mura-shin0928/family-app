@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireFamilyMember } from "@/features/auth/guard";
+import type { ActionResult } from "@/lib/action-result";
+import { logActionError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import type { TaskUpdatePatch } from "./edit-draft";
 import {
@@ -10,8 +12,6 @@ import {
   toggleDoneSchema,
   updateTaskSchema,
 } from "./schema";
-
-export type ActionResult = { ok: true } | { ok: false; error: string };
 
 /**
  * 買う場所idが自家族のものか（かつ論理削除されていないか）を1クエリで確認する。
@@ -33,6 +33,9 @@ async function resolvePurchaseLocationId(
     .is("deleted_at", null)
     .maybeSingle();
 
+  if (error) {
+    logActionError("resolvePurchaseLocationId", error);
+  }
   if (error || !data) {
     return { ok: false, error: "指定した買う場所が見つかりません" };
   }
@@ -92,10 +95,11 @@ export async function createTask(input: {
   });
 
   if (error) {
-    return {
-      ok: false,
-      error: CREATE_TASK_ERROR_MESSAGES[error.message] ?? "登録に失敗しました",
-    };
+    const known = CREATE_TASK_ERROR_MESSAGES[error.message];
+    if (!known) {
+      logActionError("createTask", error);
+    }
+    return { ok: false, error: known ?? "登録に失敗しました" };
   }
 
   return { ok: true };
@@ -129,6 +133,7 @@ export async function setTaskDone(input: {
     .select("life_event_item_id");
 
   if (error) {
+    logActionError("setTaskDone", error);
     return { ok: false, error: "更新に失敗しました" };
   }
 
@@ -190,6 +195,7 @@ export async function updateTask(
     .select("id");
 
   if (error) {
+    logActionError("updateTask", error);
     return { ok: false, error: "更新に失敗しました" };
   }
   if (data.length === 0) {
@@ -218,6 +224,7 @@ export async function deleteTask(input: {
     .select("life_event_item_id");
 
   if (error) {
+    logActionError("deleteTask", error);
     return { ok: false, error: "削除に失敗しました" };
   }
 

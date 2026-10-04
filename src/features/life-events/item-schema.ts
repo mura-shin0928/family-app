@@ -1,9 +1,6 @@
 import { z } from "zod";
+import { dateStringSchema, noteSchema } from "@/lib/schema";
 import { httpUrlSchema } from "@/lib/url";
-
-const dateStringSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "日付の形式が正しくありません");
 
 const titleSchema = z
   .string()
@@ -42,10 +39,7 @@ export const updateLifeEventItemDoneOnSchema = z.object({
 
 export const updateLifeEventItemNoteSchema = z.object({
   id: z.string().uuid(),
-  note: z.union([
-    z.string().trim().max(2000, "メモは2000文字以内で入力してください"),
-    z.literal(""),
-  ]),
+  note: noteSchema,
 });
 
 export const lifeEventItemIdSchema = z.object({ id: z.string().uuid() });

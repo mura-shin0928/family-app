@@ -1,6 +1,7 @@
 "use server";
 
 import { requireFamilyMember } from "@/features/auth/guard";
+import { logActionError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { isSnsHost, urlOnly } from "./extraction/detect";
 import { fetchHtml } from "./extraction/fetch-html";
@@ -31,7 +32,7 @@ const ANALYZE_DEADLINE_MS = 50_000;
 // テキスト経路と同じ予算を取る。
 const IMAGE_ANALYZE_DEADLINE_MS = 50_000;
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+import type { ActionResult } from "@/lib/action-result";
 
 type IngredientInput = {
   id?: string;
@@ -71,6 +72,7 @@ export async function createRecipe(input: {
   });
 
   if (error) {
+    logActionError("createRecipe", error);
     return { ok: false, error: "登録に失敗しました" };
   }
 
@@ -110,6 +112,7 @@ export async function updateRecipe(input: {
   });
 
   if (error) {
+    logActionError("updateRecipe", error);
     return { ok: false, error: "更新に失敗しました" };
   }
 
@@ -134,6 +137,7 @@ export async function deleteRecipe(input: {
     .eq("family_id", member.familyId);
 
   if (error) {
+    logActionError("deleteRecipe", error);
     return { ok: false, error: "削除に失敗しました" };
   }
 
@@ -168,6 +172,7 @@ export async function addIngredientsToPurchases(input: {
   );
 
   if (error) {
+    logActionError("addIngredientsToPurchases", error);
     return { ok: false, error: "買うものへの追加に失敗しました" };
   }
 
@@ -190,6 +195,7 @@ export async function undoAddIngredientsToPurchases(input: {
   });
 
   if (error) {
+    logActionError("undoAddIngredientsToPurchases", error);
     return { ok: false, error: "取り消しに失敗しました" };
   }
 

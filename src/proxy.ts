@@ -5,9 +5,7 @@ import {
   LOGIN_REDIRECT_COOKIE_OPTIONS,
   loginReturnPath,
 } from "@/lib/next-path";
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+import { getSupabaseEnv } from "@/lib/supabase/env";
 
 // /invite: 未ログインでも「このFamilyへの招待です」という文脈を見せてから
 // ログインへ誘導したいため、force-redirectの対象から外す
@@ -22,7 +20,8 @@ const PUBLIC_PATHS = ["/login", "/no-access", "/auth/callback", "/invite"];
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  const { url, anonKey } = getSupabaseEnv();
+  const supabase = createServerClient(url, anonKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();

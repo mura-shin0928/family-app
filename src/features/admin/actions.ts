@@ -2,20 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAppAdmin } from "@/features/auth/guard";
-import type {
-  ActionResult,
-  CreateInvitationResult,
-} from "@/features/invitations/actions";
+import { memberIdSchema } from "@/features/family/schema";
+import type { CreateInvitationResult } from "@/features/invitations/actions";
 import {
   createInvitationSchema,
   invitationIdSchema,
-  memberIdSchema,
 } from "@/features/invitations/schema";
 import {
   generateInvitationToken,
   hashInvitationToken,
 } from "@/features/invitations/token";
+import type { ActionResult } from "@/lib/action-result";
 import { INVITATION_TTL_DAYS } from "@/lib/constants";
+import { logActionError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { createFamilySchema, familyIdSchema } from "./schema";
 
@@ -47,6 +46,9 @@ export async function createFamily(input: {
     .select("id")
     .single();
 
+  if (error) {
+    logActionError("createFamily", error);
+  }
   if (error || !data) {
     return { ok: false, error: "Familyの作成に失敗しました" };
   }
@@ -91,6 +93,7 @@ export async function createAdminInvitation(
   });
 
   if (error) {
+    logActionError("createAdminInvitation", error);
     return { ok: false, error: "招待の作成に失敗しました" };
   }
 
@@ -118,6 +121,7 @@ export async function revokeAdminInvitation(
     .eq("family_id", parsedFamilyId.data);
 
   if (error) {
+    logActionError("revokeAdminInvitation", error);
     return { ok: false, error: "取り消しに失敗しました" };
   }
 
@@ -145,6 +149,7 @@ export async function deleteAdminInvitation(
     .eq("family_id", parsedFamilyId.data);
 
   if (error) {
+    logActionError("deleteAdminInvitation", error);
     return { ok: false, error: "削除に失敗しました" };
   }
 
@@ -177,6 +182,7 @@ export async function removeAdminMember(
     .eq("family_id", parsedFamilyId.data);
 
   if (error) {
+    logActionError("removeAdminMember", error);
     return { ok: false, error: "削除に失敗しました" };
   }
 
