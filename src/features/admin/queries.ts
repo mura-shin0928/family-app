@@ -43,3 +43,22 @@ export async function listFamiliesForAdmin(): Promise<
     createdAt: row.created_at,
   }));
 }
+
+/** Familyのレシピ解析の1日あたりの上限。null は既定値。 */
+export async function getFamilyRecipeAnalysisDailyLimit(
+  familyId: string,
+): Promise<number | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("families")
+    .select("recipe_analysis_daily_limit")
+    .eq("id", familyId)
+    .single();
+
+  if (error || !data) {
+    throw new Error(`failed to load recipe analysis limit: ${error?.message}`);
+  }
+
+  return data.recipe_analysis_daily_limit;
+}

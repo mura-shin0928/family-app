@@ -82,6 +82,7 @@ export type Database = {
           municipality_code: string | null
           municipality_name: string | null
           name: string
+          recipe_analysis_daily_limit: number | null
         }
         Insert: {
           created_at?: string
@@ -89,6 +90,7 @@ export type Database = {
           municipality_code?: string | null
           municipality_name?: string | null
           name: string
+          recipe_analysis_daily_limit?: number | null
         }
         Update: {
           created_at?: string
@@ -96,6 +98,7 @@ export type Database = {
           municipality_code?: string | null
           municipality_name?: string | null
           name?: string
+          recipe_analysis_daily_limit?: number | null
         }
         Relationships: []
       }
@@ -295,6 +298,32 @@ export type Database = {
             foreignKeyName: "purchase_locations_family_id_fkey"
             columns: ["family_id"]
             isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_analysis_usage: {
+        Row: {
+          count: number
+          day: string
+          family_id: string
+        }
+        Insert: {
+          count: number
+          day: string
+          family_id: string
+        }
+        Update: {
+          count?: number
+          day?: string
+          family_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_analysis_usage_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: true
             referencedRelation: "families"
             referencedColumns: ["id"]
           },
@@ -538,6 +567,7 @@ export type Database = {
           status: string
         }[]
       }
+      consume_recipe_analysis_quota: { Args: never; Returns: boolean }
       create_recipe: {
         Args: {
           p_id: string
@@ -580,6 +610,10 @@ export type Database = {
           p_note?: string
           p_title: string
         }
+        Returns: undefined
+      }
+      set_family_recipe_analysis_daily_limit: {
+        Args: { p_daily_limit: number; p_family_id: string }
         Returns: undefined
       }
       undo_add_ingredients_to_purchases: {

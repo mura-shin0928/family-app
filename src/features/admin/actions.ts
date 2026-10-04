@@ -16,7 +16,11 @@ import type { ActionResult } from "@/lib/action-result";
 import { INVITATION_TTL_DAYS } from "@/lib/constants";
 import { logActionError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
-import { createFamilySchema, familyIdSchema } from "./schema";
+import {
+  createFamilySchema,
+  familyIdSchema,
+  recipeAnalysisDailyLimitSchema,
+} from "./schema";
 
 export type CreateFamilyResult =
   | { ok: true; familyId: string }
@@ -184,6 +188,44 @@ export async function removeAdminMember(
   if (error) {
     logActionError("removeAdminMember", error);
     return { ok: false, error: "削除に失敗しました" };
+  }
+
+  revalidatePath(`/admin/families/${parsedFamilyId.data}`);
+  return { ok: true };
+}
+
+/**
+ * app_adminがFamilyのレシピ解析の1日あたりの上限を変える。nullで既定値に戻す。
+ * 権限の判定は DB 関数（is_app_admin()）側にもある。
+ */
+export async function setFamilyRecipeAnalysisDailyLimit(
+  familyId: string,
+  input: { dailyLimit: number | null },
+): Promise<ActionResult> {
+  const parsedFamilyId = familyIdSchema.safeParse(familyId);
+  const parsed = recipeAnalysisDailyLimitSchema.safeParse(input);
+  if (!parsedFamilyId.success || !parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error?.issues[0]?.message ?? "入力内容を確認してください",
+    };
+  }
+
+  await requireAppAdmin();
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc(
+    "set_family_recipe_analysis_daily_limit",
+    {
+      p_family_id: parsedFamilyId.data,
+      // 生成される型は引数を非 null とするが、関数は null を「既定値に戻す」として受け取る。
+      p_daily_limit: parsed.data.dailyLimit as number,
+    },
+  );
+
+  if (error) {
+    logActionError("setFamilyRecipeAnalysisDailyLimit", error);
+    return { ok: false, error: "上限の変更に失敗しました" };
   }
 
   revalidatePath(`/admin/families/${parsedFamilyId.data}`);
