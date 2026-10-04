@@ -1,18 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "./database.types";
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+import { getSupabaseEnv } from "./env";
 
 /**
  * Server Component / Server Action / Route Handler から使うクライアント。
  * リクエストごとに新規作成すること（使い回さない）。
  */
 export async function createClient() {
+  // cookies() を先に呼ぶ。プリレンダー中はここで動的レンダリングに切り替わり、検証まで進まない。
   const cookieStore = await cookies();
+  const { url, anonKey } = getSupabaseEnv();
 
-  return createServerClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  return createServerClient<Database>(url, anonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
