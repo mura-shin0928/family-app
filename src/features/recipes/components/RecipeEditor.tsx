@@ -23,6 +23,9 @@ import {
   type IngredientRow,
   ingredientRowsFromRecipe,
   isRecipeFormDirty,
+  type RecipeImage,
+  recipeImageFromRecipe,
+  toSubmittedImageUrl,
   toSubmittedIngredients,
 } from "../form-values";
 import { RECIPES_QUERY_KEY, type RecipeDetailDTO } from "../types";
@@ -42,6 +45,9 @@ export function RecipeEditor({
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState(recipe?.title ?? "");
   const [sourceUrl, setSourceUrl] = useState(recipe?.sourceUrl ?? "");
+  const [image, setImage] = useState<RecipeImage | null>(() =>
+    recipeImageFromRecipe(recipe),
+  );
   const [sourceText, setSourceText] = useState(recipe?.sourceText ?? "");
   const [note, setNote] = useState(recipe?.note ?? "");
   const [ingredients, setIngredients] = useState<IngredientRow[]>(() =>
@@ -61,7 +67,10 @@ export function RecipeEditor({
 
   // 読み取った下書きをフォームに足す。入力済みのタイトルは上書きせず、
   // 材料は末尾に追加する。
-  function addDraftToForm(draft: RecipeDraft, sourceUrlFromDraft?: string) {
+  function addDraftToForm(
+    draft: RecipeDraft,
+    source?: { url: string; imageUrl: string | null },
+  ) {
     if (!title.trim() && draft.title) {
       setTitle(draft.title);
     }
@@ -81,10 +90,15 @@ export function RecipeEditor({
       setNote((current) => appendServingsToNote(current, draft.servings));
     }
 
-    if (sourceUrlFromDraft) {
+    if (source) {
       // URLは専用フィールドに移したので、貼り付け欄に二重に残さない。
-      setSourceUrl(sourceUrlFromDraft);
+      setSourceUrl(source.url);
       setSourceText("");
+      setImage(
+        source.imageUrl
+          ? { url: source.imageUrl, sourceUrl: source.url }
+          : null,
+      );
     }
   }
 
@@ -105,6 +119,7 @@ export function RecipeEditor({
     }
 
     const submittedIngredients = toSubmittedIngredients(ingredients);
+    const submittedImageUrl = toSubmittedImageUrl(image, sourceUrl);
 
     startTransition(async () => {
       const result =
@@ -113,6 +128,7 @@ export function RecipeEditor({
               id: crypto.randomUUID(),
               title: trimmedTitle,
               sourceUrl: sourceUrl.trim(),
+              imageUrl: submittedImageUrl,
               sourceText: sourceText.trim(),
               note: note.trim(),
               ingredients: submittedIngredients,
@@ -121,6 +137,7 @@ export function RecipeEditor({
               recipeId: recipe?.id ?? "",
               title: trimmedTitle,
               sourceUrl: sourceUrl.trim(),
+              imageUrl: submittedImageUrl,
               sourceText: sourceText.trim(),
               note: note.trim(),
               ingredients: submittedIngredients,

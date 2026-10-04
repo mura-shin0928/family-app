@@ -13,6 +13,7 @@ import { EmptyState, PotIllustration } from "@/components/EmptyState";
 import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
 import { fetchRecipes } from "../query-actions";
 import { RECIPES_QUERY_KEY, type RecipeDTO } from "../types";
+import { RecipeThumbnail } from "./RecipeThumbnail";
 
 export function RecipeListScreen({
   initialRecipes,
@@ -40,30 +41,35 @@ export function RecipeListScreen({
               href={`/recipes/${recipe.id}`}
               variant="outlined"
               sx={{
-                display: "block",
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
                 p: 1.5,
                 textDecoration: "none",
                 color: "text.primary",
               }}
             >
-              <Typography variant="body2" noWrap sx={{ fontWeight: 700 }}>
-                {recipe.title}
-              </Typography>
-              {recipe.sourceUrl && (
-                <Stack
-                  direction="row"
-                  spacing={0.5}
-                  sx={{ alignItems: "center", mt: 0.25 }}
-                >
-                  <LinkIcon
-                    fontSize="inherit"
-                    sx={{ color: "text.secondary" }}
-                  />
-                  <Typography variant="caption" color="textSecondary" noWrap>
-                    {recipe.sourceUrl}
-                  </Typography>
-                </Stack>
-              )}
+              <RecipeThumbnail imageUrl={recipe.imageUrl} />
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography variant="body2" noWrap sx={{ fontWeight: 700 }}>
+                  {recipe.title}
+                </Typography>
+                {recipe.sourceUrl && (
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    sx={{ alignItems: "center", mt: 0.25 }}
+                  >
+                    <LinkIcon
+                      fontSize="inherit"
+                      sx={{ color: "text.secondary" }}
+                    />
+                    <Typography variant="caption" color="textSecondary" noWrap>
+                      {recipe.sourceUrl}
+                    </Typography>
+                  </Stack>
+                )}
+              </Box>
             </Paper>
           ))
         )}

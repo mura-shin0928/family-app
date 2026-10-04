@@ -38,8 +38,11 @@ export function RecipeAnalyzePanel({
 }: {
   sourceText: string;
   onSourceTextChange: (value: string) => void;
-  // sourceUrl は、貼り付けテキストが URL だったときだけ渡る。
-  onDraft: (draft: RecipeDraft, sourceUrl?: string) => void;
+  // source は、貼り付けテキストが URL だったときだけ渡る。
+  onDraft: (
+    draft: RecipeDraft,
+    source?: { url: string; imageUrl: string | null },
+  ) => void;
   // 解析には失敗したが、貼り付けテキストから URL だけは見つかったとき。
   onDetectedUrl: (url: string) => void;
 }) {
@@ -73,7 +76,12 @@ export function RecipeAnalyzePanel({
         return;
       }
 
-      onDraft(result.draft, result.sourceUrl);
+      onDraft(
+        result.draft,
+        result.sourceUrl
+          ? { url: result.sourceUrl, imageUrl: result.imageUrl ?? null }
+          : undefined,
+      );
       setAnalyzeMessage(
         sourceAnalyzedMessage(
           result.via,

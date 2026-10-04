@@ -7,7 +7,7 @@ export async function getRecipes(familyId: string): Promise<RecipeDTO[]> {
 
   const { data, error } = await supabase
     .from("recipes")
-    .select("id, title, source_url, note, created_at")
+    .select("id, title, source_url, image_url, note, created_at")
     .eq("family_id", familyId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
@@ -21,6 +21,7 @@ export async function getRecipes(familyId: string): Promise<RecipeDTO[]> {
       id: row.id,
       title: row.title,
       sourceUrl: row.source_url,
+      imageUrl: row.image_url,
       note: row.note,
       createdAt: row.created_at,
     }),
@@ -41,7 +42,7 @@ export async function getRecipe(
   ] = await Promise.all([
     supabase
       .from("recipes")
-      .select("id, title, source_url, source_text, note, created_at")
+      .select("id, title, source_url, image_url, source_text, note, created_at")
       .eq("family_id", familyId)
       .eq("id", recipeId)
       .is("deleted_at", null)
@@ -69,6 +70,7 @@ export async function getRecipe(
     id: recipe.id,
     title: recipe.title,
     sourceUrl: recipe.source_url,
+    imageUrl: recipe.image_url,
     sourceText: recipe.source_text,
     note: recipe.note,
     createdAt: recipe.created_at,

@@ -79,6 +79,24 @@ export function toSubmittedIngredients(
     .filter((row) => row.name !== "");
 }
 
+/** 代表画像と、それを読み取ったページのURL。 */
+export type RecipeImage = { url: string; sourceUrl: string };
+
+export function recipeImageFromRecipe(
+  recipe?: RecipeDetailDTO,
+): RecipeImage | null {
+  if (!recipe?.imageUrl || !recipe.sourceUrl) return null;
+  return { url: recipe.imageUrl, sourceUrl: recipe.sourceUrl };
+}
+
+/** 保存に送る画像のURL。元のURLが読み取ったときから変わっていたら送らない。 */
+export function toSubmittedImageUrl(
+  image: RecipeImage | null,
+  sourceUrl: string,
+): string {
+  return image && image.sourceUrl === sourceUrl.trim() ? image.url : "";
+}
+
 /** 読み取った「何人分」をメモの末尾に足す。メモが空ならそれだけを入れる。 */
 export function appendServingsToNote(note: string, servings: string): string {
   return note.trim() === "" ? servings : `${note}\n${servings}`;

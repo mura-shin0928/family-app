@@ -24,6 +24,21 @@ const titleSchema = z
 
 const sourceUrlSchema = z.union([httpUrlSchema, z.literal("")]);
 
+// recipes.image_url のDB制約（https・2000字）と揃える。
+const imageUrlSchema = z.union([
+  z
+    .string()
+    .max(2000)
+    .refine((value) => {
+      try {
+        return new URL(value).protocol === "https:";
+      } catch {
+        return false;
+      }
+    }, "画像のURLの形式が正しくありません"),
+  z.literal(""),
+]);
+
 // recipes.source_text のDB制約（20000字）と揃える。
 const sourceTextSchema = z.union([
   z.string().max(20000, "本文は20000文字以内で入力してください"),
@@ -34,6 +49,7 @@ export const createRecipeSchema = z.object({
   id: z.string().uuid(),
   title: titleSchema,
   sourceUrl: sourceUrlSchema,
+  imageUrl: imageUrlSchema,
   sourceText: sourceTextSchema,
   note: noteSchema,
   ingredients: z

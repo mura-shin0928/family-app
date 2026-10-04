@@ -67,17 +67,21 @@ function extractServings(value: unknown): string {
   return /^[0-90-9]+$/.test(trimmed) ? `${trimmed}人分` : trimmed;
 }
 
+/** HTML中のJSON-LDから @type: Recipe のノードをすべて集める。 */
+export function findRecipeNodes(html: string): Record<string, unknown>[] {
+  const recipeNodes: Record<string, unknown>[] = [];
+  for (const block of extractJsonLdBlocks(html)) {
+    collectRecipeNodes(block, recipeNodes);
+  }
+  return recipeNodes;
+}
+
 /**
  * HTML文字列からschema.org Recipeの構造化データを取り出す。純関数（I/Oなし）。
  * 見つからない・title/材料が読み取れない場合は null（呼び出し側はGeminiにフォールバックする）。
  */
 export function extractRecipeFromJsonLd(html: string): RecipeDraft | null {
-  const blocks = extractJsonLdBlocks(html);
-
-  const recipeNodes: Record<string, unknown>[] = [];
-  for (const block of blocks) collectRecipeNodes(block, recipeNodes);
-
-  for (const recipe of recipeNodes) {
+  for (const recipe of findRecipeNodes(html)) {
     const name = recipe.name;
     if (typeof name !== "string" || name.trim() === "") continue;
 
