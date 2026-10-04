@@ -5,8 +5,11 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { INVITATION_TTL_DAYS } from "@/lib/constants";
+import {
+  LOGIN_REDIRECT_COOKIE,
+  LOGIN_REDIRECT_COOKIE_OPTIONS,
+} from "@/lib/next-path";
 import { createClient } from "@/lib/supabase/server";
-import { INVITE_REDIRECT_COOKIE } from "./constants";
 import { checkInviteEmail } from "./queries";
 import {
   acceptInvitationSchema,
@@ -221,12 +224,11 @@ export async function sendInviteLoginLink(input: {
   // Supabaseのredirect URL許可リストの完全一致チェックに落ち、site_urlへ
   // フォールバックしてしまうため）。
   const cookieStore = await cookies();
-  cookieStore.set(INVITE_REDIRECT_COOKIE, `/invite/${parsed.data.token}`, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60,
-  });
+  cookieStore.set(
+    LOGIN_REDIRECT_COOKIE,
+    `/invite/${parsed.data.token}`,
+    LOGIN_REDIRECT_COOKIE_OPTIONS,
+  );
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({

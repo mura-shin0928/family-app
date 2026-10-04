@@ -1,5 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import {
+  LOGIN_REDIRECT_COOKIE,
+  LOGIN_REDIRECT_COOKIE_OPTIONS,
+  loginReturnPath,
+} from "@/lib/next-path";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
@@ -43,7 +48,19 @@ export async function proxy(request: NextRequest) {
   );
 
   if (!user && !isPublicPath) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const redirect = NextResponse.redirect(new URL("/login", request.url));
+    const returnPath = loginReturnPath(
+      request.nextUrl.pathname,
+      request.nextUrl.search,
+    );
+    if (returnPath) {
+      redirect.cookies.set(
+        LOGIN_REDIRECT_COOKIE,
+        returnPath,
+        LOGIN_REDIRECT_COOKIE_OPTIONS,
+      );
+    }
+    return redirect;
   }
 
   return response;
