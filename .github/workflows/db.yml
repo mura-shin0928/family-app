@@ -1,0 +1,56 @@
+name: DB
+
+# migration を空のDBに全部当て、次の2つを見る。
+# - RLS と DB 関数の統合テストが通るか。RLS はデータの最終防衛線で、ポリシーの書き換えで
+#   黙って緩むと画面からは気づけないため。
+# - そこから生成した型がコミット済みのものと一致するか。列の削除・改名のあと型を作り直し
+#   忘れると、古い型のままコンパイルが通ってしまうため。
+# コンテナの起動に1〜2分かかるので、DB に関わる変更のときだけ動かす。
+on:
+  pull_request:
+    paths:
+      - "supabase/**"
+      - "tests/integration/**"
+      - "vitest.integration.config.ts"
+      - "src/lib/supabase/database.types.ts"
+      - ".github/workflows/db.yml"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # 既定の public.ecr.aws は、共有IPのランナーからだと取得がレート制限に掛かる。
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # 生成結果の書式は CLI の版で変わる。手元で型を生成した版と揃える。
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.114.0
+
+      # 統合テストが使うのは DB / Auth / PostgREST と、その入口の Kong だけ。
+      - run: supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".node-version"
+          cache: "npm"
+
+      - run: npm ci
+
+      - run: npm run test:integration
+
+      # 統合テストが落ちても、型のずれは別に報告する。
+      - name: Generate types from the migrations
+        if: ${{ !cancelled() }}
+        run: npm run db:types
+
+      - name: Ensure committed types match the migrations
+        if: ${{ !cancelled() }}
+        run: |
+          if ! git diff --exit-code -- src/lib/supabase/database.types.ts; then
+            echo "database.types.ts が migration と一致しません。make db-reset のあと npm run db:types を実行してコミットしてください。" >&2
+            exit 1
+          fi
