@@ -225,6 +225,22 @@ const URL_UNREADABLE_ERROR =
   "ページを読み取れませんでした。本文をコピーして貼り付けてください。";
 const PASTE_ONLY_ERROR =
   "URLだけでは材料を読み取れません。本文をコピーして貼り付けてください。";
+const QUOTA_EXCEEDED_ERROR =
+  "今日の解析回数の上限に達しました。明日また試すか、手入力で保存してください。";
+
+// 外部への取得・Gemini の呼び出しの前に、家族の1日あたりの枠を1回分使う。
+// 解析してよければ null、だめなら画面に出す文言を返す。
+async function consumeAnalysisQuota(action: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data: allowed, error } = await supabase.rpc(
+    "consume_recipe_analysis_quota",
+  );
+  if (error) {
+    logActionError(action, error);
+    return FAILURE_MESSAGES["api-error"];
+  }
+  return allowed ? null : QUOTA_EXCEEDED_ERROR;
+}
 
 export async function analyzeRecipeSource(input: {
   text: string;
@@ -241,6 +257,19 @@ export async function analyzeRecipeSource(input: {
 
   const detectedUrl = urlOnly(parsed.data.text);
 
+  if (detectedUrl && isSnsHost(detectedUrl)) {
+    return { ok: false, error: PASTE_ONLY_ERROR, detectedUrl };
+  }
+
+  const quotaError = await consumeAnalysisQuota("analyzeRecipeSource");
+  if (quotaError) {
+    return {
+      ok: false,
+      error: quotaError,
+      ...(detectedUrl ? { detectedUrl } : {}),
+    };
+  }
+
   if (!detectedUrl) {
     const result = await extractRecipeFromText(parsed.data.text);
     if (result.kind === "failed") {
@@ -252,10 +281,6 @@ export async function analyzeRecipeSource(input: {
       };
     }
     return { ok: true, draft: result.draft, via: "gemini" };
-  }
-
-  if (isSnsHost(detectedUrl)) {
-    return { ok: false, error: PASTE_ONLY_ERROR, detectedUrl };
   }
 
   const deadlineAt = Date.now() + ANALYZE_DEADLINE_MS;
@@ -341,6 +366,11 @@ export async function analyzeRecipeImage(
 
   if (file.size > IMAGE_HARD_LIMIT_BYTES) {
     return { ok: false, error: IMAGE_TOO_LARGE_ERROR };
+  }
+
+  const quotaError = await consumeAnalysisQuota("analyzeRecipeImage");
+  if (quotaError) {
+    return { ok: false, error: quotaError };
   }
 
   const buffer = await file.arrayBuffer();

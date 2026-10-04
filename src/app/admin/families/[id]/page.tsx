@@ -9,7 +9,10 @@ import {
   deleteAdminInvitation,
   removeAdminMember,
   revokeAdminInvitation,
+  setFamilyRecipeAnalysisDailyLimit,
 } from "@/features/admin/actions";
+import { RecipeAnalysisLimitForm } from "@/features/admin/components/RecipeAnalysisLimitForm";
+import { getFamilyRecipeAnalysisDailyLimit } from "@/features/admin/queries";
 import { getFamily, getFamilyMembers } from "@/features/family/queries";
 import { InvitationsScreen } from "@/features/invitations/components/InvitationsScreen";
 import { getInvitations } from "@/features/invitations/queries";
@@ -26,9 +29,10 @@ export default async function AdminFamilyDetailPage({
     notFound();
   }
 
-  const [members, invitations] = await Promise.all([
+  const [members, invitations, recipeAnalysisDailyLimit] = await Promise.all([
     getFamilyMembers(id),
     getInvitations(id),
+    getFamilyRecipeAnalysisDailyLimit(id),
   ]);
 
   return (
@@ -45,6 +49,10 @@ export default async function AdminFamilyDetailPage({
         </Toolbar>
       </AppBar>
       <Toolbar />
+      <RecipeAnalysisLimitForm
+        dailyLimit={recipeAnalysisDailyLimit}
+        setDailyLimit={setFamilyRecipeAnalysisDailyLimit.bind(null, id)}
+      />
       <InvitationsScreen
         members={members}
         invitations={invitations}
