@@ -514,12 +514,27 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_token_hash: string }; Returns: string }
+      add_ingredients_to_purchases: {
+        Args: { p_ingredient_ids: string[]; p_recipe_id: string }
+        Returns: string[]
+      }
       check_invite_email: {
         Args: { p_email: string; p_token_hash: string }
         Returns: {
           family_name: string
           status: string
         }[]
+      }
+      create_recipe: {
+        Args: {
+          p_id: string
+          p_ingredients: Json
+          p_note: string
+          p_source_text: string
+          p_source_url: string
+          p_title: string
+        }
+        Returns: undefined
       }
       invitation_preview: {
         Args: { p_token_hash: string }
@@ -530,6 +545,22 @@ export type Database = {
       }
       is_app_admin: { Args: never; Returns: boolean }
       is_family_member: { Args: { target_family_id: string }; Returns: boolean }
+      next_task_sort_order: { Args: { p_family_id: string }; Returns: number }
+      undo_add_ingredients_to_purchases: {
+        Args: { p_task_ids: string[] }
+        Returns: undefined
+      }
+      update_recipe: {
+        Args: {
+          p_ingredients: Json
+          p_note: string
+          p_recipe_id: string
+          p_source_text: string
+          p_source_url: string
+          p_title: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
