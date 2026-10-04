@@ -60,11 +60,12 @@ export async function updatePurchaseLocation(input: {
   const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("purchase_locations")
     .update({ name: parsed.data.name })
     .eq("id", parsed.data.id)
-    .eq("family_id", member.familyId);
+    .eq("family_id", member.familyId)
+    .select("id");
 
   if (error) {
     if (error.code === UNIQUE_VIOLATION) {
@@ -72,6 +73,9 @@ export async function updatePurchaseLocation(input: {
     }
     logActionError("updatePurchaseLocation", error);
     return { ok: false, error: "更新に失敗しました" };
+  }
+  if (data.length === 0) {
+    return { ok: false, error: "買う場所が見つかりません" };
   }
 
   return { ok: true };

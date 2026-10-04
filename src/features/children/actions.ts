@@ -62,7 +62,7 @@ export async function updateChild(input: {
   const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("children")
     .update({
       display_name: parsed.data.displayName,
@@ -73,11 +73,15 @@ export async function updateChild(input: {
       birth_date: parsed.data.birthDate === "" ? null : parsed.data.birthDate,
     })
     .eq("id", parsed.data.childId)
-    .eq("family_id", member.familyId);
+    .eq("family_id", member.familyId)
+    .select("id");
 
   if (error) {
     logActionError("updateChild", error);
     return { ok: false, error: "更新に失敗しました" };
+  }
+  if (data.length === 0) {
+    return { ok: false, error: "子供が見つかりません" };
   }
 
   return { ok: true };
