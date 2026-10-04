@@ -518,6 +518,19 @@ export type Database = {
         Args: { p_ingredient_ids: string[]; p_recipe_id: string }
         Returns: string[]
       }
+      add_life_event_item_to_task: {
+        Args: {
+          p_catalog_key: string
+          p_child_id: string
+          p_due_on?: string
+          p_item_note?: string
+          p_item_title: string
+          p_task_note?: string
+          p_task_title: string
+          p_url?: string
+        }
+        Returns: string
+      }
       check_invite_email: {
         Args: { p_email: string; p_token_hash: string }
         Returns: {
@@ -536,6 +549,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      create_task: {
+        Args: {
+          p_due_on?: string
+          p_id: string
+          p_is_purchase: boolean
+          p_purchase_location_id?: string
+          p_record_child_id?: string
+          p_title: string
+        }
+        Returns: undefined
+      }
       invitation_preview: {
         Args: { p_token_hash: string }
         Returns: {
@@ -546,6 +570,16 @@ export type Database = {
       is_app_admin: { Args: never; Returns: boolean }
       is_family_member: { Args: { target_family_id: string }; Returns: boolean }
       next_task_sort_order: { Args: { p_family_id: string }; Returns: number }
+      record_life_event_item_done: {
+        Args: {
+          p_catalog_key: string
+          p_child_id: string
+          p_done_on: string
+          p_note?: string
+          p_title: string
+        }
+        Returns: undefined
+      }
       undo_add_ingredients_to_purchases: {
         Args: { p_task_ids: string[] }
         Returns: undefined

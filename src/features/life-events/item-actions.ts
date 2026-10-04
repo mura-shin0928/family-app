@@ -20,51 +20,22 @@ import {
   updateLifeEventItemNoteSchema,
 } from "./item-schema";
 import { programsToCatalog } from "./program-catalog";
-import type { CatalogItem, LifeEventItem } from "./types";
+import type { CatalogItem } from "./types";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-type Supabase = Awaited<ReturnType<typeof createClient>>;
-
 const INVALID_INPUT = "入力内容を確認してください";
-const ALREADY_RECORDED = "すでに記録されています";
 
 function firstIssue(error: { issues: readonly { message: string }[] }): string {
   return error.issues[0]?.message ?? INVALID_INPUT;
 }
 
-/** 自家族の子かを確かめる（RLS でも弾かれるが、分かりやすいエラーにする）。 */
-async function ownsChild(
-  supabase: Supabase,
-  familyId: string,
-  childId: string,
-): Promise<boolean> {
-  const { data } = await supabase
-    .from("children")
-    .select("id")
-    .eq("id", childId)
-    .eq("family_id", familyId)
-    .is("deleted_at", null)
-    .maybeSingle();
-  return Boolean(data);
-}
-
-async function findActiveItem(
-  supabase: Supabase,
-  childId: string,
-  catalogKey: string,
-) {
-  const { data } = await supabase
-    .from("life_event_items")
-    .select("id, status")
-    .eq("child_id", childId)
-    .eq("catalog_key", catalogKey)
-    .is("deleted_at", null)
-    .maybeSingle();
-  return (
-    data && { id: data.id, status: data.status as LifeEventItem["status"] }
-  );
-}
+/** SQL 関数の raise exception メッセージ → 画面表示文言。 */
+const ITEM_ERROR_MESSAGES: Record<string, string> = {
+  child_not_found: "子供が見つかりません",
+  already_recorded: "すでに記録されています",
+  item_state_changed: "項目の状態が変わっています。画面を更新してください",
+};
 
 export async function addLifeEventItemToTask(input: {
   childId: string;
@@ -77,84 +48,34 @@ export async function addLifeEventItemToTask(input: {
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
   const { childId, catalogKey, dueOn } = parsed.data;
 
-  const { member } = await requireFamilyMember();
+  await requireFamilyMember();
   const supabase = await createClient();
-
-  if (!(await ownsChild(supabase, member.familyId, childId))) {
-    return { ok: false, error: "子供が見つかりません" };
-  }
 
   // テンプレはサーバー側のカタログを正とする。制度は呼び出し側の値を使う。
   const template = findCatalogItem(catalogKey);
-  const itemTitle = template?.title ?? parsed.data.title;
-  const taskTitle = parsed.data.title;
-  const note = template?.note ?? null;
   const url = template ? template.url : parsed.data.url || null;
-  // 制度は記録のメモに公式ページを残す。タスク完了で記録になったときも残る
-  const itemNote = template ? null : url;
 
-  let itemId: string;
-  let createdItem = false;
-  const { data: inserted, error: insertError } = await supabase
-    .from("life_event_items")
-    .insert({
-      family_id: member.familyId,
-      child_id: childId,
-      catalog_key: catalogKey,
-      title: itemTitle,
-      note: itemNote,
-      status: "in_task",
-      created_by: member.id,
-    })
-    .select("id")
-    .single();
-
-  if (inserted) {
-    itemId = inserted.id;
-    createdItem = true;
-  } else if (insertError?.code === "23505") {
-    // 同時に追加された。先にできた行を使う。
-    const existing = await findActiveItem(supabase, childId, catalogKey);
-    if (!existing) return { ok: false, error: "タスクへの追加に失敗しました" };
-    if (existing.status === "done") {
-      return { ok: false, error: ALREADY_RECORDED };
-    }
-    itemId = existing.id;
-  } else {
-    return { ok: false, error: "タスクへの追加に失敗しました" };
-  }
-
-  const { data: lastTask } = await supabase
-    .from("tasks")
-    .select("sort_order")
-    .eq("family_id", member.familyId)
-    .is("deleted_at", null)
-    .order("sort_order", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const taskId = crypto.randomUUID();
-  const { error } = await supabase.from("tasks").insert({
-    id: taskId,
-    family_id: member.familyId,
-    title: taskTitle,
-    note,
-    url,
-    due_on: dueOn === "" ? null : dueOn,
-    is_purchase: false,
-    sort_order: (lastTask?.sort_order ?? 0) + 1,
-    created_by: member.id,
-    life_event_item_id: itemId,
-  });
+  const { data: taskId, error } = await supabase.rpc(
+    "add_life_event_item_to_task",
+    {
+      p_child_id: childId,
+      p_catalog_key: catalogKey,
+      p_item_title: template?.title ?? parsed.data.title,
+      p_task_title: parsed.data.title,
+      // 制度は記録のメモに公式ページを残す。タスク完了で記録になったときも残る
+      p_item_note: (template ? null : url) ?? undefined,
+      p_task_note: template?.note ?? undefined,
+      p_url: url ?? undefined,
+      p_due_on: dueOn || undefined,
+    },
+  );
 
   if (error) {
-    if (createdItem) {
-      await supabase
-        .from("life_event_items")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", itemId);
-    }
-    return { ok: false, error: "タスクへの追加に失敗しました" };
+    return {
+      ok: false,
+      error:
+        ITEM_ERROR_MESSAGES[error.message] ?? "タスクへの追加に失敗しました",
+    };
   }
   return { ok: true, taskId };
 }
@@ -170,61 +91,26 @@ export async function recordLifeEventItemDone(input: {
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
   const { childId, catalogKey, doneOn } = parsed.data;
 
-  const { member } = await requireFamilyMember();
+  await requireFamilyMember();
   const supabase = await createClient();
 
-  if (!(await ownsChild(supabase, member.familyId, childId))) {
-    return { ok: false, error: "子供が見つかりません" };
-  }
-
   const template = findCatalogItem(catalogKey);
-  const title = template?.title ?? parsed.data.title;
-  // 制度は記録のメモに公式ページを残す
-  const note = template ? null : parsed.data.url || null;
-  const failure = "記録に失敗しました";
 
-  const { error: insertError } = await supabase
-    .from("life_event_items")
-    .insert({
-      family_id: member.familyId,
-      child_id: childId,
-      catalog_key: catalogKey,
-      title,
-      note,
-      status: "done",
-      done_on: doneOn,
-      created_by: member.id,
-    });
-  if (!insertError) return { ok: true };
-  if (insertError.code !== "23505") return { ok: false, error: failure };
+  const { error } = await supabase.rpc("record_life_event_item_done", {
+    p_child_id: childId,
+    p_catalog_key: catalogKey,
+    p_title: template?.title ?? parsed.data.title,
+    p_done_on: doneOn,
+    // 制度は記録のメモに公式ページを残す
+    p_note: (template ? null : parsed.data.url) || undefined,
+  });
 
-  const existing = await findActiveItem(supabase, childId, catalogKey);
-  if (!existing) return { ok: false, error: failure };
-  if (existing.status === "done") return { ok: false, error: ALREADY_RECORDED };
-
-  // in_task → done。更新条件に状態を入れ、先に別の操作で変わっていたら書き換えない。
-  const { data: updated, error: updateError } = await supabase
-    .from("life_event_items")
-    .update({ status: "done", done_on: doneOn })
-    .eq("id", existing.id)
-    .eq("status", "in_task")
-    .is("deleted_at", null)
-    .select("id");
-  if (updateError) return { ok: false, error: failure };
-  if (!updated || updated.length === 0) {
+  if (error) {
     return {
       ok: false,
-      error: "項目の状態が変わっています。画面を更新してください",
+      error: ITEM_ERROR_MESSAGES[error.message] ?? "記録に失敗しました",
     };
   }
-
-  // 手で付けた記録が、あとのタスク操作で巻き戻らないよう参照を外す。
-  const { error: detachError } = await supabase
-    .from("tasks")
-    .update({ life_event_item_id: null })
-    .eq("life_event_item_id", existing.id);
-  if (detachError) return { ok: false, error: failure };
-
   return { ok: true };
 }
 
