@@ -19,9 +19,13 @@
  * 書き込み系コマンドは --yes を付けない限り、接続先と内容を表示するだけで何もしない
  * （config push事故の再発防止 — 常に「今どこに何をしようとしているか」を先に見せる）。
  */
-import { createHash, randomBytes } from "node:crypto";
 import { parseArgs } from "node:util";
 import { createClient } from "@supabase/supabase-js";
+import {
+  generateInvitationToken,
+  hashInvitationToken,
+} from "../src/features/invitations/token.ts";
+import { INVITATION_TTL_DAYS } from "../src/lib/constants.ts";
 
 const USAGE = `使い方:
   node --env-file=.env.admin.local scripts/admin.mts <command> [options]
@@ -43,7 +47,6 @@ commands:
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const APP_ORIGIN = process.env.APP_ORIGIN;
-const INVITATION_TTL_DAYS = 7;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   console.error("SUPABASE_URL と SUPABASE_SERVICE_ROLE_KEY が必要です。\n");
@@ -54,14 +57,6 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
-
-function generateInvitationToken(): string {
-  return randomBytes(32).toString("base64url");
-}
-
-function hashInvitationToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);

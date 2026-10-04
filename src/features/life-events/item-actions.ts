@@ -8,6 +8,7 @@ import {
 import { ageInMonths } from "@/features/programs/filter";
 import { getFamilyMunicipality } from "@/features/programs/queries";
 import type { Attribution } from "@/features/programs/types";
+import type { ActionResult } from "@/lib/action-result";
 import { todayInJst } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
 import { findCatalogItem } from "./catalog";
@@ -21,8 +22,6 @@ import {
 } from "./item-schema";
 import { programsToCatalog } from "./program-catalog";
 import type { CatalogItem } from "./types";
-
-export type ActionResult = { ok: true } | { ok: false; error: string };
 
 const INVALID_INPUT = "入力内容を確認してください";
 

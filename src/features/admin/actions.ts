@@ -2,19 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAppAdmin } from "@/features/auth/guard";
-import type {
-  ActionResult,
-  CreateInvitationResult,
-} from "@/features/invitations/actions";
+import { memberIdSchema } from "@/features/family/schema";
+import type { CreateInvitationResult } from "@/features/invitations/actions";
 import {
   createInvitationSchema,
   invitationIdSchema,
-  memberIdSchema,
 } from "@/features/invitations/schema";
 import {
   generateInvitationToken,
   hashInvitationToken,
 } from "@/features/invitations/token";
+import type { ActionResult } from "@/lib/action-result";
 import { INVITATION_TTL_DAYS } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/server";
 import { createFamilySchema, familyIdSchema } from "./schema";

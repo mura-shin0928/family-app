@@ -19,15 +19,10 @@ import Link from "next/link";
 import { type ReactNode, useRef, useState } from "react";
 import type { Child } from "@/features/children/types";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
+import type { ActionResult } from "@/lib/action-result";
 import { SOON_DAYS } from "@/lib/constants";
 import { todayInJst } from "@/lib/date";
-import {
-  type ActionResult,
-  createTask,
-  deleteTask,
-  setTaskDone,
-  updateTask,
-} from "../actions";
+import { createTask, deleteTask, setTaskDone, updateTask } from "../actions";
 import {
   bucketOpenTasks,
   splitOpenAndCompletedToday,

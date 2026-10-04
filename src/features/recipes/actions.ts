@@ -31,7 +31,7 @@ const ANALYZE_DEADLINE_MS = 50_000;
 // テキスト経路と同じ予算を取る。
 const IMAGE_ANALYZE_DEADLINE_MS = 50_000;
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+import type { ActionResult } from "@/lib/action-result";
 
 type IngredientInput = {
   id?: string;

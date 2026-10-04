@@ -10,12 +10,9 @@ import {
   removeAdminMember,
   revokeAdminInvitation,
 } from "@/features/admin/actions";
+import { getFamily, getFamilyMembers } from "@/features/family/queries";
 import { InvitationsScreen } from "@/features/invitations/components/InvitationsScreen";
-import {
-  getFamily,
-  getFamilyMembers,
-  getInvitations,
-} from "@/features/invitations/queries";
+import { getInvitations } from "@/features/invitations/queries";
 
 export default async function AdminFamilyDetailPage({
   params,

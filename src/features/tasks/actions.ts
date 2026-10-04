@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireFamilyMember } from "@/features/auth/guard";
+import type { ActionResult } from "@/lib/action-result";
 import { createClient } from "@/lib/supabase/server";
 import type { TaskUpdatePatch } from "./edit-draft";
 import {
@@ -10,8 +11,6 @@ import {
   toggleDoneSchema,
   updateTaskSchema,
 } from "./schema";
-
-export type ActionResult = { ok: true } | { ok: false; error: string };
 
 /**
  * 買う場所idが自家族のものか（かつ論理削除されていないか）を1クエリで確認する。

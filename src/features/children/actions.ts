@@ -1,14 +1,13 @@
 "use server";
 
 import { requireFamilyMember } from "@/features/auth/guard";
+import type { ActionResult } from "@/lib/action-result";
 import { createClient } from "@/lib/supabase/server";
 import {
   createChildSchema,
   deleteChildSchema,
   updateChildSchema,
 } from "./schema";
-
-export type ActionResult = { ok: true } | { ok: false; error: string };
 
 export async function createChild(input: {
   displayName: string;

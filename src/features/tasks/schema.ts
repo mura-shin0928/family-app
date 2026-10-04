@@ -1,18 +1,10 @@
 import { z } from "zod";
+import { dateStringSchema, noteSchema } from "@/lib/schema";
 import { httpUrlSchema } from "@/lib/url";
 
-const dateStringSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "日付の形式が正しくありません");
-
-// recipes/schema.ts の sourceUrlSchema / noteSchema と同じ規約
+// recipes/schema.ts の sourceUrlSchema と同じ規約
 // （空文字列 = 未入力の union、文字数上限はDBのCHECK制約と揃える）。
 const urlSchema = z.union([httpUrlSchema, z.literal("")]);
-
-const noteSchema = z.union([
-  z.string().trim().max(2000, "メモは2000文字以内で入力してください"),
-  z.literal(""),
-]);
 
 // 空文字列 = 未設定（tasks.dueOn と同じ規約）。所有チェックは Server Action 側で行う。
 const purchaseLocationIdSchema = z.union([z.string().uuid(), z.literal("")]);

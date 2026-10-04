@@ -1,14 +1,13 @@
 "use server";
 
 import { requireFamilyMember } from "@/features/auth/guard";
+import type { ActionResult } from "@/lib/action-result";
 import { createClient } from "@/lib/supabase/server";
 import {
   createPurchaseLocationSchema,
   deletePurchaseLocationSchema,
   updatePurchaseLocationSchema,
 } from "./schema";
-
-export type ActionResult = { ok: true } | { ok: false; error: string };
 
 // purchase_locations_family_name_idx（部分unique）違反。
 const UNIQUE_VIOLATION = "23505";
