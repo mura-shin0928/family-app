@@ -169,6 +169,58 @@ describe("レシピの書き込み関数", () => {
       expect(ingredients.every((row) => row.family_id === familyF1)).toBe(true);
     });
 
+    it("画像のURLを保存し、渡さなければ null のままにする", async () => {
+      const withImage = randomUUID();
+      const withoutImage = randomUUID();
+      const base = {
+        p_title: "画像つき",
+        p_source_url: "https://example.test/curry",
+        p_source_text: "",
+        p_note: "",
+        p_ingredients: [],
+      };
+
+      const { error } = await clientA.rpc("create_recipe", {
+        ...base,
+        p_id: withImage,
+        p_image_url: "https://cdn.example.test/curry.jpg",
+      });
+      expect(error).toBeNull();
+      const { error: omittedError } = await clientA.rpc("create_recipe", {
+        ...base,
+        p_id: withoutImage,
+      });
+      expect(omittedError).toBeNull();
+
+      const { data } = await admin
+        .from("recipes")
+        .select("id, image_url")
+        .in("id", [withImage, withoutImage]);
+      expect(data?.find((row) => row.id === withImage)?.image_url).toBe(
+        "https://cdn.example.test/curry.jpg",
+      );
+      expect(
+        data?.find((row) => row.id === withoutImage)?.image_url,
+      ).toBeNull();
+    });
+
+    it("https 以外の画像URLは保存できない", async () => {
+      const id = randomUUID();
+      const { error } = await clientA.rpc("create_recipe", {
+        p_id: id,
+        p_title: "不正な画像",
+        p_source_url: "",
+        p_source_text: "",
+        p_note: "",
+        p_ingredients: [],
+        p_image_url: "javascript:alert(1)",
+      });
+      expect(error).not.toBeNull();
+
+      const { data } = await admin.from("recipes").select("id").eq("id", id);
+      expect(data).toEqual([]);
+    });
+
     it("材料の登録に失敗したら、レシピも残らない", async () => {
       const id = randomUUID();
       const { error } = await clientA.rpc("create_recipe", {
@@ -208,6 +260,40 @@ describe("レシピの書き込み関数", () => {
   });
 
   describe("update_recipe", () => {
+    it("画像のURLを置き換え、空文字列なら消す", async () => {
+      const { recipeId } = await seedRecipe(familyF1, memberAId, []);
+      const base = {
+        p_recipe_id: recipeId,
+        p_title: "画像を替える",
+        p_source_url: "https://example.test/curry",
+        p_source_text: "",
+        p_note: "",
+        p_ingredients: [],
+      };
+      async function imageUrl() {
+        const { data } = await admin
+          .from("recipes")
+          .select("image_url")
+          .eq("id", recipeId)
+          .single();
+        return data?.image_url;
+      }
+
+      const { error } = await clientA.rpc("update_recipe", {
+        ...base,
+        p_image_url: "https://cdn.example.test/new.jpg",
+      });
+      expect(error).toBeNull();
+      expect(await imageUrl()).toBe("https://cdn.example.test/new.jpg");
+
+      const { error: clearError } = await clientA.rpc("update_recipe", {
+        ...base,
+        p_image_url: "",
+      });
+      expect(clearError).toBeNull();
+      expect(await imageUrl()).toBeNull();
+    });
+
     it("既存の材料は task_id を保って更新し、渡されなかった材料は消し、新しい材料を足す", async () => {
       const { recipeId, ingredientIds } = await seedRecipe(
         familyF1,

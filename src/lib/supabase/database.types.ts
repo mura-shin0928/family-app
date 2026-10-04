@@ -394,6 +394,7 @@ export type Database = {
           deleted_at: string | null
           family_id: string
           id: string
+          image_url: string | null
           note: string | null
           source_text: string | null
           source_url: string | null
@@ -406,6 +407,7 @@ export type Database = {
           deleted_at?: string | null
           family_id: string
           id?: string
+          image_url?: string | null
           note?: string | null
           source_text?: string | null
           source_url?: string | null
@@ -418,6 +420,7 @@ export type Database = {
           deleted_at?: string | null
           family_id?: string
           id?: string
+          image_url?: string | null
           note?: string | null
           source_text?: string | null
           source_url?: string | null
@@ -571,6 +574,7 @@ export type Database = {
       create_recipe: {
         Args: {
           p_id: string
+          p_image_url?: string
           p_ingredients: Json
           p_note: string
           p_source_text: string
@@ -622,6 +626,7 @@ export type Database = {
       }
       update_recipe: {
         Args: {
+          p_image_url?: string
           p_ingredients: Json
           p_note: string
           p_recipe_id: string

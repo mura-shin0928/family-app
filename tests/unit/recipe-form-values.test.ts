@@ -5,6 +5,8 @@ import {
   ingredientRowsFromRecipe,
   isRecipeFormDirty,
   type RecipeFormValues,
+  recipeImageFromRecipe,
+  toSubmittedImageUrl,
   toSubmittedIngredients,
 } from "@/features/recipes/form-values";
 import type { RecipeDetailDTO } from "@/features/recipes/types";
@@ -14,6 +16,7 @@ function makeRecipe(overrides: Partial<RecipeDetailDTO> = {}): RecipeDetailDTO {
     id: "00000000-0000-4000-8000-000000000001",
     title: "カレー",
     sourceUrl: null,
+    imageUrl: null,
     sourceText: null,
     note: null,
     createdAt: "2026-10-01T00:00:00Z",
@@ -200,5 +203,44 @@ describe("appendServingsToNote", () => {
     expect(appendServingsToNote("辛口で作る", "2人分")).toBe(
       "辛口で作る\n2人分",
     );
+  });
+});
+
+describe("recipeImageFromRecipe", () => {
+  it("ties the saved image to the saved source URL", () => {
+    expect(
+      recipeImageFromRecipe(
+        makeRecipe({
+          sourceUrl: "https://a.jp/1",
+          imageUrl: "https://cdn.a.jp/1.jpg",
+        }),
+      ),
+    ).toEqual({ url: "https://cdn.a.jp/1.jpg", sourceUrl: "https://a.jp/1" });
+  });
+
+  it("returns null without an image or a recipe", () => {
+    expect(
+      recipeImageFromRecipe(makeRecipe({ sourceUrl: "https://a.jp/1" })),
+    ).toBeNull();
+    expect(recipeImageFromRecipe()).toBeNull();
+  });
+});
+
+describe("toSubmittedImageUrl", () => {
+  const image = { url: "https://cdn.a.jp/1.jpg", sourceUrl: "https://a.jp/1" };
+
+  it("keeps the image while the source URL is unchanged", () => {
+    expect(toSubmittedImageUrl(image, " https://a.jp/1 ")).toBe(
+      "https://cdn.a.jp/1.jpg",
+    );
+  });
+
+  it("drops the image when the source URL was changed or cleared", () => {
+    expect(toSubmittedImageUrl(image, "https://b.jp/2")).toBe("");
+    expect(toSubmittedImageUrl(image, "")).toBe("");
+  });
+
+  it("returns an empty string without an image", () => {
+    expect(toSubmittedImageUrl(null, "https://a.jp/1")).toBe("");
   });
 });

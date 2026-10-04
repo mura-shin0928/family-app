@@ -9,6 +9,7 @@ import {
   extractRecipeFromImage,
   extractRecipeFromText,
 } from "./extraction/gemini";
+import { extractImageUrl } from "./extraction/image-url";
 import { extractRecipeFromJsonLd } from "./extraction/jsonld";
 import { MAX_NAME_LENGTH } from "./extraction/normalize";
 import { extractReadable } from "./extraction/readable";
@@ -44,6 +45,7 @@ export async function createRecipe(input: {
   id: string;
   title: string;
   sourceUrl: string;
+  imageUrl: string;
   sourceText: string;
   note: string;
   ingredients: IngredientInput[];
@@ -69,6 +71,7 @@ export async function createRecipe(input: {
       name: ingredient.name,
       quantity: ingredient.quantity,
     })),
+    p_image_url: parsed.data.imageUrl,
   });
 
   if (error) {
@@ -83,6 +86,7 @@ export async function updateRecipe(input: {
   recipeId: string;
   title: string;
   sourceUrl: string;
+  imageUrl: string;
   sourceText: string;
   note: string;
   ingredients: IngredientInput[];
@@ -109,6 +113,7 @@ export async function updateRecipe(input: {
       name: ingredient.name,
       quantity: ingredient.quantity,
     })),
+    p_image_url: parsed.data.imageUrl,
   });
 
   if (error) {
@@ -207,6 +212,8 @@ export type AnalyzeRecipeSourceResult =
       ok: true;
       draft: RecipeDraft;
       sourceUrl?: string;
+      // sourceUrl のページの代表画像。見つからなければ null。
+      imageUrl?: string | null;
       via: "jsonld" | "gemini";
     }
   | { ok: false; error: string; detectedUrl?: string };
@@ -289,12 +296,15 @@ export async function analyzeRecipeSource(input: {
     return { ok: false, error: URL_UNREADABLE_ERROR, detectedUrl };
   }
 
+  const imageUrl = extractImageUrl(fetched.html, detectedUrl);
+
   const jsonLdDraft = extractRecipeFromJsonLd(fetched.html);
   if (jsonLdDraft) {
     return {
       ok: true,
       draft: jsonLdDraft,
       sourceUrl: detectedUrl,
+      imageUrl,
       via: "jsonld",
     };
   }
@@ -321,7 +331,7 @@ export async function analyzeRecipeSource(input: {
       ? { ...result.draft, title: pageTitle.slice(0, MAX_NAME_LENGTH) }
       : result.draft;
 
-  return { ok: true, draft, sourceUrl: detectedUrl, via: "gemini" };
+  return { ok: true, draft, sourceUrl: detectedUrl, imageUrl, via: "gemini" };
 }
 
 export type AnalyzeRecipeImageResult =

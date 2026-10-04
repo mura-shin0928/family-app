@@ -29,6 +29,33 @@ export function decodeHtmlEntities(input: string): string {
   });
 }
 
+const META_TAG_REGEX = /<meta\b(?:"[^"]*"|'[^']*'|[^>"'])*>/gi;
+const ATTRIBUTE_REGEX =
+  /([^\s"'=<>/]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g;
+
+/**
+ * <meta property="..." content="..."> の content を返す（og:title, og:image など）。
+ * property の代わりに name で書かれたタグも対象。該当がなければ null。
+ */
+export function metaContent(html: string, key: string): string | null {
+  for (const [tag] of html.matchAll(META_TAG_REGEX)) {
+    const attributes = new Map<string, string>();
+    for (const match of tag.matchAll(ATTRIBUTE_REGEX)) {
+      attributes.set(
+        match[1].toLowerCase(),
+        match[2] ?? match[3] ?? match[4] ?? "",
+      );
+    }
+
+    const tagKey = attributes.get("property") ?? attributes.get("name");
+    if (tagKey?.toLowerCase() !== key) continue;
+
+    const content = decodeHtmlEntities(attributes.get("content") ?? "").trim();
+    if (content !== "") return content;
+  }
+  return null;
+}
+
 /**
  * script/style の中身ごと除去してからタグを剥がす。
  * <script>内のJSに"<div>"のような文字列が混ざっても本文として拾わないため。

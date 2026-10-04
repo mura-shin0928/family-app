@@ -6,6 +6,7 @@ export type RecipeDTO = {
   id: string;
   title: string;
   sourceUrl: string | null;
+  imageUrl: string | null;
   note: string | null;
   createdAt: string;
 };
