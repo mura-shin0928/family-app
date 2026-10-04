@@ -28,7 +28,7 @@ export type Database = {
         Row: {
           birth_date: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           deleted_at: string | null
           display_name: string
           expected_birth_date: string | null
@@ -39,7 +39,7 @@ export type Database = {
         Insert: {
           birth_date?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           deleted_at?: string | null
           display_name: string
           expected_birth_date?: string | null
@@ -50,7 +50,7 @@ export type Database = {
         Update: {
           birth_date?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           deleted_at?: string | null
           display_name?: string
           expected_birth_date?: string | null
@@ -193,7 +193,7 @@ export type Database = {
           catalog_key: string | null
           child_id: string
           created_at: string
-          created_by: string
+          created_by: string | null
           deleted_at: string | null
           done_on: string | null
           family_id: string
@@ -207,7 +207,7 @@ export type Database = {
           catalog_key?: string | null
           child_id: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
           deleted_at?: string | null
           done_on?: string | null
           family_id: string
@@ -221,7 +221,7 @@ export type Database = {
           catalog_key?: string | null
           child_id?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           deleted_at?: string | null
           done_on?: string | null
           family_id?: string
@@ -258,7 +258,7 @@ export type Database = {
       purchase_locations: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           deleted_at: string | null
           family_id: string
           id: string
@@ -267,7 +267,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           deleted_at?: string | null
           family_id: string
           id?: string
@@ -276,7 +276,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           deleted_at?: string | null
           family_id?: string
           id?: string
@@ -361,7 +361,7 @@ export type Database = {
       recipes: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           deleted_at: string | null
           family_id: string
           id: string
@@ -373,7 +373,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           deleted_at?: string | null
           family_id: string
           id?: string
@@ -385,7 +385,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           deleted_at?: string | null
           family_id?: string
           id?: string
@@ -417,7 +417,7 @@ export type Database = {
           completed_at: string | null
           completed_by: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           deleted_at: string | null
           due_on: string | null
           family_id: string
@@ -436,7 +436,7 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           deleted_at?: string | null
           due_on?: string | null
           family_id: string
@@ -455,7 +455,7 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           deleted_at?: string | null
           due_on?: string | null
           family_id?: string
