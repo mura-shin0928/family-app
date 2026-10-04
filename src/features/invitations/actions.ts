@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { requireFamilyMember } from "@/features/auth/guard";
 import type { ActionResult } from "@/lib/action-result";
 import { INVITATION_TTL_DAYS } from "@/lib/constants";
+import { logActionError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { INVITE_REDIRECT_COOKIE } from "./constants";
 import { checkInviteEmail } from "./queries";
@@ -47,10 +48,6 @@ const ACCEPT_ERROR_MESSAGES: Record<string, string> = {
     "すでに別のFamilyに参加しているため、この招待を受けられません",
 };
 
-function mapAcceptErrorMessage(message: string): string {
-  return ACCEPT_ERROR_MESSAGES[message] ?? "招待の受諾に失敗しました";
-}
-
 /**
  * 招待を発行する。familyId はクライアント入力を信用せず、常に
  * requireFamilyMember() で解決した「自分の所属Family」を使う。
@@ -88,6 +85,7 @@ export async function createInvitation(input: {
   });
 
   if (error) {
+    logActionError("createInvitation", error);
     return { ok: false, error: "招待の作成に失敗しました" };
   }
 
@@ -113,6 +111,7 @@ export async function revokeInvitation(input: {
     .eq("family_id", member.familyId);
 
   if (error) {
+    logActionError("revokeInvitation", error);
     return { ok: false, error: "取り消しに失敗しました" };
   }
 
@@ -143,6 +142,7 @@ export async function deleteInvitation(input: {
     .eq("family_id", member.familyId);
 
   if (error) {
+    logActionError("deleteInvitation", error);
     return { ok: false, error: "削除に失敗しました" };
   }
 
@@ -201,6 +201,7 @@ export async function sendInviteLoginLink(input: {
   });
 
   if (error) {
+    logActionError("sendInviteLoginLink", error);
     return { ok: false, error: "ログインリンクの送信に失敗しました" };
   }
 
@@ -234,7 +235,11 @@ export async function acceptInvitation(input: {
   });
 
   if (error) {
-    return { ok: false, error: mapAcceptErrorMessage(error.message) };
+    const known = ACCEPT_ERROR_MESSAGES[error.message];
+    if (!known) {
+      logActionError("acceptInvitation", error);
+    }
+    return { ok: false, error: known ?? "招待の受諾に失敗しました" };
   }
 
   redirect("/tasks");

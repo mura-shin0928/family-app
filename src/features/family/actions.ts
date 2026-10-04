@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireFamilyMember } from "@/features/auth/guard";
 import type { ActionResult } from "@/lib/action-result";
+import { logActionError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { memberIdSchema } from "./schema";
 
@@ -33,6 +34,7 @@ export async function removeMember(input: {
     .eq("family_id", member.familyId);
 
   if (error) {
+    logActionError("removeMember", error);
     return { ok: false, error: "削除に失敗しました" };
   }
 

@@ -10,6 +10,7 @@ import { getFamilyMunicipality } from "@/features/programs/queries";
 import type { Attribution } from "@/features/programs/types";
 import type { ActionResult } from "@/lib/action-result";
 import { todayInJst } from "@/lib/date";
+import { logActionError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { findCatalogItem } from "./catalog";
 import {
@@ -70,11 +71,11 @@ export async function addLifeEventItemToTask(input: {
   );
 
   if (error) {
-    return {
-      ok: false,
-      error:
-        ITEM_ERROR_MESSAGES[error.message] ?? "タスクへの追加に失敗しました",
-    };
+    const known = ITEM_ERROR_MESSAGES[error.message];
+    if (!known) {
+      logActionError("addLifeEventItemToTask", error);
+    }
+    return { ok: false, error: known ?? "タスクへの追加に失敗しました" };
   }
   return { ok: true, taskId };
 }
@@ -105,10 +106,11 @@ export async function recordLifeEventItemDone(input: {
   });
 
   if (error) {
-    return {
-      ok: false,
-      error: ITEM_ERROR_MESSAGES[error.message] ?? "記録に失敗しました",
-    };
+    const known = ITEM_ERROR_MESSAGES[error.message];
+    if (!known) {
+      logActionError("recordLifeEventItemDone", error);
+    }
+    return { ok: false, error: known ?? "記録に失敗しました" };
   }
   return { ok: true };
 }
@@ -132,7 +134,10 @@ export async function updateLifeEventItemDoneOn(input: {
     .is("deleted_at", null)
     .select("id");
 
-  if (error) return { ok: false, error: "日付の更新に失敗しました" };
+  if (error) {
+    logActionError("updateLifeEventItemDoneOn", error);
+    return { ok: false, error: "日付の更新に失敗しました" };
+  }
   if (!data || data.length === 0) {
     return {
       ok: false,
@@ -159,7 +164,10 @@ export async function updateLifeEventItemNote(input: {
     .eq("family_id", member.familyId)
     .is("deleted_at", null);
 
-  if (error) return { ok: false, error: "メモの更新に失敗しました" };
+  if (error) {
+    logActionError("updateLifeEventItemNote", error);
+    return { ok: false, error: "メモの更新に失敗しました" };
+  }
   return { ok: true };
 }
 
@@ -178,7 +186,10 @@ export async function removeLifeEventItem(input: {
     .eq("id", parsed.data.id)
     .eq("family_id", member.familyId);
 
-  if (error) return { ok: false, error: "削除に失敗しました" };
+  if (error) {
+    logActionError("removeLifeEventItem", error);
+    return { ok: false, error: "削除に失敗しました" };
+  }
   return { ok: true };
 }
 
