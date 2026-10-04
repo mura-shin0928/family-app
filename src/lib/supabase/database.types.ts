@@ -554,9 +554,11 @@ export type Database = {
           p_due_on?: string
           p_id: string
           p_is_purchase: boolean
+          p_note?: string
           p_purchase_location_id?: string
           p_record_child_id?: string
           p_title: string
+          p_url?: string
         }
         Returns: undefined
       }

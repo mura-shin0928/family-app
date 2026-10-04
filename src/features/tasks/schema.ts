@@ -32,6 +32,8 @@ export const createTaskSchema = z.object({
   isPurchase: z.boolean(),
   purchaseLocationId: purchaseLocationIdSchema,
   recordChildId: recordChildIdSchema,
+  url: urlSchema.optional(),
+  note: noteSchema.optional(),
 });
 
 export const taskIdSchema = z.object({
