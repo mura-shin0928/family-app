@@ -52,6 +52,12 @@ function revalidateLifeEventsIfLinked(
   }
 }
 
+/** create_task (SQL) の raise exception メッセージ → 画面表示文言。 */
+const CREATE_TASK_ERROR_MESSAGES: Record<string, string> = {
+  purchase_location_not_found: "指定した買う場所が見つかりません",
+  child_not_found: "子供が見つかりません",
+};
+
 export async function createTask(input: {
   id: string;
   title: string;
@@ -68,84 +74,24 @@ export async function createTask(input: {
     };
   }
 
-  const { member } = await requireFamilyMember();
+  await requireFamilyMember();
   const supabase = await createClient();
 
-  const location = await resolvePurchaseLocationId(
-    supabase,
-    parsed.data.purchaseLocationId,
-  );
-  if (!location.ok) {
-    return location;
-  }
-
-  const recordChildId = parsed.data.recordChildId;
-  if (recordChildId !== "") {
-    const { data: child } = await supabase
-      .from("children")
-      .select("id")
-      .eq("id", recordChildId)
-      .eq("family_id", member.familyId)
-      .is("deleted_at", null)
-      .maybeSingle();
-    if (!child) {
-      return { ok: false, error: "子供が見つかりません" };
-    }
-  }
-
-  const dueOn = parsed.data.dueOn === "" ? null : parsed.data.dueOn;
-
-  const { data: lastTask } = await supabase
-    .from("tasks")
-    .select("sort_order")
-    .eq("family_id", member.familyId)
-    .is("deleted_at", null)
-    .order("sort_order", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const nextSortOrder = (lastTask?.sort_order ?? 0) + 1;
-
-  let lifeEventItemId: string | null = null;
-  if (recordChildId !== "") {
-    const { data: item, error: itemError } = await supabase
-      .from("life_event_items")
-      .insert({
-        family_id: member.familyId,
-        child_id: recordChildId,
-        catalog_key: null,
-        title: parsed.data.title.slice(0, 100),
-        status: "in_task",
-        created_by: member.id,
-      })
-      .select("id")
-      .single();
-    if (itemError || !item) {
-      return { ok: false, error: "登録に失敗しました" };
-    }
-    lifeEventItemId = item.id;
-  }
-
-  const { error } = await supabase.from("tasks").insert({
-    id: parsed.data.id,
-    family_id: member.familyId,
-    title: parsed.data.title,
-    due_on: dueOn,
-    is_purchase: parsed.data.isPurchase,
-    purchase_location_id: location.value,
-    sort_order: nextSortOrder,
-    created_by: member.id,
-    life_event_item_id: lifeEventItemId,
+  // 空文字列 = 未設定。関数側の default null に任せる。
+  const { error } = await supabase.rpc("create_task", {
+    p_id: parsed.data.id,
+    p_title: parsed.data.title,
+    p_is_purchase: parsed.data.isPurchase,
+    p_due_on: parsed.data.dueOn || undefined,
+    p_purchase_location_id: parsed.data.purchaseLocationId || undefined,
+    p_record_child_id: parsed.data.recordChildId || undefined,
   });
 
   if (error) {
-    if (lifeEventItemId) {
-      await supabase
-        .from("life_event_items")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("id", lifeEventItemId);
-    }
-    return { ok: false, error: "登録に失敗しました" };
+    return {
+      ok: false,
+      error: CREATE_TASK_ERROR_MESSAGES[error.message] ?? "登録に失敗しました",
+    };
   }
 
   return { ok: true };
