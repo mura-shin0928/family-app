@@ -1,28 +1,21 @@
 "use client";
 
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
-import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
-import Tooltip from "@mui/material/Tooltip";
-import Typography from "@mui/material/Typography";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { type ReactNode, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { Child } from "@/features/children/types";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
-import type { ActionResult } from "@/lib/action-result";
 import { SOON_DAYS } from "@/lib/constants";
 import { todayInJst } from "@/lib/date";
-import { createTask, deleteTask, setTaskDone, updateTask } from "../actions";
 import {
   bucketOpenTasks,
   splitOpenAndCompletedToday,
@@ -30,17 +23,19 @@ import {
   type TaskBucketKey,
   todayProgress,
 } from "../buckets";
-import { patchToTaskFields, type TaskUpdatePatch } from "../edit-draft";
-import {
-  filterByPurchaseLocation,
-  type PurchaseLocationSelection,
-} from "../purchase-filter";
 import { fetchTasks } from "../query-actions";
 import { TASKS_QUERY_KEY, type TaskDTO } from "../types";
 import { MascotSpeech } from "./MascotSpeech";
+import { PurchaseTaskList } from "./PurchaseTaskList";
 import { QuickCaptureBar } from "./QuickCaptureBar";
 import { TaskEditSheet } from "./TaskEditSheet";
 import { TaskRow } from "./TaskRow";
+import {
+  BucketSection,
+  CollapsibleSection,
+  CompletedSection,
+} from "./TaskSections";
+import { type TaskToast, useTaskMutations } from "./useTaskMutations";
 import { useTasksRealtime } from "./useTasksRealtime";
 
 const BUCKET_LABEL: Record<TaskBucketKey, string> = {
@@ -52,242 +47,6 @@ const BUCKET_LABEL: Record<TaskBucketKey, string> = {
 };
 
 const COLLAPSIBLE_BUCKETS: readonly TaskBucketKey[] = ["upcoming", "none"];
-
-const COMPLETED_TASK_HINT =
-  "完了したタスクは翌日になると一覧から自動的に非表示になります（削除はされません）";
-
-type Action =
-  | { type: "add"; task: TaskDTO }
-  | { type: "toggle"; id: string; done: boolean }
-  | { type: "update"; id: string; fields: Partial<TaskDTO> }
-  | { type: "remove"; id: string };
-
-function applyAction(tasks: TaskDTO[], action: Action): TaskDTO[] {
-  switch (action.type) {
-    case "add":
-      return [...tasks, action.task];
-    case "toggle":
-      return tasks.map((task) =>
-        task.id === action.id
-          ? {
-              ...task,
-              status: action.done ? "done" : "open",
-              completedAt: action.done ? new Date().toISOString() : null,
-            }
-          : task,
-      );
-    case "update":
-      return tasks.map((task) =>
-        task.id === action.id ? { ...task, ...action.fields } : task,
-      );
-    case "remove":
-      return tasks.filter((task) => task.id !== action.id);
-  }
-}
-
-type Toast = { message: string; actionLabel?: string; onAction?: () => void };
-
-type OptimisticMutationContext = { previous: TaskDTO[] | undefined };
-
-/**
- * タスク操作に共通する「楽観更新→サーバー呼び出し→失敗時ロールバック→
- * 完了後invalidate」の骨格。サーバーをsource of truthとして扱うため、
- * 成功時もローカルの楽観値を確定値として使い続けず、必ず再取得させる。
- */
-function useOptimisticTasksMutation<TInput>(
-  mutationFn: (input: TInput) => Promise<ActionResult>,
-  toAction: (input: TInput) => Action,
-  handlers?: {
-    onOk?: (input: TInput) => void;
-    onFail?: (error: string) => void;
-  },
-) {
-  const queryClient = useQueryClient();
-
-  return useMutation<
-    ActionResult,
-    Error,
-    TInput,
-    OptimisticMutationContext | undefined
-  >({
-    mutationFn,
-    onMutate: async (input) => {
-      await queryClient.cancelQueries({ queryKey: TASKS_QUERY_KEY });
-      const previous = queryClient.getQueryData<TaskDTO[]>(TASKS_QUERY_KEY);
-      queryClient.setQueryData<TaskDTO[]>(TASKS_QUERY_KEY, (current) =>
-        applyAction(current ?? [], toAction(input)),
-      );
-      return { previous };
-    },
-    onSuccess: (result, input, context) => {
-      if (result.ok) {
-        handlers?.onOk?.(input);
-        return;
-      }
-      if (context?.previous) {
-        queryClient.setQueryData(TASKS_QUERY_KEY, context.previous);
-      }
-      handlers?.onFail?.(result.error);
-    },
-    onError: (_error, _input, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(TASKS_QUERY_KEY, context.previous);
-      }
-      handlers?.onFail?.("通信に失敗しました");
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-    },
-  });
-}
-
-function BucketSection({
-  label,
-  count,
-  children,
-}: {
-  label: string;
-  count: number;
-  children: ReactNode;
-}) {
-  return (
-    <Box component="section">
-      <Typography variant="subtitle2" sx={{ color: "primary.dark", mb: 1 }}>
-        {label}（{count}）
-      </Typography>
-      <Stack spacing={1}>{children}</Stack>
-    </Box>
-  );
-}
-
-/**
- * BucketSection と同じ見た目（Paper/カード枠なし）の折りたたみ見出し。
- * MUIのAccordionはPaper+角丸+線を持つため、通常の見出しと並べると
- * それだけ「かさばって」見える — Collapseで組み直し、視覚的な重さを揃える。
- */
-function CollapsibleHeader({
-  title,
-  expanded,
-  onToggle,
-  extra,
-}: {
-  title: ReactNode;
-  expanded: boolean;
-  onToggle: () => void;
-  extra?: ReactNode;
-}) {
-  return (
-    <Box
-      onClick={onToggle}
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: 0.5,
-        cursor: "pointer",
-        mb: 1,
-      }}
-    >
-      <Typography variant="subtitle2" sx={{ color: "primary.dark" }}>
-        {title}
-      </Typography>
-      {extra}
-      <ExpandMoreIcon
-        fontSize="small"
-        sx={{
-          color: "text.secondary",
-          transform: expanded ? "rotate(180deg)" : "none",
-          transition: "transform 0.15s",
-        }}
-      />
-    </Box>
-  );
-}
-
-function CollapsibleSection({
-  label,
-  count,
-  defaultExpanded,
-  children,
-}: {
-  label: string;
-  count: number;
-  defaultExpanded: boolean;
-  children: ReactNode;
-}) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
-  return (
-    <Box component="section">
-      <CollapsibleHeader
-        title={`${label}（${count}）`}
-        expanded={expanded}
-        onToggle={() => setExpanded((current) => !current)}
-      />
-      <Collapse in={expanded}>
-        <Stack spacing={1}>{children}</Stack>
-      </Collapse>
-    </Box>
-  );
-}
-
-function CompletedSection({
-  count,
-  children,
-}: {
-  count: number;
-  children: ReactNode;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const [hintOpen, setHintOpen] = useState(false);
-  const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function toggleHint() {
-    if (hintTimer.current) clearTimeout(hintTimer.current);
-    setHintOpen((current) => {
-      const next = !current;
-      if (next) {
-        hintTimer.current = setTimeout(() => setHintOpen(false), 4000);
-      }
-      return next;
-    });
-  }
-
-  return (
-    <Box component="section">
-      <CollapsibleHeader
-        title={`完了（今日 ${count}）`}
-        expanded={expanded}
-        onToggle={() => setExpanded((current) => !current)}
-        extra={
-          // MUIのTooltipはhover前提のためタッチ操作では長押し(既定約0.7秒)が
-          // 必要になり、単純なタップだと開かないことがある。ここではタップの
-          // クリックイベントだけで開閉を制御し、自動でも4秒後に閉じる。
-          <Tooltip
-            title={COMPLETED_TASK_HINT}
-            open={hintOpen}
-            onClose={() => setHintOpen(false)}
-            disableFocusListener
-            disableHoverListener
-            disableTouchListener
-          >
-            <InfoOutlinedIcon
-              fontSize="inherit"
-              tabIndex={0}
-              titleAccess={COMPLETED_TASK_HINT}
-              onClick={(event) => {
-                event.stopPropagation();
-                toggleHint();
-              }}
-              sx={{ color: "text.secondary", cursor: "help" }}
-            />
-          </Tooltip>
-        }
-      />
-      <Collapse in={expanded}>
-        <Stack spacing={1}>{children}</Stack>
-      </Collapse>
-    </Box>
-  );
-}
 
 export function TaskListScreen({
   initialTasks,
@@ -309,128 +68,23 @@ export function TaskListScreen({
 
   useTasksRealtime(familyId);
 
-  const [toast, setToast] = useState<Toast | null>(null);
+  const [toast, setToast] = useState<TaskToast | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [showPurchaseOnly, setShowPurchaseOnly] = useState(false);
-  const [locationSelection, setLocationSelection] =
-    useState<PurchaseLocationSelection>("all");
 
-  function togglePurchaseOnly() {
-    setShowPurchaseOnly((current) => {
-      // 閉じるときは場所フィルタもリセットする（隠れた状態を残さない）。
-      if (current) setLocationSelection("all");
-      return !current;
-    });
-  }
-
-  function showToast(next: Toast) {
+  function showToast(next: TaskToast) {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     setToast(next);
     toastTimer.current = setTimeout(() => setToast(null), 5000);
   }
 
-  const createMutation = useOptimisticTasksMutation(
-    createTask,
-    (input: {
-      id: string;
-      title: string;
-      dueOn: string;
-      isPurchase: boolean;
-      purchaseLocationId: string;
-      recordChildId: string;
-    }): Action => ({
-      type: "add",
-      task: {
-        id: input.id,
-        title: input.title,
-        dueOn: input.dueOn === "" ? null : input.dueOn,
-        isPurchase: input.isPurchase,
-        status: "open",
-        completedAt: null,
-        sortOrder: Number.MAX_SAFE_INTEGER,
-        url: null,
-        note: null,
-        purchaseLocationId:
-          input.purchaseLocationId === "" ? null : input.purchaseLocationId,
-        recordChildId: input.recordChildId === "" ? null : input.recordChildId,
-      },
-    }),
-    { onFail: (error) => showToast({ message: error }) },
-  );
-
-  const toggleMutation = useOptimisticTasksMutation(
-    setTaskDone,
-    (input: { taskId: string; done: boolean }): Action => ({
-      type: "toggle",
-      id: input.taskId,
-      done: input.done,
-    }),
-    {
-      onOk: (input) => {
-        if (input.done) {
-          showToast({
-            message: "完了しました",
-            actionLabel: "元に戻す",
-            onAction: () =>
-              toggleMutation.mutate({ taskId: input.taskId, done: false }),
-          });
-        }
-      },
-      onFail: (error) => showToast({ message: error }),
-    },
-  );
-
-  const updateMutation = useOptimisticTasksMutation(
-    updateTask,
-    ({ taskId, ...patch }: { taskId: string } & TaskUpdatePatch): Action => ({
-      type: "update",
-      id: taskId,
-      fields: patchToTaskFields(patch),
-    }),
-    { onFail: (error) => showToast({ message: error }) },
-  );
-
-  const deleteMutation = useOptimisticTasksMutation(
-    deleteTask,
-    (input: { taskId: string }): Action => ({
-      type: "remove",
-      id: input.taskId,
-    }),
-    { onFail: (error) => showToast({ message: error }) },
-  );
+  const mutations = useTaskMutations(showToast);
 
   const today = todayInJst();
   const { open, completedToday } = splitOpenAndCompletedToday(tasks);
   const buckets = bucketOpenTasks(open, today);
   const progress = todayProgress(buckets, completedToday.length);
-
-  // 買うものだけ表示: 期限の緊急度ではなく、売り場を回る順（sort_order）で見せる。
-  const purchaseOpen = open
-    .filter((task) => task.isPurchase)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-  const purchaseCompletedToday = completedToday.filter(
-    (task) => task.isPurchase,
-  );
-
-  const knownLocationIds = new Set(locations.map((location) => location.id));
-  // 選択中の場所idが削除済みなら「すべて」に戻す（行き止まりの空表示を避ける）。
-  const effectiveSelection: PurchaseLocationSelection =
-    locationSelection === "all" ||
-    locationSelection === "none" ||
-    knownLocationIds.has(locationSelection)
-      ? locationSelection
-      : "all";
-  const filteredPurchaseOpen = filterByPurchaseLocation(
-    purchaseOpen,
-    effectiveSelection,
-    knownLocationIds,
-  );
-  const filteredPurchaseCompletedToday = filterByPurchaseLocation(
-    purchaseCompletedToday,
-    effectiveSelection,
-    knownLocationIds,
-  );
 
   function handleCreate(input: {
     title: string;
@@ -439,7 +93,7 @@ export function TaskListScreen({
     purchaseLocationId: string | null;
     recordChildId: string | null;
   }) {
-    createMutation.mutate({
+    mutations.create({
       id: crypto.randomUUID(),
       title: input.title,
       dueOn: input.dueOn ?? "",
@@ -447,14 +101,6 @@ export function TaskListScreen({
       purchaseLocationId: input.purchaseLocationId ?? "",
       recordChildId: input.recordChildId ?? "",
     });
-  }
-
-  function handleToggle(task: TaskDTO) {
-    toggleMutation.mutate({ taskId: task.id, done: task.status !== "done" });
-  }
-
-  function performDelete(task: TaskDTO) {
-    deleteMutation.mutate({ taskId: task.id });
   }
 
   const visibleBuckets = TASK_BUCKET_ORDER.filter(
@@ -471,11 +117,24 @@ export function TaskListScreen({
       : null;
   }
 
-  const rowProps = {
-    locations,
-    onToggle: handleToggle,
-    onOpen: (task: TaskDTO) => setEditingTaskId(task.id),
-  };
+  function renderRow(task: TaskDTO) {
+    return (
+      <TaskRow
+        key={task.id}
+        task={task}
+        today={today}
+        recordChildName={recordChildNameOf(task)}
+        locations={locations}
+        onToggle={(target) =>
+          mutations.toggle({
+            taskId: target.id,
+            done: target.status !== "done",
+          })
+        }
+        onOpen={(target) => setEditingTaskId(target.id)}
+      />
+    );
+  }
 
   // 開いている間に削除された（Realtime 等）ら見つからなくなり、シートは閉じる。
   const editingTask = editingTaskId
@@ -507,93 +166,17 @@ export function TaskListScreen({
             clickable
             color={showPurchaseOnly ? "primary" : "default"}
             variant={showPurchaseOnly ? "filled" : "outlined"}
-            onClick={togglePurchaseOnly}
+            onClick={() => setShowPurchaseOnly((current) => !current)}
           />
         </Box>
 
-        {showPurchaseOnly && locations.length > 0 && (
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-            <Chip
-              label="すべて"
-              size="small"
-              clickable
-              color={effectiveSelection === "all" ? "primary" : "default"}
-              variant={effectiveSelection === "all" ? "filled" : "outlined"}
-              onClick={() => setLocationSelection("all")}
-            />
-            {locations.map((location) => (
-              <Chip
-                key={location.id}
-                label={location.name}
-                size="small"
-                clickable
-                color={
-                  effectiveSelection === location.id ? "primary" : "default"
-                }
-                variant={
-                  effectiveSelection === location.id ? "filled" : "outlined"
-                }
-                onClick={() => setLocationSelection(location.id)}
-              />
-            ))}
-            <Chip
-              label="未設定"
-              size="small"
-              clickable
-              color={effectiveSelection === "none" ? "primary" : "default"}
-              variant={effectiveSelection === "none" ? "filled" : "outlined"}
-              onClick={() => setLocationSelection("none")}
-            />
-          </Box>
-        )}
-
         {showPurchaseOnly ? (
-          <>
-            {filteredPurchaseOpen.length > 0 && (
-              <BucketSection
-                label="買うもの"
-                count={filteredPurchaseOpen.length}
-              >
-                {filteredPurchaseOpen.map((task) => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    today={today}
-                    recordChildName={recordChildNameOf(task)}
-                    {...rowProps}
-                  />
-                ))}
-              </BucketSection>
-            )}
-
-            {filteredPurchaseCompletedToday.length > 0 && (
-              <CompletedSection count={filteredPurchaseCompletedToday.length}>
-                {filteredPurchaseCompletedToday.map((task) => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    today={today}
-                    recordChildName={recordChildNameOf(task)}
-                    {...rowProps}
-                  />
-                ))}
-              </CompletedSection>
-            )}
-
-            {filteredPurchaseOpen.length === 0 &&
-              filteredPurchaseCompletedToday.length === 0 && (
-                <Typography
-                  variant="body1"
-                  color="textSecondary"
-                  align="center"
-                  sx={{ py: 8 }}
-                >
-                  {effectiveSelection === "all"
-                    ? "買うものはありません。"
-                    : "この場所の買うものはありません。"}
-                </Typography>
-              )}
-          </>
+          <PurchaseTaskList
+            open={open}
+            completedToday={completedToday}
+            locations={locations}
+            renderRow={renderRow}
+          />
         ) : (
           <>
             <MascotSpeech
@@ -609,15 +192,7 @@ export function TaskListScreen({
                   label={BUCKET_LABEL[key]}
                   count={buckets[key].length}
                 >
-                  {buckets[key].map((task) => (
-                    <TaskRow
-                      key={task.id}
-                      task={task}
-                      today={today}
-                      recordChildName={recordChildNameOf(task)}
-                      {...rowProps}
-                    />
-                  ))}
+                  {buckets[key].map(renderRow)}
                 </BucketSection>
               ) : null,
             )}
@@ -630,30 +205,14 @@ export function TaskListScreen({
                   count={buckets[key].length}
                   defaultExpanded
                 >
-                  {buckets[key].map((task) => (
-                    <TaskRow
-                      key={task.id}
-                      task={task}
-                      today={today}
-                      recordChildName={recordChildNameOf(task)}
-                      {...rowProps}
-                    />
-                  ))}
+                  {buckets[key].map(renderRow)}
                 </CollapsibleSection>
               ) : null,
             )}
 
             {completedToday.length > 0 && (
               <CompletedSection count={completedToday.length}>
-                {completedToday.map((task) => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    today={today}
-                    recordChildName={recordChildNameOf(task)}
-                    {...rowProps}
-                  />
-                ))}
+                {completedToday.map(renderRow)}
               </CompletedSection>
             )}
           </>
@@ -692,11 +251,11 @@ export function TaskListScreen({
         locations={locations}
         recordChildName={editingTask ? recordChildNameOf(editingTask) : null}
         onSave={(task, patch) => {
-          updateMutation.mutate({ taskId: task.id, ...patch });
+          mutations.update({ taskId: task.id, ...patch });
           setEditingTaskId(null);
         }}
         onDelete={(task) => {
-          performDelete(task);
+          mutations.remove({ taskId: task.id });
           setEditingTaskId(null);
         }}
         onClose={() => setEditingTaskId(null)}
