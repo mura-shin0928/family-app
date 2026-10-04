@@ -11,7 +11,7 @@ import {
 import type { ExtractionResult } from "./types";
 
 // 実疎通で6〜23秒程度のばらつきを確認した（thinking_levelを使うと
-// 思考ステップが挟まりレイテンシが安定しない）。ページ側のmaxDuration(30秒)
+// 思考ステップが挟まりレイテンシが安定しない）。ページ側のmaxDuration(60秒)
 // に収まる範囲で余裕を持たせる。
 const TIMEOUT_MS = 25_000;
 
