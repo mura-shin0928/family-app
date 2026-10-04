@@ -4,3 +4,16 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      # 一緒に上げないと型や peer dependency がずれる組
+      react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      mui:
+        patterns: ["@mui/*", "@emotion/*"]
+      # 上記以外の minor / patch は1本のPRにまとめる
+      minor-and-patch:
+        update-types: ["minor", "patch"]
