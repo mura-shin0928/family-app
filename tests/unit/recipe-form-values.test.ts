@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  appendServingsToNote,
   formValuesFromRecipe,
+  ingredientRowsFromRecipe,
   isRecipeFormDirty,
   type RecipeFormValues,
+  toSubmittedIngredients,
 } from "@/features/recipes/form-values";
 import type { RecipeDetailDTO } from "@/features/recipes/types";
 
@@ -133,5 +136,69 @@ describe("isRecipeFormDirty", () => {
     const empty = formValuesFromRecipe();
     expect(isRecipeFormDirty(empty, empty)).toBe(false);
     expect(isRecipeFormDirty(empty, { ...empty, title: "カレー" })).toBe(true);
+  });
+});
+
+describe("ingredientRowsFromRecipe", () => {
+  it("新規作成は行なし", () => {
+    expect(ingredientRowsFromRecipe()).toEqual([]);
+  });
+
+  it("保存済みの材料は id を key にして、分量の null を空文字にする", () => {
+    const recipe = makeRecipe({
+      ingredients: [
+        {
+          id: "00000000-0000-4000-8000-000000000011",
+          name: "玉ねぎ",
+          quantity: null,
+          sortOrder: 0,
+          taskId: null,
+        },
+      ],
+    });
+    expect(ingredientRowsFromRecipe(recipe)).toEqual([
+      {
+        key: "00000000-0000-4000-8000-000000000011",
+        id: "00000000-0000-4000-8000-000000000011",
+        name: "玉ねぎ",
+        quantity: "",
+      },
+    ]);
+  });
+});
+
+describe("toSubmittedIngredients", () => {
+  it("前後の空白を落とし、key は送らない", () => {
+    expect(
+      toSubmittedIngredients([
+        { key: "k1", id: "i1", name: " 玉ねぎ ", quantity: " 2個 " },
+        { key: "k2", name: "にんじん", quantity: "" },
+      ]),
+    ).toEqual([
+      { id: "i1", name: "玉ねぎ", quantity: "2個" },
+      { id: undefined, name: "にんじん", quantity: "" },
+    ]);
+  });
+
+  it("材料名が空の行は分量があっても送らない", () => {
+    expect(
+      toSubmittedIngredients([
+        { key: "k1", name: "  ", quantity: "2個" },
+        { key: "k2", name: "", quantity: "" },
+      ]),
+    ).toEqual([]);
+  });
+});
+
+describe("appendServingsToNote", () => {
+  it("メモが空（空白だけ）なら人数分だけを入れる", () => {
+    expect(appendServingsToNote("", "2人分")).toBe("2人分");
+    expect(appendServingsToNote("  ", "2人分")).toBe("2人分");
+  });
+
+  it("メモがあれば改行して末尾に足す", () => {
+    expect(appendServingsToNote("辛口で作る", "2人分")).toBe(
+      "辛口で作る\n2人分",
+    );
   });
 });
