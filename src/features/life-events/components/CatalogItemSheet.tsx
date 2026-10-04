@@ -8,6 +8,7 @@ import Drawer from "@mui/material/Drawer";
 import MuiLink from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import { isHttpUrl } from "@/lib/url";
 import { LIFE_EVENT_KINDS } from "../catalog";
 import type { ItemState } from "../search";
 import { formatSlashDate } from "../timing";
@@ -57,7 +58,7 @@ export function CatalogItemSheet({
               {item.note}
             </Typography>
           )}
-          {item.url && (
+          {item.url && isHttpUrl(item.url) && (
             <MuiLink
               href={item.url}
               target="_blank"

@@ -22,6 +22,7 @@ import { EditSheet, EditSheetForm } from "@/components/EditSheet";
 import { PurchaseLocationOptions } from "@/features/purchase-locations/components/PurchaseLocationOptions";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { todayInJst } from "@/lib/date";
+import { isHttpUrl } from "@/lib/url";
 import {
   buildTaskPatch,
   draftFromTask,
@@ -245,18 +246,19 @@ function TaskEditForm({
                 sx={{ color: "text.secondary", mr: 0.5 }}
               />
             ),
-            endAdornment: task.url ? (
-              <IconButton
-                component="a"
-                href={task.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                size="small"
-                aria-label="URLを開く"
-              >
-                <OpenInNewIcon fontSize="inherit" />
-              </IconButton>
-            ) : undefined,
+            endAdornment:
+              task.url && isHttpUrl(task.url) ? (
+                <IconButton
+                  component="a"
+                  href={task.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  size="small"
+                  aria-label="URLを開く"
+                >
+                  <OpenInNewIcon fontSize="inherit" />
+                </IconButton>
+              ) : undefined,
           },
           htmlInput: inputStyle,
         }}

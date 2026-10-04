@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { isHttpUrl } from "@/lib/url";
 import type { Area, Attribution, Program, ProgramCategory } from "./types";
 
 /**
@@ -153,16 +154,19 @@ export async function getAreaPrograms(
   if (!result.ok) return result;
   return {
     ...result,
-    data: result.data.map((program) => ({
-      id: program.id,
-      areaCode: program.area_code,
-      canonicalName: program.canonical_name,
-      shortName: program.short_name,
-      sourceUrl: program.source_url,
-      categoryCodes: program.category_codes,
-      targetCodes: program.target_codes,
-      ageMinMonths: program.age_min_months,
-      ageMaxMonths: program.age_max_months,
-    })),
+    // 公式ページはリンクとして開くので、http(s) 以外は一覧に出さない
+    data: result.data
+      .filter((program) => isHttpUrl(program.source_url))
+      .map((program) => ({
+        id: program.id,
+        areaCode: program.area_code,
+        canonicalName: program.canonical_name,
+        shortName: program.short_name,
+        sourceUrl: program.source_url,
+        categoryCodes: program.category_codes,
+        targetCodes: program.target_codes,
+        ageMinMonths: program.age_min_months,
+        ageMaxMonths: program.age_max_months,
+      })),
   };
 }

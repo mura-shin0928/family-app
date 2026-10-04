@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { httpUrlSchema } from "@/lib/url";
 
 const dateStringSchema = z
   .string()
@@ -6,10 +7,7 @@ const dateStringSchema = z
 
 // recipes/schema.ts の sourceUrlSchema / noteSchema と同じ規約
 // （空文字列 = 未入力の union、文字数上限はDBのCHECK制約と揃える）。
-const urlSchema = z.union([
-  z.url("URLの形式が正しくありません").max(2000),
-  z.literal(""),
-]);
+const urlSchema = z.union([httpUrlSchema, z.literal("")]);
 
 const noteSchema = z.union([
   z.string().trim().max(2000, "メモは2000文字以内で入力してください"),

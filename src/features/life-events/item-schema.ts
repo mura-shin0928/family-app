@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { httpUrlSchema } from "@/lib/url";
 
 const dateStringSchema = z
   .string()
@@ -15,9 +16,7 @@ const catalogKeySchema = z.string().min(1).max(200);
 const childIdSchema = z.string().uuid();
 
 // 制度（program:）の公式ページ。空文字列 = なし
-const urlSchema = z
-  .union([z.url("URLの形式が正しくありません").max(2000), z.literal("")])
-  .optional();
+const urlSchema = z.union([httpUrlSchema, z.literal("")]).optional();
 
 export const addLifeEventItemToTaskSchema = z.object({
   childId: childIdSchema,

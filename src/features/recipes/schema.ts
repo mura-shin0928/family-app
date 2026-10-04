@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { httpUrlSchema } from "@/lib/url";
 
 // 空文字列 = 未入力。tasks/schema.ts の dueOn と同じ規約（"" | 値 の union）。
 const ingredientInputSchema = z.object({
@@ -20,10 +21,7 @@ const titleSchema = z
   .min(1, "タイトルを入力してください")
   .max(200, "タイトルは200文字以内で入力してください");
 
-const sourceUrlSchema = z.union([
-  z.url("URLの形式が正しくありません").max(2000),
-  z.literal(""),
-]);
+const sourceUrlSchema = z.union([httpUrlSchema, z.literal("")]);
 
 const noteSchema = z.union([
   z.string().trim().max(2000, "メモは2000文字以内で入力してください"),
