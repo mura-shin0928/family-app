@@ -1,5 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import {
+  LOGIN_REDIRECT_COOKIE,
+  LOGIN_REDIRECT_COOKIE_OPTIONS,
+  loginReturnPath,
+} from "@/lib/next-path";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 
 // /invite: 未ログインでも「このFamilyへの招待です」という文脈を見せてから
@@ -42,7 +47,19 @@ export async function proxy(request: NextRequest) {
   );
 
   if (!user && !isPublicPath) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const redirect = NextResponse.redirect(new URL("/login", request.url));
+    const returnPath = loginReturnPath(
+      request.nextUrl.pathname,
+      request.nextUrl.search,
+    );
+    if (returnPath) {
+      redirect.cookies.set(
+        LOGIN_REDIRECT_COOKIE,
+        returnPath,
+        LOGIN_REDIRECT_COOKIE_OPTIONS,
+      );
+    }
+    return redirect;
   }
 
   return response;

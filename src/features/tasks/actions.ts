@@ -68,6 +68,8 @@ export async function createTask(input: {
   isPurchase: boolean;
   purchaseLocationId: string;
   recordChildId: string;
+  url?: string;
+  note?: string;
 }): Promise<ActionResult> {
   const parsed = createTaskSchema.safeParse(input);
   if (!parsed.success) {
@@ -88,6 +90,8 @@ export async function createTask(input: {
     p_due_on: parsed.data.dueOn || undefined,
     p_purchase_location_id: parsed.data.purchaseLocationId || undefined,
     p_record_child_id: parsed.data.recordChildId || undefined,
+    p_url: parsed.data.url || undefined,
+    p_note: parsed.data.note || undefined,
   });
 
   if (error) {

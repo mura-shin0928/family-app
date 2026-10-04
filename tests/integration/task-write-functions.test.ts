@@ -178,6 +178,22 @@ describe("タスク・ライフイベント項目の書き込み関数", () => {
       expect(task?.purchase_location_id).toBe(locationF1);
     });
 
+    it("URL とメモを付けられる", async () => {
+      const id = randomUUID();
+      const { error } = await clientA.rpc("create_task", {
+        p_id: id,
+        p_title: "気になる投稿",
+        p_is_purchase: false,
+        p_url: "https://www.instagram.com/p/abc/",
+        p_note: "共有されたメモ",
+      });
+      expect(error).toBeNull();
+
+      const task = await taskById(id);
+      expect(task?.url).toBe("https://www.instagram.com/p/abc/");
+      expect(task?.note).toBe("共有されたメモ");
+    });
+
     it("他の家族の買う場所は付けられない", async () => {
       const id = randomUUID();
       const { error } = await clientA.rpc("create_task", {
