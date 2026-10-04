@@ -10,6 +10,12 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     background_color: brand.light.background,
     theme_color: brand.light.background,
+    // 他アプリの共有シートに出す（Android のインストール済みPWAのみ）。
+    share_target: {
+      action: "/tasks/share",
+      method: "GET",
+      params: { title: "title", text: "text", url: "url" },
+    },
     icons: [
       { src: "/icons/192", sizes: "192x192", type: "image/png" },
       { src: "/icons/512", sizes: "512x512", type: "image/png" },
