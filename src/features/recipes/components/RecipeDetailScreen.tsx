@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { TASKS_QUERY_KEY } from "@/features/tasks/types";
 import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
+import { isHttpUrl } from "@/lib/url";
 import {
   addIngredientsToPurchases,
   deleteRecipe,
@@ -165,7 +166,7 @@ export function RecipeDetailScreen({
         </Button>
       </Stack>
 
-      {recipe?.sourceUrl && (
+      {recipe?.sourceUrl && isHttpUrl(recipe.sourceUrl) && (
         <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
           <LinkIcon fontSize="small" sx={{ color: "text.secondary" }} />
           <Typography
