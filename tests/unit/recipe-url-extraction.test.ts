@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { isSnsHost } from "@/features/recipes/extraction/detect";
 import { extractRecipeFromJsonLd } from "@/features/recipes/extraction/jsonld";
@@ -279,253 +280,180 @@ describe("extractReadable", () => {
 });
 
 describe("fetchHtml", () => {
-  const dnsLookup = vi.hoisted(() => vi.fn());
-  vi.mock("node:dns/promises", () => ({ lookup: dnsLookup }));
+  const guardedGet = vi.hoisted(() => vi.fn());
+  vi.mock("@/features/recipes/extraction/guarded-request", () => ({
+    guardedGet,
+  }));
 
   afterEach(() => {
-    vi.unstubAllGlobals();
-    dnsLookup.mockReset();
+    guardedGet.mockReset();
   });
 
   function htmlResponse(
-    html: string,
+    html: string | Uint8Array,
     contentType = "text/html; charset=utf-8",
   ) {
-    const bytes = new TextEncoder().encode(html);
-    let sent = false;
     return {
-      ok: true,
       status: 200,
-      headers: {
-        get: (key: string) => (key === "content-type" ? contentType : null),
-      },
-      body: {
-        cancel: async () => {},
-        getReader: () => ({
-          read: async () => {
-            if (sent) return { done: true, value: undefined };
-            sent = true;
-            return { done: false, value: bytes };
-          },
-          cancel: async () => {},
-        }),
-      },
+      headers: { "content-type": contentType },
+      body: Readable.from([Buffer.from(html)]),
     };
   }
 
-  function redirectResponse(location: string) {
+  function redirectResponse(location: string | undefined) {
     return {
-      ok: false,
       status: 302,
-      headers: { get: (key: string) => (key === "location" ? location : null) },
-      body: null,
+      headers: { location },
+      body: Readable.from([]),
     };
   }
 
-  it("rejects a non-https URL without calling fetch", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-
+  async function run(url: string, deadlineAt = Date.now() + 5000) {
     const { fetchHtml } = await import(
       "@/features/recipes/extraction/fetch-html"
     );
-    const result = await fetchHtml("http://example.com/recipe", {
-      deadlineAt: Date.now() + 5000,
-    });
+    return fetchHtml(url, { deadlineAt });
+  }
+
+  function requestedUrls() {
+    return guardedGet.mock.calls.map(([url]) => String(url));
+  }
+
+  it("rejects a non-https URL without sending a request", async () => {
+    const result = await run("http://example.com/recipe");
 
     expect(result).toEqual({ ok: false });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(guardedGet).not.toHaveBeenCalled();
   });
 
-  it("rejects the localhost hostname without a DNS lookup", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+  it("returns the HTML of a 200 text/html response", async () => {
+    guardedGet.mockResolvedValue(htmlResponse("<html>レシピ</html>"));
 
-    const { fetchHtml } = await import(
-      "@/features/recipes/extraction/fetch-html"
-    );
-    const result = await fetchHtml("https://localhost/recipe", {
-      deadlineAt: Date.now() + 5000,
-    });
+    const result = await run("https://example.com/recipe");
 
-    expect(result).toEqual({ ok: false });
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(dnsLookup).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: true, html: "<html>レシピ</html>" });
+    expect(requestedUrls()).toEqual(["https://example.com/recipe"]);
   });
 
-  it("rejects when DNS resolves the hostname to a private IP", async () => {
-    dnsLookup.mockResolvedValue([{ address: "10.0.0.5", family: 4 }]);
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+  it("fails when the guarded request refuses the host", async () => {
+    guardedGet.mockRejectedValue(new Error("blocked"));
 
-    const { fetchHtml } = await import(
-      "@/features/recipes/extraction/fetch-html"
-    );
-    const result = await fetchHtml("https://internal.example.com/recipe", {
-      deadlineAt: Date.now() + 5000,
-    });
-
-    expect(result).toEqual({ ok: false });
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("succeeds when DNS resolves to a public IP and the response is HTML", async () => {
-    dnsLookup.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(htmlResponse("<html>ok</html>")),
-    );
-
-    const { fetchHtml } = await import(
-      "@/features/recipes/extraction/fetch-html"
-    );
-    const result = await fetchHtml("https://example.com/recipe", {
-      deadlineAt: Date.now() + 5000,
-    });
-
-    expect(result).toEqual({ ok: true, html: "<html>ok</html>" });
-  });
-
-  it("rejects a non-HTML content-type", async () => {
-    dnsLookup.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(htmlResponse("{}", "application/json")),
-    );
-
-    const { fetchHtml } = await import(
-      "@/features/recipes/extraction/fetch-html"
-    );
-    const result = await fetchHtml("https://example.com/recipe.json", {
-      deadlineAt: Date.now() + 5000,
-    });
+    const result = await run("https://internal.example.com/recipe");
 
     expect(result).toEqual({ ok: false });
   });
 
-  it("follows a redirect to a safe host and returns its HTML", async () => {
-    dnsLookup.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(redirectResponse("https://example.com/final"))
+  it("rejects a non-HTML content-type and discards the body", async () => {
+    const response = htmlResponse("{}", "application/json");
+    guardedGet.mockResolvedValue(response);
+
+    const result = await run("https://example.com/recipe.json");
+
+    expect(result).toEqual({ ok: false });
+    expect(response.body.destroyed).toBe(true);
+  });
+
+  it("rejects a non-2xx response", async () => {
+    guardedGet.mockResolvedValue({
+      ...htmlResponse("<html>not found</html>"),
+      status: 404,
+    });
+
+    expect(await run("https://example.com/missing")).toEqual({ ok: false });
+  });
+
+  it("follows a redirect through the guarded request and returns the final HTML", async () => {
+    guardedGet
+      .mockResolvedValueOnce(redirectResponse("/final"))
       .mockResolvedValueOnce(htmlResponse("<html>final</html>"));
-    vi.stubGlobal("fetch", fetchMock);
 
-    const { fetchHtml } = await import(
-      "@/features/recipes/extraction/fetch-html"
-    );
-    const result = await fetchHtml("https://example.com/recipe", {
-      deadlineAt: Date.now() + 5000,
-    });
+    const result = await run("https://example.com/recipe");
 
     expect(result).toEqual({ ok: true, html: "<html>final</html>" });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(requestedUrls()).toEqual([
+      "https://example.com/recipe",
+      "https://example.com/final",
+    ]);
+  });
+
+  it("fails when the guarded request refuses a redirect target", async () => {
+    guardedGet
+      .mockResolvedValueOnce(redirectResponse("https://internal.example.com/x"))
+      .mockRejectedValueOnce(new Error("blocked"));
+
+    const result = await run("https://example.com/recipe");
+
+    expect(result).toEqual({ ok: false });
+    expect(requestedUrls()).toEqual([
+      "https://example.com/recipe",
+      "https://internal.example.com/x",
+    ]);
   });
 
   it("rejects a redirect to a non-https location", async () => {
-    dnsLookup.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(redirectResponse("http://example.com/final")),
-    );
+    guardedGet.mockResolvedValue(redirectResponse("http://example.com/final"));
 
-    const { fetchHtml } = await import(
-      "@/features/recipes/extraction/fetch-html"
-    );
-    const result = await fetchHtml("https://example.com/recipe", {
-      deadlineAt: Date.now() + 5000,
-    });
+    const result = await run("https://example.com/recipe");
 
     expect(result).toEqual({ ok: false });
+    expect(guardedGet).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a redirect without a location header", async () => {
+    guardedGet.mockResolvedValue(redirectResponse(undefined));
+
+    expect(await run("https://example.com/recipe")).toEqual({ ok: false });
   });
 
   it("gives up after exceeding the maximum number of redirects", async () => {
-    dnsLookup.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(redirectResponse("https://example.com/next"));
-    vi.stubGlobal("fetch", fetchMock);
-
-    const { fetchHtml } = await import(
-      "@/features/recipes/extraction/fetch-html"
+    guardedGet.mockImplementation(async () =>
+      redirectResponse("https://example.com/next"),
     );
-    const result = await fetchHtml("https://example.com/recipe", {
-      deadlineAt: Date.now() + 5000,
-    });
+
+    const result = await run("https://example.com/recipe");
 
     expect(result).toEqual({ ok: false });
     // 初回 + リダイレクト3回 = 4回まで
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(guardedGet).toHaveBeenCalledTimes(4);
   });
 
-  it("rejects a redirect that lands on a private IP", async () => {
-    dnsLookup
-      .mockResolvedValueOnce([{ address: "93.184.216.34", family: 4 }])
-      .mockResolvedValueOnce([{ address: "127.0.0.1", family: 4 }]);
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(redirectResponse("https://internal.example.com/x")),
-    );
+  it("stops reading once the body exceeds the 1MB cap", async () => {
+    const response = htmlResponse(new Uint8Array(1_100_000), "text/html");
+    guardedGet.mockResolvedValue(response);
 
-    const { fetchHtml } = await import(
-      "@/features/recipes/extraction/fetch-html"
-    );
-    const result = await fetchHtml("https://example.com/recipe", {
-      deadlineAt: Date.now() + 5000,
-    });
+    const result = await run("https://example.com/recipe");
 
     expect(result).toEqual({ ok: false });
+    expect(response.body.destroyed).toBe(true);
   });
 
-  it("aborts once the body exceeds the 1MB cap", async () => {
-    dnsLookup.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
-    const bigChunk = new Uint8Array(1_100_000);
-    const cancel = vi.fn(async () => {});
-    let sent = false;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        headers: { get: () => "text/html" },
-        body: {
-          getReader: () => ({
-            read: async () => {
-              if (sent) return { done: true, value: undefined };
-              sent = true;
-              return { done: false, value: bigChunk };
-            },
-            cancel,
-          }),
-        },
-      }),
-    );
+  it("fails when the body stream errors partway", async () => {
+    const body = new Readable({ read() {} });
+    guardedGet.mockResolvedValue({ ...htmlResponse(""), body });
+    body.destroy(new Error("aborted"));
 
-    const { fetchHtml } = await import(
-      "@/features/recipes/extraction/fetch-html"
-    );
-    const result = await fetchHtml("https://example.com/recipe", {
-      deadlineAt: Date.now() + 5000,
-    });
-
-    expect(result).toEqual({ ok: false });
-    expect(cancel).toHaveBeenCalled();
+    expect(await run("https://example.com/recipe")).toEqual({ ok: false });
   });
 
   it("fails immediately when the deadline has already passed", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-
-    const { fetchHtml } = await import(
-      "@/features/recipes/extraction/fetch-html"
-    );
-    const result = await fetchHtml("https://example.com/recipe", {
-      deadlineAt: Date.now() - 1,
-    });
+    const result = await run("https://example.com/recipe", Date.now() - 1);
 
     expect(result).toEqual({ ok: false });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(guardedGet).not.toHaveBeenCalled();
+  });
+
+  it("caps each request's timeout at 5 seconds and at the remaining deadline", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    guardedGet.mockImplementation(async () => htmlResponse("<html></html>"));
+
+    await run("https://example.com/recipe", Date.now() + 60_000);
+    await run("https://example.com/recipe", Date.now() + 1_000);
+
+    expect(timeout.mock.calls[0]?.[0]).toBe(5_000);
+    expect(timeout.mock.calls[1]?.[0]).toBeLessThanOrEqual(1_000);
+    expect(guardedGet.mock.calls[0]?.[1].signal).toBe(
+      timeout.mock.results[0]?.value,
+    );
+    timeout.mockRestore();
   });
 });
