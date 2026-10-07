@@ -5,6 +5,11 @@ import { extractRecipeFromJsonLd } from "@/features/recipes/extraction/jsonld";
 import { extractReadable } from "@/features/recipes/extraction/readable";
 import { splitIngredientNameAndQuantity } from "@/features/recipes/extraction/split-ingredient";
 
+const guardedGet = vi.hoisted(() => vi.fn());
+vi.mock("@/features/recipes/extraction/guarded-request", () => ({
+  guardedGet,
+}));
+
 describe("isSnsHost", () => {
   it("returns true for X (x.com / twitter.com), with or without www", () => {
     expect(isSnsHost("https://x.com/foo/status/1")).toBe(true);
@@ -280,11 +285,6 @@ describe("extractReadable", () => {
 });
 
 describe("fetchHtml", () => {
-  const guardedGet = vi.hoisted(() => vi.fn());
-  vi.mock("@/features/recipes/extraction/guarded-request", () => ({
-    guardedGet,
-  }));
-
   afterEach(() => {
     guardedGet.mockReset();
   });
