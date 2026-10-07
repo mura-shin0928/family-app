@@ -28,6 +28,8 @@ function makeTask(overrides: Partial<TaskDTO> = {}): TaskDTO {
 
 const TASK_ID = "00000000-0000-4000-8000-000000000001";
 const LOC = "11111111-1111-4111-8111-111111111111";
+const CHILD = "22222222-2222-4222-8222-222222222222";
+const OTHER_CHILD = "33333333-3333-4333-8333-333333333333";
 
 describe("draftFromTask", () => {
   it("null の url/note を空文字にする", () => {
@@ -77,6 +79,19 @@ describe("buildTaskPatch", () => {
     expect(
       buildTaskPatch(withLoc, { ...withLoc, purchaseLocationId: null }),
     ).toEqual({ purchaseLocationId: "" });
+  });
+
+  it("記録する子は、付ける・付け替えるときは id、外すときは空文字で送る", () => {
+    expect(
+      buildTaskPatch(original, { ...original, recordChildId: CHILD }),
+    ).toEqual({ recordChildId: CHILD });
+    const withChild = { ...original, recordChildId: CHILD };
+    expect(
+      buildTaskPatch(withChild, { ...withChild, recordChildId: OTHER_CHILD }),
+    ).toEqual({ recordChildId: OTHER_CHILD });
+    expect(
+      buildTaskPatch(withChild, { ...withChild, recordChildId: null }),
+    ).toEqual({ recordChildId: "" });
   });
 
   it("買うものをオフにしても場所は送らない", () => {
@@ -138,6 +153,9 @@ describe("patchToTaskFields", () => {
     ).toEqual({ dueOn: null, url: null, note: "x", purchaseLocationId: null });
     expect(patchToTaskFields({ isPurchase: true })).toEqual({
       isPurchase: true,
+    });
+    expect(patchToTaskFields({ recordChildId: "" })).toEqual({
+      recordChildId: null,
     });
   });
 });
