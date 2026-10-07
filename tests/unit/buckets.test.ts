@@ -90,10 +90,22 @@ describe("todayProgress", () => {
   const progressOf = (open: TaskDTO[], completedTodayCount: number) =>
     todayProgress(bucketOpenTasks(open, TODAY), completedTodayCount);
 
-  it("is remaining while an overdue or today task remains", () => {
+  it("is overdue while an overdue task remains, even alongside a today task", () => {
     expect(progressOf([makeTask({ id: "a", dueOn: "2026-08-16" })], 1)).toBe(
-      "remaining",
+      "overdue",
     );
+    expect(
+      progressOf(
+        [
+          makeTask({ id: "a", dueOn: "2026-08-16" }),
+          makeTask({ id: "b", dueOn: TODAY }),
+        ],
+        0,
+      ),
+    ).toBe("overdue");
+  });
+
+  it("is remaining while only today tasks remain", () => {
     expect(progressOf([makeTask({ id: "a", dueOn: TODAY })], 0)).toBe(
       "remaining",
     );
