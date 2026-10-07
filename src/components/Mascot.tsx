@@ -6,7 +6,8 @@ export type MascotExpression =
   | "wink"
   | "surprised"
   | "sleepy"
-  | "cheer";
+  | "cheer"
+  | "worried";
 
 const EYE_STROKE = "2.4";
 const LEFT_EYE_SMILE = "M34 59q3-3.5 6 0";
@@ -14,7 +15,7 @@ const RIGHT_EYE_SMILE = "M50 59q3-3.5 6 0";
 
 /**
  * マスコット「おうちくん」。輪郭線なしの面で描く。
- * ふだん・にっこり・ウインク・きょとん・ひと休み（カップ）・全部できた（万歳）の6表情。
+ * ふだん・にっこり・ウインク・きょとん・ひと休み（カップ）・全部できた（万歳）・こまり顔の7表情。
  */
 export function Mascot({
   expression = "happy",
@@ -94,6 +95,15 @@ function Eyes({ expression }: { expression: MascotExpression }) {
           <path d={RIGHT_EYE_SMILE} stroke={c.eye} strokeWidth={EYE_STROKE} />
         </g>
       );
+    case "worried":
+      return (
+        <g>
+          {/* ハの字の眉 */}
+          <path d="M33 53l6-2.5M57 53l-6-2.5" stroke={c.eye} strokeWidth="2" />
+          <circle cx="37" cy="58" r="3" fill={c.eye} />
+          <circle cx="53" cy="58" r="3" fill={c.eye} />
+        </g>
+      );
     default:
       return (
         <g>
@@ -112,6 +122,14 @@ function Mouth({ expression }: { expression: MascotExpression }) {
       return <path d="M41 64q4 6 8 0z" fill={c.eye} />;
     case "surprised":
       return <circle cx="45" cy="66" r="2.6" fill={c.eye} />;
+    case "worried":
+      return (
+        <path
+          d="M41.5 67q3.5-3.5 7 0"
+          stroke={c.eye}
+          strokeWidth={EYE_STROKE}
+        />
+      );
     default:
       return (
         <path

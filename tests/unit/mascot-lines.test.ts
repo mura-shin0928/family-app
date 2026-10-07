@@ -14,6 +14,16 @@ describe("mascotLineAt", () => {
     expect(mascotLineAt("allDone", 0)).toBe(MASCOT_GREETING.allDone);
   });
 
+  it("looks worried only when something is overdue", () => {
+    const worried = Object.entries(MASCOT_GREETING)
+      .filter(([, line]) => line.expression === "worried")
+      .map(([progress]) => progress);
+    expect(worried).toEqual(["overdue"]);
+    expect(MASCOT_CHATTER.some((line) => line.expression === "worried")).toBe(
+      false,
+    );
+  });
+
   it("moves through the chatter one tap at a time", () => {
     MASCOT_CHATTER.forEach((line, index) => {
       expect(mascotLineAt("remaining", index + 1)).toBe(line);

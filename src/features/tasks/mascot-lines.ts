@@ -9,6 +9,10 @@ export type MascotLine = {
 
 /** 画面を開いたときのひとこと。万歳は全部できたときだけ。 */
 export const MASCOT_GREETING: Record<TodayProgress, MascotLine> = {
+  overdue: {
+    expression: "worried",
+    lines: ["期限がすぎたものがあるよ。", "いっしょにかたづけよう！"],
+  },
   remaining: {
     expression: "happy",
     lines: ["今日やることがあるよ。", "いっしょにやろう！"],

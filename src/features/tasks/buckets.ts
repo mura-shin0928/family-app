@@ -71,6 +71,7 @@ export function splitOpenAndCompletedToday(tasks: readonly TaskDTO[]): {
 }
 
 export type TodayProgress =
+  | "overdue"
   | "remaining"
   | "allDone"
   | "todayDone"
@@ -79,15 +80,15 @@ export type TodayProgress =
 
 /**
  * 今日のぶん（「期限超過」と「今日」）の進み具合。
+ * 期限超過がひとつでもあれば overdue、今日のぶんだけが残っていれば remaining。
  * 先の期限・期限なしが残っていても、今日のぶんが片付いていれば区切りとして扱う。
  */
 export function todayProgress(
   buckets: Record<TaskBucketKey, readonly TaskDTO[]>,
   completedTodayCount: number,
 ): TodayProgress {
-  if (buckets.overdue.length > 0 || buckets.today.length > 0) {
-    return "remaining";
-  }
+  if (buckets.overdue.length > 0) return "overdue";
+  if (buckets.today.length > 0) return "remaining";
   const hasLater =
     buckets.soon.length > 0 ||
     buckets.upcoming.length > 0 ||
