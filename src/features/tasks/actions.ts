@@ -61,6 +61,12 @@ const CREATE_TASK_ERROR_MESSAGES: Record<string, string> = {
   child_not_found: "子供が見つかりません",
 };
 
+/** set_task_record_child (SQL) の raise exception メッセージ → 画面表示文言。 */
+const SET_TASK_RECORD_CHILD_ERROR_MESSAGES: Record<string, string> = {
+  task_not_found: "タスクが見つかりません",
+  child_not_found: "子供が見つかりません",
+};
+
 export async function createTask(input: {
   id: string;
   title: string;
@@ -152,8 +158,16 @@ export async function updateTask(
     };
   }
 
-  const { taskId, title, dueOn, isPurchase, purchaseLocationId, url, note } =
-    parsed.data;
+  const {
+    taskId,
+    title,
+    dueOn,
+    isPurchase,
+    purchaseLocationId,
+    recordChildId,
+    url,
+    note,
+  } = parsed.data;
   const update: {
     title?: string;
     due_on?: string | null;
@@ -182,24 +196,39 @@ export async function updateTask(
     update.purchase_location_id = location.value;
   }
 
-  if (Object.keys(update).length === 0) {
-    return { ok: true };
+  if (Object.keys(update).length > 0) {
+    const { data, error } = await supabase
+      .from("tasks")
+      .update(update)
+      .eq("id", taskId)
+      .eq("family_id", member.familyId)
+      .is("deleted_at", null)
+      .select("id");
+
+    if (error) {
+      logActionError("updateTask", error);
+      return { ok: false, error: "更新に失敗しました" };
+    }
+    if (data.length === 0) {
+      return { ok: false, error: "タスクが見つかりません" };
+    }
   }
 
-  const { data, error } = await supabase
-    .from("tasks")
-    .update(update)
-    .eq("id", taskId)
-    .eq("family_id", member.familyId)
-    .is("deleted_at", null)
-    .select("id");
+  if (recordChildId !== undefined) {
+    // 空文字列 = 記録しない。関数側の default null に任せる。
+    const { error } = await supabase.rpc("set_task_record_child", {
+      p_task_id: taskId,
+      p_child_id: recordChildId || undefined,
+    });
 
-  if (error) {
-    logActionError("updateTask", error);
-    return { ok: false, error: "更新に失敗しました" };
-  }
-  if (data.length === 0) {
-    return { ok: false, error: "タスクが見つかりません" };
+    if (error) {
+      const known = SET_TASK_RECORD_CHILD_ERROR_MESSAGES[error.message];
+      if (!known) {
+        logActionError("updateTask", error);
+      }
+      return { ok: false, error: known ?? "更新に失敗しました" };
+    }
+    revalidatePath("/life-events");
   }
 
   return { ok: true };

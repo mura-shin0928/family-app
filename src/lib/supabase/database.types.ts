@@ -620,6 +620,10 @@ export type Database = {
         Args: { p_daily_limit: number; p_family_id: string }
         Returns: undefined
       }
+      set_task_record_child: {
+        Args: { p_child_id?: string; p_task_id: string }
+        Returns: undefined
+      }
       undo_add_ingredients_to_purchases: {
         Args: { p_task_ids: string[] }
         Returns: undefined

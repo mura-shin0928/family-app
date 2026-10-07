@@ -266,6 +266,171 @@ describe("タスク・ライフイベント項目の書き込み関数", () => {
     });
   });
 
+  describe("set_task_record_child", () => {
+    async function createTask(recordChildId?: string) {
+      const id = randomUUID();
+      const { error } = await clientA.rpc("create_task", {
+        p_id: id,
+        p_title: `記録の付け外し-${runId}`,
+        p_is_purchase: false,
+        p_record_child_id: recordChildId,
+      });
+      if (error) throw new Error(error.message);
+      return id;
+    }
+
+    async function itemById(id: string | null | undefined) {
+      const { data, error } = await admin
+        .from("life_event_items")
+        .select("child_id, catalog_key, title, status, done_on, deleted_at")
+        .eq("id", id)
+        .single();
+      if (error) throw new Error(error.message);
+      return data;
+    }
+
+    it("付いていないタスクに子を付けると、in_task の項目を作って繋ぐ", async () => {
+      const id = await createTask();
+      const { error } = await clientA.rpc("set_task_record_child", {
+        p_task_id: id,
+        p_child_id: childF1,
+      });
+      expect(error).toBeNull();
+
+      const task = await taskById(id);
+      expect(await itemById(task?.life_event_item_id)).toEqual({
+        child_id: childF1,
+        catalog_key: null,
+        title: `記録の付け外し-${runId}`,
+        status: "in_task",
+        done_on: null,
+        deleted_at: null,
+      });
+    });
+
+    it("完了済みのタスクに付けると、項目も済みで作る", async () => {
+      const id = await createTask();
+      await admin
+        .from("tasks")
+        .update({
+          status: "done",
+          completed_at: "2026-10-01T03:00:00Z",
+          completed_by: memberAId,
+        })
+        .eq("id", id);
+
+      const { error } = await clientA.rpc("set_task_record_child", {
+        p_task_id: id,
+        p_child_id: childF1,
+      });
+      expect(error).toBeNull();
+
+      const task = await taskById(id);
+      expect(await itemById(task?.life_event_item_id)).toMatchObject({
+        status: "done",
+        done_on: "2026-10-01",
+      });
+    });
+
+    it("外すと、タスクからの参照を消して項目を論理削除する", async () => {
+      const id = await createTask(childF1);
+      const itemId = (await taskById(id))?.life_event_item_id;
+
+      const { error } = await clientA.rpc("set_task_record_child", {
+        p_task_id: id,
+      });
+      expect(error).toBeNull();
+
+      expect((await taskById(id))?.life_event_item_id).toBeNull();
+      expect((await itemById(itemId)).deleted_at).not.toBeNull();
+    });
+
+    it("別の子に付け替えると、元の項目を論理削除して新しい項目に繋ぐ", async () => {
+      const { data: sibling } = await admin
+        .from("children")
+        .insert({
+          family_id: familyF1,
+          display_name: "F1の下の子",
+          created_by: memberAId,
+        })
+        .select("id")
+        .single();
+      const id = await createTask(childF1);
+      const oldItemId = (await taskById(id))?.life_event_item_id;
+
+      const { error } = await clientA.rpc("set_task_record_child", {
+        p_task_id: id,
+        p_child_id: sibling?.id,
+      });
+      expect(error).toBeNull();
+
+      const newItemId = (await taskById(id))?.life_event_item_id;
+      expect(newItemId).not.toBe(oldItemId);
+      expect((await itemById(newItemId)).child_id).toBe(sibling?.id);
+      expect((await itemById(oldItemId)).deleted_at).not.toBeNull();
+    });
+
+    it("同じ子を指定しても項目を作り直さない", async () => {
+      const id = await createTask(childF1);
+      const itemId = (await taskById(id))?.life_event_item_id;
+
+      const { error } = await clientA.rpc("set_task_record_child", {
+        p_task_id: id,
+        p_child_id: childF1,
+      });
+      expect(error).toBeNull();
+      expect((await taskById(id))?.life_event_item_id).toBe(itemId);
+    });
+
+    it("同じ項目を指すタスクがほかにあれば、外しても項目は残る", async () => {
+      const args = {
+        p_child_id: childF1,
+        p_catalog_key: `test:shared-${runId}`,
+        p_item_title: "妊婦健診を受ける",
+        p_task_title: "妊婦健診を受ける",
+      };
+      const first = await clientA.rpc("add_life_event_item_to_task", args);
+      const second = await clientA.rpc("add_life_event_item_to_task", args);
+      const itemId = (await taskById(first.data))?.life_event_item_id;
+
+      const { error } = await clientA.rpc("set_task_record_child", {
+        p_task_id: first.data,
+      });
+      expect(error).toBeNull();
+
+      expect((await taskById(first.data))?.life_event_item_id).toBeNull();
+      expect((await taskById(second.data))?.life_event_item_id).toBe(itemId);
+      expect((await itemById(itemId)).deleted_at).toBeNull();
+    });
+
+    it("他の家族の子は指定できず、元の記録も変わらない", async () => {
+      const id = await createTask(childF1);
+      const itemId = (await taskById(id))?.life_event_item_id;
+
+      const { error } = await clientA.rpc("set_task_record_child", {
+        p_task_id: id,
+        p_child_id: childF2,
+      });
+      expect(error?.message).toContain("child_not_found");
+      expect((await taskById(id))?.life_event_item_id).toBe(itemId);
+      expect((await itemById(itemId)).deleted_at).toBeNull();
+    });
+
+    it("他の家族のタスクは変えられない", async () => {
+      const { data: other } = await admin
+        .from("tasks")
+        .insert({ family_id: familyF2, title: "他家族のタスク", sort_order: 1 })
+        .select("id")
+        .single();
+
+      const { error } = await clientA.rpc("set_task_record_child", {
+        p_task_id: other?.id,
+        p_child_id: childF1,
+      });
+      expect(error?.message).toContain("task_not_found");
+    });
+  });
+
   describe("add_life_event_item_to_task", () => {
     it("項目とタスクを作って繋ぎ、タスクの id を返す", async () => {
       const key = `test:add-${runId}`;

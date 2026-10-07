@@ -13,12 +13,13 @@ import Chip from "@mui/material/Chip";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
-import { useRef, useState } from "react";
+import { type MouseEvent, useRef, useState } from "react";
 import { EditSheet, EditSheetForm } from "@/components/EditSheet";
+import type { Child } from "@/features/children/types";
 import { PurchaseLocationOptions } from "@/features/purchase-locations/components/PurchaseLocationOptions";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { todayInJst } from "@/lib/date";
@@ -39,7 +40,7 @@ import { DuePanel } from "./DuePanel";
 type Props = {
   task: TaskDTO | null;
   locations: PurchaseLocation[];
-  recordChildName: string | null;
+  familyChildren: Child[];
   onSave: (task: TaskDTO, patch: TaskUpdatePatch) => void;
   onDelete: (task: TaskDTO) => void;
   onClose: () => void;
@@ -51,7 +52,7 @@ const inputStyle = { style: { fontSize: "1rem" } };
 export function TaskEditSheet({
   task,
   locations,
-  recordChildName,
+  familyChildren,
   onSave,
   onDelete,
   onClose,
@@ -63,7 +64,7 @@ export function TaskEditSheet({
           key={task.id}
           task={task}
           locations={locations}
-          recordChildName={recordChildName}
+          familyChildren={familyChildren}
           onSave={onSave}
           onDelete={onDelete}
           onClose={onClose}
@@ -76,7 +77,7 @@ export function TaskEditSheet({
 function TaskEditForm({
   task,
   locations,
-  recordChildName,
+  familyChildren,
   onSave,
   onDelete,
   onClose,
@@ -96,6 +97,9 @@ function TaskEditForm({
   const selectedLocation =
     locations.find((location) => location.id === draft.purchaseLocationId) ??
     null;
+  const [recordAnchor, setRecordAnchor] = useState<HTMLElement | null>(null);
+  const recordChild =
+    familyChildren.find((child) => child.id === draft.recordChildId) ?? null;
 
   function update(fields: Partial<TaskDraft>) {
     setDraft((current) => ({ ...current, ...fields }));
@@ -103,6 +107,19 @@ function TaskEditForm({
 
   function clearError(field: keyof TaskDraftErrors) {
     setErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
+  // オンのときに押したら外す。オフのときは子が1人ならその子、複数なら選ばせる。
+  function toggleRecord(event: MouseEvent<HTMLElement>) {
+    if (draft.recordChildId !== null) {
+      update({ recordChildId: null });
+      return;
+    }
+    if (familyChildren.length === 1) {
+      update({ recordChildId: familyChildren[0]?.id ?? null });
+      return;
+    }
+    setRecordAnchor(event.currentTarget);
   }
 
   function selectDue(dueOn: string | null) {
@@ -183,6 +200,21 @@ function TaskEditForm({
               onClick={(event) => setLocationAnchor(event.currentTarget)}
             />
           )}
+          {(familyChildren.length > 0 || recordChild) && (
+            <Chip
+              icon={<ChildCareIcon />}
+              label={recordChild ? recordChild.displayName : "イベント"}
+              aria-label={
+                recordChild
+                  ? `${recordChild.displayName}のライフイベントに記録する（押すと外す）`
+                  : "ライフイベントに記録する"
+              }
+              clickable
+              color={recordChild ? "primary" : "default"}
+              variant={recordChild ? "filled" : "outlined"}
+              onClick={toggleRecord}
+            />
+          )}
           {/*
           シートの上端より上まで重ねて出す。シートは overflow でスクロールするため、
           absolute だと切れる。fixed 配置ならシートの外まで出せ、Portal を使わないので
@@ -225,6 +257,23 @@ function TaskEditForm({
             setLocationAnchor(null);
           }}
         />
+      </Menu>
+      <Menu
+        anchorEl={recordAnchor}
+        open={!!recordAnchor}
+        onClose={() => setRecordAnchor(null)}
+      >
+        {familyChildren.map((child) => (
+          <MenuItem
+            key={child.id}
+            onClick={() => {
+              update({ recordChildId: child.id });
+              setRecordAnchor(null);
+            }}
+          >
+            {child.displayName}
+          </MenuItem>
+        ))}
       </Menu>
 
       <TextField
@@ -293,20 +342,6 @@ function TaskEditForm({
           htmlInput: inputStyle,
         }}
       />
-
-      {recordChildName && (
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 0.5,
-            color: "text.secondary",
-          }}
-        >
-          <ChildCareIcon sx={{ fontSize: 16 }} />
-          <Typography variant="body2">{recordChildName}の記録に残す</Typography>
-        </Box>
-      )}
     </EditSheetForm>
   );
 }

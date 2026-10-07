@@ -49,6 +49,7 @@ export const updateTaskSchema = z.object({
   dueOn: z.union([dateStringSchema, z.literal("")]).optional(),
   isPurchase: z.boolean().optional(),
   purchaseLocationId: purchaseLocationIdSchema.optional(),
+  recordChildId: recordChildIdSchema.optional(),
   url: urlSchema.optional(),
   note: noteSchema.optional(),
 });

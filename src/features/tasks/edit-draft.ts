@@ -8,6 +8,7 @@ export type TaskDraft = {
   dueOn: string | null;
   isPurchase: boolean;
   purchaseLocationId: string | null;
+  recordChildId: string | null;
   url: string;
   note: string;
 };
@@ -18,6 +19,7 @@ export type TaskUpdatePatch = Partial<{
   dueOn: string;
   isPurchase: boolean;
   purchaseLocationId: string;
+  recordChildId: string;
   url: string;
   note: string;
 }>;
@@ -30,6 +32,7 @@ export function draftFromTask(task: TaskDTO): TaskDraft {
     dueOn: task.dueOn,
     isPurchase: task.isPurchase,
     purchaseLocationId: task.purchaseLocationId,
+    recordChildId: task.recordChildId,
     url: task.url ?? "",
     note: task.note ?? "",
   };
@@ -52,6 +55,9 @@ export function buildTaskPatch(
   }
   if (draft.purchaseLocationId !== original.purchaseLocationId) {
     patch.purchaseLocationId = draft.purchaseLocationId ?? "";
+  }
+  if (draft.recordChildId !== original.recordChildId) {
+    patch.recordChildId = draft.recordChildId ?? "";
   }
   const url = draft.url.trim();
   if (url !== original.url.trim()) patch.url = url;
@@ -91,6 +97,9 @@ export function patchToTaskFields(patch: TaskUpdatePatch): Partial<TaskDTO> {
   if (patch.isPurchase !== undefined) fields.isPurchase = patch.isPurchase;
   if (patch.purchaseLocationId !== undefined) {
     fields.purchaseLocationId = patch.purchaseLocationId || null;
+  }
+  if (patch.recordChildId !== undefined) {
+    fields.recordChildId = patch.recordChildId || null;
   }
   if (patch.url !== undefined) fields.url = patch.url || null;
   if (patch.note !== undefined) fields.note = patch.note || null;

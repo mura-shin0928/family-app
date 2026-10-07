@@ -249,7 +249,7 @@ export function TaskListScreen({
       <TaskEditSheet
         task={editingTask}
         locations={locations}
-        recordChildName={editingTask ? recordChildNameOf(editingTask) : null}
+        familyChildren={familyChildren}
         onSave={(task, patch) => {
           mutations.update({ taskId: task.id, ...patch });
           setEditingTaskId(null);
