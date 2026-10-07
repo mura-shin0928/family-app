@@ -140,22 +140,23 @@ describe("作成済みデータを持つメンバーの削除", () => {
   });
 
   // removeMember / removeAdminMember と同じクエリ
-  it.each(
-    AUTHORED_TABLES,
-  )("%s を作成したメンバーを家族から削除できる", async (table) => {
-    const target = await addMember(`author-${table}`);
-    await seedAuthoredRow(table, target.memberId);
-    const client = await signInAsClient(owner.email, PASSWORD);
+  it.each(AUTHORED_TABLES)(
+    "%s を作成したメンバーを家族から削除できる",
+    async (table) => {
+      const target = await addMember(`author-${table}`);
+      await seedAuthoredRow(table, target.memberId);
+      const client = await signInAsClient(owner.email, PASSWORD);
 
-    const { error } = await client
-      .from("family_members")
-      .delete()
-      .eq("id", target.memberId)
-      .eq("family_id", familyId);
+      const { error } = await client
+        .from("family_members")
+        .delete()
+        .eq("id", target.memberId)
+        .eq("family_id", familyId);
 
-    expect(error).toBeNull();
-    expect(await memberExists(target.memberId)).toBe(false);
-  });
+      expect(error).toBeNull();
+      expect(await memberExists(target.memberId)).toBe(false);
+    },
+  );
 
   it("削除されたメンバーが作ったタスクは残り、残りのメンバーが更新できる", async () => {
     const target = await addMember("author-kept");

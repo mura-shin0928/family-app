@@ -17,7 +17,7 @@
     "test:integration": "vitest run -c vitest.integration.config.ts",
     "db:types": "supabase gen types typescript --local --schema public > src/lib/supabase/database.types.ts",
     "admin": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.admin.local scripts/admin.mts",
-    "backfill:recipe-images": "node --env-file=.env.admin.local node_modules/vite-node/vite-node.mjs -c vitest.config.ts scripts/backfill-recipe-images.ts",
+    "backfill:recipe-images": "node --env-file=.env.admin.local node_modules/.bin/vite-node -c vitest.config.ts scripts/backfill-recipe-images.ts",
     "dev:login": "node scripts/dev-login.mjs"
   },
   "dependencies": {
@@ -27,33 +27,33 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "@mui/icons-material": "^9.3.1",
-    "@mui/material": "^9.3.1",
-    "@mui/material-nextjs": "^9.3.0",
-    "@supabase/ssr": "^0.12.4",
-    "@supabase/supabase-js": "^2.112.3",
-    "@tanstack/react-query": "^5.101.4",
+    "@mui/icons-material": "^9.4.0",
+    "@mui/material": "^9.4.0",
+    "@mui/material-nextjs": "^9.4.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.117.3",
+    "@tanstack/react-query": "^5.104.1",
     "date-fns": "^4.4.0",
     "date-fns-tz": "^3.2.0",
     "next": "16.3.8",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "server-only": "^0.0.1",
-    "zod": "^4.4.3"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.2",
+    "@biomejs/biome": "2.5.15",
     "@digital-go-jp/design-tokens": "^2.0.1",
-    "@tanstack/react-query-devtools": "^5.101.4",
-    "@types/node": "^20",
+    "@tanstack/react-query-devtools": "^5.104.1",
+    "@types/node": "^24.19.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
-    "typescript": "^5",
-    "vitest": "^3"
+    "typescript": "^7.0.2",
+    "vite-node": "^6.0.0",
+    "vitest": "^5.0.3"
   },
   "allowScripts": {
-    "esbuild@0.28.2": true,
     "fsevents@2.3.3": true
   }
 }
