@@ -9,14 +9,19 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
-import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useRouter } from "next/navigation";
 import { type MouseEvent, useState, useTransition } from "react";
+import { ResultSnackbar } from "@/components/ResultSnackbar";
 import type { FamilyMemberDTO } from "@/features/family/types";
 import type { ActionResult } from "@/lib/action-result";
 import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
+import {
+  type ResultToast,
+  successToast,
+  toResultToast,
+} from "@/lib/result-toast";
 import type { CreateInvitationResult } from "../actions";
 import {
   buildInviteUrl,
@@ -58,7 +63,7 @@ export function InvitationsScreen({
   const [isPending, startTransition] = useTransition();
   const [inviteFormOpen, setInviteFormOpen] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<ResultToast | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<InvitationDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MemberListRow | null>(null);
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
@@ -80,7 +85,7 @@ export function InvitationsScreen({
     startTransition(async () => {
       const result = await revokeInvitation({ invitationId: invitation.id });
       setRevokeTarget(null);
-      setToast(result.ok ? "招待を取り消しました" : result.error);
+      setToast(toResultToast(result, "招待を取り消しました"));
       if (result.ok) router.refresh();
     });
   }
@@ -92,7 +97,7 @@ export function InvitationsScreen({
           ? await removeMember({ memberId: target.id })
           : await deleteInvitation({ invitationId: target.id });
       setDeleteTarget(null);
-      setToast(result.ok ? "メンバーを削除しました" : result.error);
+      setToast(toResultToast(result, "メンバーを削除しました"));
       if (result.ok) router.refresh();
     });
   }
@@ -164,7 +169,7 @@ export function InvitationsScreen({
       <InviteUrlDialog
         url={inviteUrl}
         onClose={() => setInviteUrl(null)}
-        onCopied={() => setToast("URLをコピーしました")}
+        onCopied={() => setToast(successToast("URLをコピーしました"))}
       />
 
       <Dialog
@@ -239,11 +244,10 @@ export function InvitationsScreen({
         )}
       </Menu>
 
-      <Snackbar
-        open={toast !== null}
+      <ResultSnackbar
+        toast={toast}
         autoHideDuration={3000}
         onClose={() => setToast(null)}
-        message={toast}
       />
     </Stack>
   );

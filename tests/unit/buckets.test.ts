@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   bucketKeyForDueOn,
   bucketOpenTasks,
+  completingFinishesToday,
   splitOpenAndCompletedToday,
   todayProgress,
 } from "@/features/tasks/buckets";
@@ -84,6 +85,22 @@ describe("splitOpenAndCompletedToday", () => {
     expect(open.map((t) => t.id)).toEqual(["open-1", "open-2"]);
     expect(completedToday.map((t) => t.id)).toEqual(["done-1"]);
   });
+
+  it("keeps a just-completed task in open while it lingers", () => {
+    const tasks = [
+      makeTask({ id: "open-1", status: "open" }),
+      makeTask({ id: "done-1", status: "done" }),
+      makeTask({ id: "done-2", status: "done" }),
+    ];
+
+    const { open, completedToday } = splitOpenAndCompletedToday(
+      tasks,
+      new Set(["done-1"]),
+    );
+
+    expect(open.map((t) => t.id)).toEqual(["open-1", "done-1"]);
+    expect(completedToday.map((t) => t.id)).toEqual(["done-2"]);
+  });
 });
 
 describe("todayProgress", () => {
@@ -130,5 +147,44 @@ describe("todayProgress", () => {
 
   it("is nothingToDo when there is no task at all", () => {
     expect(progressOf([], 0)).toBe("nothingToDo");
+  });
+});
+
+describe("completingFinishesToday", () => {
+  it("is true when the last today task is completed", () => {
+    const tasks = [
+      makeTask({ id: "a", dueOn: TODAY }),
+      makeTask({ id: "later", dueOn: "2026-09-30" }),
+    ];
+    expect(completingFinishesToday(tasks, "a", TODAY)).toBe(true);
+  });
+
+  it("is true when the last overdue task is completed", () => {
+    const tasks = [makeTask({ id: "a", dueOn: "2026-08-16" })];
+    expect(completingFinishesToday(tasks, "a", TODAY)).toBe(true);
+  });
+
+  it("is false while another today task remains", () => {
+    const tasks = [
+      makeTask({ id: "a", dueOn: TODAY }),
+      makeTask({ id: "b", dueOn: TODAY }),
+    ];
+    expect(completingFinishesToday(tasks, "a", TODAY)).toBe(false);
+  });
+
+  it("is false when the completed task is not part of today", () => {
+    const tasks = [
+      makeTask({ id: "a", dueOn: TODAY }),
+      makeTask({ id: "none" }),
+    ];
+    expect(completingFinishesToday(tasks, "none", TODAY)).toBe(false);
+  });
+
+  it("is false when today was already finished", () => {
+    const tasks = [
+      makeTask({ id: "done", dueOn: TODAY, status: "done" }),
+      makeTask({ id: "none" }),
+    ];
+    expect(completingFinishesToday(tasks, "none", TODAY)).toBe(false);
   });
 });

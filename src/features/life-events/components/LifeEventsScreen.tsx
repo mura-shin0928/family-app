@@ -3,7 +3,6 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
@@ -13,11 +12,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { ResultSnackbar } from "@/components/ResultSnackbar";
 import type { Child } from "@/features/children/types";
 import { deleteTask } from "@/features/tasks/actions";
 import { TASKS_QUERY_KEY } from "@/features/tasks/types";
 import { todayInJst } from "@/lib/date";
 import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
+import { successToast } from "@/lib/result-toast";
 import {
   addLifeEventItemToTask,
   recordLifeEventItemDone,
@@ -227,13 +228,12 @@ export function LifeEventsScreen({
         onSubmit={handleSubmitDone}
       />
 
-      <Snackbar
-        open={!!toast}
+      <ResultSnackbar
+        toast={toast ? successToast("タスクに追加しました") : null}
         onClose={() => setToast(null)}
-        autoHideDuration={8000}
+        autoHideDuration={3000}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         sx={{ bottom: 72 }}
-        message="タスクに追加しました"
         action={
           <Button color="inherit" size="small" onClick={handleUndoAddToTask}>
             元に戻す

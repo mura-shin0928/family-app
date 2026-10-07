@@ -12,15 +12,16 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import Divider from "@mui/material/Divider";
-import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { ResultSnackbar } from "@/components/ResultSnackbar";
 import { TASKS_QUERY_KEY } from "@/features/tasks/types";
 import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
+import { type ResultToast, successToast } from "@/lib/result-toast";
 import { isHttpUrl } from "@/lib/url";
 import {
   addIngredientsToPurchases,
@@ -45,10 +46,9 @@ export function RecipeDetailScreen({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkedIds, setCheckedIds] = useState<Record<string, boolean>>({});
-  const [toast, setToast] = useState<{
-    message: string;
-    taskIds: string[];
-  } | null>(null);
+  const [toast, setToast] = useState<
+    (ResultToast & { taskIds: string[] }) | null
+  >(null);
 
   const { data: recipe = initialRecipe } = useQuery({
     queryKey: recipeDetailQueryKey(initialRecipe.id),
@@ -69,7 +69,7 @@ export function RecipeDetailScreen({
       });
       queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
       setToast({
-        message: `${result.taskIds.length}件を買うものに追加しました`,
+        ...successToast(`${result.taskIds.length}件を買うものに追加しました`),
         taskIds: result.taskIds,
       });
     },
@@ -293,13 +293,12 @@ export function RecipeDetailScreen({
         </DialogActions>
       </Dialog>
 
-      <Snackbar
-        open={!!toast}
+      <ResultSnackbar
+        toast={toast}
         onClose={() => setToast(null)}
-        autoHideDuration={8000}
+        autoHideDuration={3000}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         sx={{ bottom: 72 }}
-        message={toast?.message}
         action={
           <Button
             color="inherit"
