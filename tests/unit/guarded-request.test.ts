@@ -140,16 +140,14 @@ describe("guardedGet", () => {
     expect(connections).toBe(0);
   });
 
-  it.each([
-    "127.0.0.1",
-    "[::1]",
-    "[::ffff:7f00:1]",
-    "0x7f.1",
-  ])("does not connect to the internal IP literal %s", async (host) => {
-    await expect(get(`https://${host}:${port}/`)).rejects.toThrow();
+  it.each(["127.0.0.1", "[::1]", "[::ffff:7f00:1]", "0x7f.1"])(
+    "does not connect to the internal IP literal %s",
+    async (host) => {
+      await expect(get(`https://${host}:${port}/`)).rejects.toThrow();
 
-    expect(connections).toBe(0);
-  });
+      expect(connections).toBe(0);
+    },
+  );
 });
 
 describe("decodeBody", () => {

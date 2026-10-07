@@ -39,9 +39,10 @@ const source: Record<keyof typeof dads, { $value?: string }> = {
 };
 
 describe("dads", () => {
-  it.each(
-    Object.entries(source),
-  )("%s は @digital-go-jp/design-tokens の値と一致する", (key, token) => {
-    expect(dads[key as keyof typeof dads]).toBe(token.$value);
-  });
+  it.each(Object.entries(source))(
+    "%s は @digital-go-jp/design-tokens の値と一致する",
+    (key, token) => {
+      expect(dads[key as keyof typeof dads]).toBe(token.$value);
+    },
+  );
 });
