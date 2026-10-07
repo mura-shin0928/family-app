@@ -45,7 +45,7 @@
     "@biomejs/biome": "2.5.15",
     "@digital-go-jp/design-tokens": "^2.0.1",
     "@tanstack/react-query-devtools": "^5.104.1",
-    "@types/node": "^20",
+    "@types/node": "^24.19.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",

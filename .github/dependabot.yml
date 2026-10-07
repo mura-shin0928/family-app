@@ -17,3 +17,7 @@ updates:
       # 上記以外の minor / patch は1本のPRにまとめる
       minor-and-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # 型は実行環境の Node (.node-version) に合わせる。major は Node を上げるときに手で上げる
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
