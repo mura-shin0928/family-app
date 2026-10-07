@@ -7,17 +7,18 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
-import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { ResultSnackbar } from "@/components/ResultSnackbar";
 import type { Child } from "@/features/children/types";
 import type { PurchaseLocation } from "@/features/purchase-locations/types";
 import { SOON_DAYS } from "@/lib/constants";
 import { todayInJst } from "@/lib/date";
 import {
   bucketOpenTasks,
+  completingFinishesToday,
   splitOpenAndCompletedToday,
   TASK_BUCKET_ORDER,
   type TaskBucketKey,
@@ -29,12 +30,13 @@ import { MascotSpeech } from "./MascotSpeech";
 import { PurchaseTaskList } from "./PurchaseTaskList";
 import { QuickCaptureBar } from "./QuickCaptureBar";
 import { TaskEditSheet } from "./TaskEditSheet";
-import { TaskRow } from "./TaskRow";
+import { COMPLETE_EFFECT_MS, TaskRow } from "./TaskRow";
 import {
   BucketSection,
   CollapsibleSection,
   CompletedSection,
 } from "./TaskSections";
+import { TodayDoneEffect } from "./TodayDoneEffect";
 import { type TaskToast, useTaskMutations } from "./useTaskMutations";
 import { useTasksRealtime } from "./useTasksRealtime";
 
@@ -72,17 +74,52 @@ export function TaskListScreen({
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [showPurchaseOnly, setShowPurchaseOnly] = useState(false);
+  // 今日のぶんを片付けた回数。変わるたびに紙吹雪を作り直す。
+  const [todayDoneCount, setTodayDoneCount] = useState(0);
+  const [lingeringIds, setLingeringIds] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
 
   function showToast(next: TaskToast) {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     setToast(next);
-    toastTimer.current = setTimeout(() => setToast(null), 5000);
+    toastTimer.current = setTimeout(() => setToast(null), 3000);
   }
 
   const mutations = useTaskMutations(showToast);
 
+  function lingerBeforeMoving(taskId: string) {
+    setLingeringIds((current) => new Set(current).add(taskId));
+    setTimeout(() => {
+      setLingeringIds((current) => {
+        const next = new Set(current);
+        next.delete(taskId);
+        return next;
+      });
+    }, COMPLETE_EFFECT_MS);
+  }
+
+  function handleToggle(target: TaskDTO) {
+    const done = target.status !== "done";
+    const motionOk = !window.matchMedia("(prefers-reduced-motion: reduce)")
+      .matches;
+    if (done && motionOk) {
+      lingerBeforeMoving(target.id);
+      if (completingFinishesToday(tasks, target.id, today)) {
+        setTimeout(
+          () => setTodayDoneCount((count) => count + 1),
+          COMPLETE_EFFECT_MS,
+        );
+      }
+    }
+    mutations.toggle({ taskId: target.id, done });
+  }
+
   const today = todayInJst();
-  const { open, completedToday } = splitOpenAndCompletedToday(tasks);
+  const { open, completedToday } = splitOpenAndCompletedToday(
+    tasks,
+    lingeringIds,
+  );
   const buckets = bucketOpenTasks(open, today);
   const progress = todayProgress(buckets, completedToday.length);
 
@@ -125,12 +162,8 @@ export function TaskListScreen({
         today={today}
         recordChildName={recordChildNameOf(task)}
         locations={locations}
-        onToggle={(target) =>
-          mutations.toggle({
-            taskId: target.id,
-            done: target.status !== "done",
-          })
-        }
+        justCompleted={lingeringIds.has(task.id)}
+        onToggle={handleToggle}
         onOpen={(target) => setEditingTaskId(target.id)}
       />
     );
@@ -225,11 +258,12 @@ export function TaskListScreen({
         onSubmit={handleCreate}
       />
 
-      <Snackbar
-        open={!!toast}
+      {todayDoneCount > 0 && <TodayDoneEffect key={todayDoneCount} />}
+
+      <ResultSnackbar
+        toast={toast}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         sx={{ bottom: 152 }}
-        message={toast?.message}
         action={
           toast?.actionLabel ? (
             <Button

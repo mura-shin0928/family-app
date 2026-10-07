@@ -53,15 +53,19 @@ export function bucketOpenTasks(
 /**
  * 今日画面: 未完了(open)タスクと「今日完了したタスク」に分ける。
  * 前日以前に完了したタスクはクエリ側で除外されている前提。
+ * lingeringIds は完了にした直後のタスク。完了の演出を見せる間は未完了の側に残す。
  */
-export function splitOpenAndCompletedToday(tasks: readonly TaskDTO[]): {
+export function splitOpenAndCompletedToday(
+  tasks: readonly TaskDTO[],
+  lingeringIds: ReadonlySet<string> = new Set(),
+): {
   open: TaskDTO[];
   completedToday: TaskDTO[];
 } {
   const open: TaskDTO[] = [];
   const completedToday: TaskDTO[] = [];
   for (const task of tasks) {
-    if (task.status === "open") {
+    if (task.status === "open" || lingeringIds.has(task.id)) {
       open.push(task);
     } else {
       completedToday.push(task);
@@ -95,4 +99,25 @@ export function todayProgress(
     buckets.none.length > 0;
   if (completedTodayCount > 0) return hasLater ? "todayDone" : "allDone";
   return hasLater ? "nothingToday" : "nothingToDo";
+}
+
+const TODAY_PENDING: readonly TodayProgress[] = ["overdue", "remaining"];
+
+/** taskId を完了にすると、残っていた今日のぶんがちょうど片付くか。 */
+export function completingFinishesToday(
+  tasks: readonly TaskDTO[],
+  taskId: string,
+  today: string,
+): boolean {
+  const progressOf = (list: readonly TaskDTO[]) => {
+    const { open, completedToday } = splitOpenAndCompletedToday(list);
+    return todayProgress(bucketOpenTasks(open, today), completedToday.length);
+  };
+  const after = tasks.map((task) =>
+    task.id === taskId ? { ...task, status: "done" as const } : task,
+  );
+  return (
+    TODAY_PENDING.includes(progressOf(tasks)) &&
+    !TODAY_PENDING.includes(progressOf(after))
+  );
 }

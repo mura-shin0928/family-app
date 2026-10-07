@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ActionResult } from "@/lib/action-result";
+import { errorToast, type ResultToast, successToast } from "@/lib/result-toast";
 import { createTask, deleteTask, setTaskDone, updateTask } from "../actions";
 import { patchToTaskFields, type TaskUpdatePatch } from "../edit-draft";
 import {
@@ -12,8 +13,7 @@ import {
 } from "../optimistic-actions";
 import { TASKS_QUERY_KEY, type TaskDTO } from "../types";
 
-export type TaskToast = {
-  message: string;
+export type TaskToast = ResultToast & {
   actionLabel?: string;
   onAction?: () => void;
 };
@@ -77,7 +77,7 @@ function useOptimisticTasksMutation<TInput>(
  * 失敗と、完了にしたときの「元に戻す」は showToast で知らせる。
  */
 export function useTaskMutations(showToast: (toast: TaskToast) => void) {
-  const onFail = (error: string) => showToast({ message: error });
+  const onFail = (error: string) => showToast(errorToast(error));
 
   const createMutation = useOptimisticTasksMutation(
     createTask,
@@ -100,7 +100,7 @@ export function useTaskMutations(showToast: (toast: TaskToast) => void) {
       onOk: (input) => {
         if (input.done) {
           showToast({
-            message: "完了しました",
+            ...successToast("完了しました"),
             actionLabel: "元に戻す",
             onAction: () =>
               toggleMutation.mutate({ taskId: input.taskId, done: false }),
