@@ -59,6 +59,11 @@ export function matchesQuery(item: CatalogItem, query: string): boolean {
   );
 }
 
+/** Web 検索の結果から作った項目か（key は web-catalog.ts の webCatalogKey）。 */
+export function isWebCatalogKey(key: string): boolean {
+  return key.startsWith("web:");
+}
+
 export type ItemState =
   | { status: "in_task" }
   | { status: "done"; doneOn: DateString }

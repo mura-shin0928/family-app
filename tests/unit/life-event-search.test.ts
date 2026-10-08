@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   describeChildStage,
   describeTiming,
+  isWebCatalogKey,
   itemStateFor,
   matchesQuery,
   normalizeForSearch,
@@ -201,5 +202,13 @@ describe("describeChildStage", () => {
     expect(
       describeChildStage({ birthDate: null, expectedBirthDate: null }, today),
     ).toBeNull();
+  });
+});
+
+describe("isWebCatalogKey", () => {
+  it("is true only for web: keys", () => {
+    expect(isWebCatalogKey("web:0123abcd")).toBe(true);
+    expect(isWebCatalogKey("program:abc")).toBe(false);
+    expect(isWebCatalogKey("birth:birth-registration")).toBe(false);
   });
 });

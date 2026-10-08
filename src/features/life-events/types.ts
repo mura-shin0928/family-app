@@ -21,7 +21,8 @@ export type CatalogTiming = {
 /** 全家族共通のカタログの1項目。key は `${kind}:<slug>` で、変更しない。 */
 export type CatalogItem = {
   key: string;
-  kind: LifeEventKind;
+  /** Web 検索の結果（key が `web:`）は種別を持たないので null。 */
+  kind: LifeEventKind | null;
   title: string;
   summary: string;
   note: string | null;
