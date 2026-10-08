@@ -20,9 +20,16 @@ const responseSchema = z.object({
   ),
 });
 
-// basic は1回1クレジット。
+// basic は1回1クレジット。国と自治体のサイトを上に寄せる（prefer なので他のサイトも出る）。
 export function buildRequestBody(query: string) {
-  return { query, max_results: MAX_RESULTS, search_depth: "basic" };
+  return {
+    query,
+    max_results: MAX_RESULTS,
+    search_depth: "basic",
+    country: "japan",
+    include_domains: ["go.jp", "lg.jp"],
+    include_domains_mode: "prefer",
+  };
 }
 
 /** 応答を結果の一覧にする。形が想定と違えば null。 */

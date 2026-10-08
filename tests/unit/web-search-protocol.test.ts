@@ -75,11 +75,14 @@ describe("parseResults", () => {
 });
 
 describe("buildRequestBody", () => {
-  it("asks for 10 basic-depth results", () => {
+  it("asks for 10 basic-depth results from Japan, preferring government sites", () => {
     expect(buildRequestBody("小金井市 産後ケア")).toEqual({
       query: "小金井市 産後ケア",
       max_results: 10,
       search_depth: "basic",
+      country: "japan",
+      include_domains: ["go.jp", "lg.jp"],
+      include_domains_mode: "prefer",
     });
   });
 });

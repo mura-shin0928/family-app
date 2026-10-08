@@ -26,6 +26,15 @@ describe("buildSearchQuery", () => {
     expect(buildSearchQuery("産後ケア", null)).toBe("産後ケア");
   });
 
+  it("does not repeat the municipality name when the query already has it", () => {
+    expect(buildSearchQuery("小金井市 産後ケア", "小金井市")).toBe(
+      "小金井市 産後ケア",
+    );
+    expect(buildSearchQuery("産後ケア 小金井市", "小金井市")).toBe(
+      "産後ケア 小金井市",
+    );
+  });
+
   it("trims the query", () => {
     expect(buildSearchQuery("  産後ケア　", "小金井市")).toBe(
       "小金井市 産後ケア",

@@ -9,13 +9,17 @@ import type { CatalogItem } from "./types";
 const MAX_TITLE_LENGTH = 100;
 const MAX_SUMMARY_LENGTH = 200;
 
-/** Web に投げる検索語。自治体が設定済みなら、その名前を前に足して寄せる。 */
+/**
+ * Web に投げる検索語。自治体が設定済みなら、その名前を前に足して寄せる
+ * （検索語にすでに入っていれば足さない）。
+ */
 export function buildSearchQuery(
   query: string,
   municipalityName: string | null,
 ): string {
   const trimmed = query.trim();
-  return municipalityName ? `${municipalityName} ${trimmed}` : trimmed;
+  if (!municipalityName || trimmed.includes(municipalityName)) return trimmed;
+  return `${municipalityName} ${trimmed}`;
 }
 
 /**
