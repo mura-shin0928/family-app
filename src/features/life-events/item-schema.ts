@@ -45,3 +45,8 @@ export const updateLifeEventItemNoteSchema = z.object({
 export const lifeEventItemIdSchema = z.object({ id: z.string().uuid() });
 
 export const fetchAreaCatalogSchema = z.object({ childId: childIdSchema });
+
+export const searchWebCatalogSchema = z.object({
+  childId: childIdSchema,
+  query: z.string().trim().min(1).max(100),
+});
