@@ -9,9 +9,11 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import MuiLink from "@mui/material/Link";
+import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
@@ -430,11 +432,7 @@ function WebSearchBody({
   const { data } = web;
 
   if (web.isFetching) {
-    return (
-      <Typography variant="body2" sx={{ color: "text.secondary", py: 1 }}>
-        Web を検索しています…
-      </Typography>
-    );
+    return <WebSearchLoading />;
   }
   if (web.isError || (data && !data.ok && data.reason !== "quota_exceeded")) {
     return (
@@ -494,5 +492,36 @@ function WebSearchBody({
       </Typography>
       <CollapsibleRows list={data.items} renderRow={renderRow} />
     </>
+  );
+}
+
+/** 検索中の表示。結果の行（タイトル＋ホスト名）と同じ高さの骨組みを並べる。 */
+function WebSearchLoading() {
+  return (
+    <Box role="status" aria-live="polite">
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          py: 1,
+        }}
+      >
+        <CircularProgress size={16} />
+        Web を検索しています…
+      </Typography>
+      {[70, 55, 80].map((width) => (
+        <Box
+          key={width}
+          aria-hidden
+          sx={{ py: 1.5, borderBottom: 1, borderColor: "divider" }}
+        >
+          <Skeleton variant="text" width={`${width}%`} />
+          <Skeleton variant="text" width="40%" sx={{ fontSize: "0.75rem" }} />
+        </Box>
+      ))}
+    </Box>
   );
 }
