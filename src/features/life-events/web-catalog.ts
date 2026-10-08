@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
+import type { Program } from "@/features/programs/types";
 import type { WebSearchResult } from "@/features/web-search/types";
+import { programsToCatalog } from "./program-catalog";
+import { matchesQuery } from "./search";
 import type { CatalogItem } from "./types";
 
 // item-schema.ts の titleSchema の上限と揃える。
@@ -37,19 +40,34 @@ export function webCatalogKey(url: string): string {
   return `web:${hash.slice(0, 32)}`;
 }
 
+/**
+ * 「探す」タブがこの検索語で一覧に出している制度のページ。月齢と名前の一致で絞る。
+ * 一覧に出ていない制度のページは Web の結果から除かない（名前が違って手元で引けなかった
+ * 制度こそ、Web で見つけたいため）。
+ */
+export function shownProgramUrls(
+  programs: Program[],
+  ageMonths: number | null,
+  query: string,
+): string[] {
+  return programsToCatalog(programs, ageMonths)
+    .filter((item) => matchesQuery(item, query))
+    .flatMap((item) => (item.url ? [item.url] : []));
+}
+
 function truncate(text: string, max: number): string {
   return Array.from(text).slice(0, max).join("");
 }
 
 /**
- * Web の結果をカタログ項目にする。制度の一覧（registryUrls）にすでにあるページと、
+ * Web の結果をカタログ項目にする。画面にすでに出ている制度のページ（shownUrls）と、
  * 結果の中で重複したページは落とす。並び順は検索結果のまま。
  */
 export function webResultsToCatalog(
   results: readonly WebSearchResult[],
-  registryUrls: readonly string[],
+  shownUrls: readonly string[],
 ): CatalogItem[] {
-  const seen = new Set(registryUrls.map(pageIdentity));
+  const seen = new Set(shownUrls.map(pageIdentity));
   const items: CatalogItem[] = [];
   for (const result of results) {
     const identity = pageIdentity(result.url);

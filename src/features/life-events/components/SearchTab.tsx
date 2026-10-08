@@ -33,6 +33,7 @@ import {
   itemStateFor,
   matchesQuery,
   resolveTargetDate,
+  SEARCH_QUERY_MAX_LENGTH,
   selectCurrentItems,
   WINDOW_DAYS_AFTER,
   WINDOW_DAYS_BEFORE,
@@ -134,6 +135,7 @@ export function SearchTab({
         slotProps={{
           htmlInput: {
             style: { fontSize: "1rem" },
+            maxLength: SEARCH_QUERY_MAX_LENGTH,
             "aria-label": "ライフイベントの項目を検索",
           },
           input: {

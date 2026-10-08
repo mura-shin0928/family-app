@@ -25,7 +25,11 @@ import {
 } from "./item-schema";
 import { programsToCatalog } from "./program-catalog";
 import type { CatalogItem } from "./types";
-import { buildSearchQuery, webResultsToCatalog } from "./web-catalog";
+import {
+  buildSearchQuery,
+  shownProgramUrls,
+  webResultsToCatalog,
+} from "./web-catalog";
 
 const INVALID_INPUT = "入力内容を確認してください";
 
@@ -265,7 +269,7 @@ export type WebCatalogResult =
 
 /**
  * 検索語で Web を検索し、結果のページをカタログ項目にして返す。
- * 家族の自治体が設定済みなら、その名前を検索語に足し、制度の一覧にあるページは除く。
+ * 家族の自治体が設定済みなら、その名前を検索語に足し、画面に出ている制度のページは除く。
  */
 export async function searchWebCatalog(input: {
   childId: string;
@@ -283,7 +287,7 @@ export async function searchWebCatalog(input: {
 
   const { data: child } = await supabase
     .from("children")
-    .select("id")
+    .select("birth_date")
     .eq("id", parsed.data.childId)
     .eq("family_id", member.familyId)
     .is("deleted_at", null)
@@ -311,8 +315,12 @@ export async function searchWebCatalog(input: {
   const programs = municipality
     ? await getAreaPrograms(municipality.code)
     : null;
-  const registryUrls = programs?.ok
-    ? programs.data.map((program) => program.sourceUrl)
+  const shownUrls = programs?.ok
+    ? shownProgramUrls(
+        programs.data,
+        child.birth_date ? ageInMonths(child.birth_date, todayInJst()) : null,
+        parsed.data.query,
+      )
     : [];
 
   const searchedQuery = buildSearchQuery(
@@ -331,6 +339,6 @@ export async function searchWebCatalog(input: {
   return {
     ok: true,
     searchedQuery,
-    items: webResultsToCatalog(result.results, registryUrls),
+    items: webResultsToCatalog(result.results, shownUrls),
   };
 }

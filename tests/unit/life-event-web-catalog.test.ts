@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSearchQuery,
+  shownProgramUrls,
   webCatalogKey,
   webResultsToCatalog,
 } from "@/features/life-events/web-catalog";
+import type { Program } from "@/features/programs/types";
 import type { WebSearchResult } from "@/features/web-search/types";
 
 function result(overrides: Partial<WebSearchResult> = {}): WebSearchResult {
@@ -134,5 +136,52 @@ describe("webResultsToCatalog", () => {
       "https://x.test/1",
       "https://x.test/2",
     ]);
+  });
+});
+
+function program(overrides: Partial<Program>): Program {
+  return {
+    id: crypto.randomUUID(),
+    areaCode: "999999",
+    canonicalName: "標準名",
+    shortName: null,
+    sourceUrl: "https://example.test/page",
+    categoryCodes: ["003"],
+    targetCodes: ["087"],
+    ageMinMonths: null,
+    ageMaxMonths: null,
+    ...overrides,
+  };
+}
+
+describe("shownProgramUrls", () => {
+  it("returns the url of a program whose name matches the query", () => {
+    const programs = [
+      program({ shortName: "産後ケア事業", sourceUrl: "https://x.test/a" }),
+    ];
+    expect(shownProgramUrls(programs, null, "産後ケア")).toEqual([
+      "https://x.test/a",
+    ]);
+  });
+
+  it("leaves out a program the query does not find by name", () => {
+    const programs = [
+      program({
+        shortName: "産後家事・育児支援事業",
+        sourceUrl: "https://x.test/a",
+      }),
+    ];
+    expect(shownProgramUrls(programs, null, "産後ヘルパー")).toEqual([]);
+  });
+
+  it("leaves out a program outside the child's age", () => {
+    const programs = [
+      program({
+        shortName: "産後ケア事業",
+        sourceUrl: "https://x.test/a",
+        ageMaxMonths: 12,
+      }),
+    ];
+    expect(shownProgramUrls(programs, 24, "産後ケア")).toEqual([]);
   });
 });
