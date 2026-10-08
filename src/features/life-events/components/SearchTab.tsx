@@ -3,6 +3,7 @@
 import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
+import PublicOutlinedIcon from "@mui/icons-material/PublicOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -15,13 +16,17 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import { useQuery } from "@tanstack/react-query";
+import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import type { Child } from "@/features/children/types";
 import { todayInJst } from "@/lib/date";
 import { LIFE_EVENT_CATALOG, LIFE_EVENT_KINDS } from "../catalog";
-import { fetchAreaCatalog } from "../item-actions";
+import {
+  fetchAreaCatalog,
+  searchWebCatalog,
+  type WebCatalogResult,
+} from "../item-actions";
 import {
   describeChildStage,
   describeTiming,
@@ -42,12 +47,14 @@ export function SearchTab({
   child,
   items,
   showPrograms,
+  showWebSearch,
   onAddToTask,
   onRecordDone,
 }: {
   child: Child;
   items: LifeEventItem[];
   showPrograms: boolean;
+  showWebSearch: boolean;
   onAddToTask: (item: CatalogItem, presetDueOn: string) => void;
   onRecordDone: (item: CatalogItem) => void;
 }) {
@@ -84,6 +91,16 @@ export function SearchTab({
             : chip === "current" || item.kind === chip,
         )
       : [];
+
+  // Web は押したときだけ引く。検索語ごとに結果を持ち、同じ語に戻したら引き直さない。
+  const trimmedQuery = query.trim();
+  const web = useQuery({
+    queryKey: ["life-event-web-search", child.id, trimmedQuery],
+    queryFn: () => searchWebCatalog({ childId: child.id, query: trimmedQuery }),
+    enabled: false,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
+  });
 
   // 検索中は制度の結果が出るまで「見つかりませんでした」を出さない。
   const programsPending =
@@ -200,6 +217,16 @@ export function SearchTab({
           </Typography>
         )}
       </Box>
+
+      {showWebSearch && searching && (
+        <WebSearchSection
+          // 検索語が変わったら「もっと見る」を閉じた状態に戻す
+          key={trimmedQuery}
+          web={web}
+          query={trimmedQuery}
+          renderRow={renderRow}
+        />
+      )}
 
       <CatalogItemSheet
         item={sheetItem}
@@ -367,5 +394,103 @@ function ProgramSection({
         </Typography>
       )}
     </Box>
+  );
+}
+
+function WebSearchSection({
+  web,
+  query,
+  renderRow,
+}: {
+  web: UseQueryResult<WebCatalogResult>;
+  query: string;
+  renderRow: (item: CatalogItem) => React.ReactNode;
+}) {
+  return (
+    <Box>
+      <SectionHeading icon={<PublicOutlinedIcon fontSize="small" />}>
+        Web の検索結果
+      </SectionHeading>
+      <WebSearchBody web={web} query={query} renderRow={renderRow} />
+    </Box>
+  );
+}
+
+function WebSearchBody({
+  web,
+  query,
+  renderRow,
+}: {
+  web: UseQueryResult<WebCatalogResult>;
+  query: string;
+  renderRow: (item: CatalogItem) => React.ReactNode;
+}) {
+  const { data } = web;
+
+  if (web.isFetching) {
+    return (
+      <Typography variant="body2" sx={{ color: "text.secondary", py: 1 }}>
+        Web を検索しています…
+      </Typography>
+    );
+  }
+  if (web.isError || (data && !data.ok && data.reason !== "quota_exceeded")) {
+    return (
+      <Box sx={{ py: 1 }}>
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          Web 検索に失敗しました
+        </Typography>
+        <Button size="small" onClick={() => web.refetch()} sx={{ mt: 0.5 }}>
+          もう一度試す
+        </Button>
+      </Box>
+    );
+  }
+  if (!data) {
+    return (
+      <Button
+        variant="outlined"
+        fullWidth
+        startIcon={<SearchIcon />}
+        onClick={() => web.refetch()}
+        sx={{ mt: 1.5 }}
+      >
+        「{query}」を Web でも探す
+      </Button>
+    );
+  }
+  if (!data.ok) {
+    return (
+      <Typography variant="body2" sx={{ color: "text.secondary", py: 1 }}>
+        今日の Web 検索の回数を使い切りました。明日また試してください
+      </Typography>
+    );
+  }
+  if (data.items.length === 0) {
+    return (
+      <Typography variant="body2" sx={{ color: "text.secondary", py: 1 }}>
+        Web でも見つかりませんでした
+      </Typography>
+    );
+  }
+  return (
+    <>
+      <Typography
+        variant="caption"
+        component="p"
+        sx={{
+          color: "text.secondary",
+          mt: 1,
+          mb: 0.5,
+          px: 1.5,
+          py: 1,
+          bgcolor: "action.hover",
+          borderRadius: 1,
+        }}
+      >
+        {`「${data.searchedQuery}」の検索結果です。公式の情報かどうかは、ページを開いて確かめてください。`}
+      </Typography>
+      <CollapsibleRows list={data.items} renderRow={renderRow} />
+    </>
   );
 }

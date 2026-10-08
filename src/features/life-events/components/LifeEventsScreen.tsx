@@ -35,10 +35,12 @@ export function LifeEventsScreen({
   familyChildren,
   items,
   showPrograms,
+  showWebSearch,
 }: {
   familyChildren: Child[];
   items: LifeEventItem[];
   showPrograms: boolean;
+  showWebSearch: boolean;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -175,6 +177,7 @@ export function LifeEventsScreen({
             child={activeChild}
             items={items}
             showPrograms={showPrograms}
+            showWebSearch={showWebSearch}
             onAddToTask={(item, presetDueOn) => {
               setError(null);
               setTaskDialog({ item, presetDueOn });
