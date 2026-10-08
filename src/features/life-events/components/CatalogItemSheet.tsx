@@ -8,9 +8,9 @@ import Drawer from "@mui/material/Drawer";
 import MuiLink from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { isHttpUrl } from "@/lib/url";
+import { hostnameOf, isHttpUrl } from "@/lib/url";
 import { LIFE_EVENT_KINDS } from "../catalog";
-import type { ItemState } from "../search";
+import { type ItemState, isWebCatalogKey } from "../search";
 import { formatSlashDate } from "../timing";
 import type { CatalogItem } from "../types";
 
@@ -31,6 +31,9 @@ export function CatalogItemSheet({
   onRecord: () => void;
 }) {
   const kindLabel = LIFE_EVENT_KINDS.find((k) => k.kind === item?.kind)?.label;
+  const isWeb = item !== null && isWebCatalogKey(item.key);
+  const host = isWeb && item.url ? hostnameOf(item.url) : null;
+  const meta = [kindLabel, timing].filter(Boolean).join(" ・ ");
 
   return (
     <Drawer
@@ -47,12 +50,27 @@ export function CatalogItemSheet({
           sx={{ p: 2, pb: "calc(16px + env(safe-area-inset-bottom))" }}
         >
           <Typography variant="h6">{item.title}</Typography>
+          {host && (
+            <Typography
+              variant="caption"
+              sx={{ color: "text.secondary", overflowWrap: "anywhere" }}
+            >
+              {host}
+            </Typography>
+          )}
           {item.summary !== "" && (
             <Typography variant="body2">{item.summary}</Typography>
           )}
-          <Typography variant="caption" sx={{ color: "text.secondary" }}>
-            {[kindLabel, timing].filter(Boolean).join(" ・ ")}
-          </Typography>
+          {isWeb && (
+            <Typography variant="caption" sx={{ color: "text.secondary" }}>
+              Web 検索の抜粋です。内容はページで確かめてください。
+            </Typography>
+          )}
+          {meta !== "" && (
+            <Typography variant="caption" sx={{ color: "text.secondary" }}>
+              {meta}
+            </Typography>
+          )}
           {item.note && (
             <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
               {item.note}
@@ -65,7 +83,7 @@ export function CatalogItemSheet({
               rel="noopener noreferrer"
               variant="body2"
             >
-              公式ページを開く
+              {isWeb ? "ページを開く" : "公式ページを開く"}
             </MuiLink>
           )}
           {state.status === "in_task" && (

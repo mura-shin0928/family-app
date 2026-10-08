@@ -4,6 +4,7 @@ import { getChildren } from "@/features/children/queries";
 import { LifeEventsScreen } from "@/features/life-events/components/LifeEventsScreen";
 import { getLifeEventItems } from "@/features/life-events/item-queries";
 import { isSeidoDataHubConfigured } from "@/features/programs/api";
+import { isWebSearchConfigured } from "@/features/web-search/tavily";
 import { AppHeader } from "../AppHeader";
 
 export default async function LifeEventsPage() {
@@ -29,6 +30,7 @@ export default async function LifeEventsPage() {
         familyChildren={familyChildren}
         items={items}
         showPrograms={isSeidoDataHubConfigured()}
+        showWebSearch={isWebSearchConfigured()}
       />
     </Box>
   );

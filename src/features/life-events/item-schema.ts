@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { dateStringSchema, noteSchema } from "@/lib/schema";
 import { httpUrlSchema } from "@/lib/url";
+import { SEARCH_QUERY_MAX_LENGTH } from "./search";
 
 const titleSchema = z
   .string()
@@ -45,3 +46,8 @@ export const updateLifeEventItemNoteSchema = z.object({
 export const lifeEventItemIdSchema = z.object({ id: z.string().uuid() });
 
 export const fetchAreaCatalogSchema = z.object({ childId: childIdSchema });
+
+export const searchWebCatalogSchema = z.object({
+  childId: childIdSchema,
+  query: z.string().trim().min(1).max(SEARCH_QUERY_MAX_LENGTH),
+});

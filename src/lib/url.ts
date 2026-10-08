@@ -10,6 +10,15 @@ export function isHttpUrl(value: string): boolean {
   }
 }
 
+/** URL のホスト名。URL として読めなければ null。 */
+export function hostnameOf(value: string): string | null {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return null;
+  }
+}
+
 // 上限はDBのCHECK制約（tasks.url / recipes.source_url）と揃える。
 export const httpUrlSchema = z
   .string()

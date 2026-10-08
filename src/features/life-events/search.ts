@@ -42,6 +42,9 @@ export function selectCurrentItems(
     .map((entry) => entry.item);
 }
 
+/** 検索語の上限。Web 検索の Server Action の検証と、検索欄の入力上限で揃える。 */
+export const SEARCH_QUERY_MAX_LENGTH = 100;
+
 /** NFKC → 小文字 → カタカナをひらがなに。 */
 export function normalizeForSearch(text: string): string {
   return text
@@ -57,6 +60,11 @@ export function matchesQuery(item: CatalogItem, query: string): boolean {
   return [item.title, ...item.aliases, item.summary].some((text) =>
     normalizeForSearch(text).includes(q),
   );
+}
+
+/** Web 検索の結果から作った項目か（key は web-catalog.ts の webCatalogKey）。 */
+export function isWebCatalogKey(key: string): boolean {
+  return key.startsWith("web:");
 }
 
 export type ItemState =

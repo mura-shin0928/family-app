@@ -8,6 +8,7 @@ import {
 import { ageInMonths } from "@/features/programs/filter";
 import { getFamilyMunicipality } from "@/features/programs/queries";
 import type { Attribution } from "@/features/programs/types";
+import { isWebSearchConfigured, searchWeb } from "@/features/web-search/tavily";
 import type { ActionResult } from "@/lib/action-result";
 import { todayInJst } from "@/lib/date";
 import { logActionError } from "@/lib/log";
@@ -18,11 +19,17 @@ import {
   fetchAreaCatalogSchema,
   lifeEventItemIdSchema,
   recordLifeEventItemDoneSchema,
+  searchWebCatalogSchema,
   updateLifeEventItemDoneOnSchema,
   updateLifeEventItemNoteSchema,
 } from "./item-schema";
 import { programsToCatalog } from "./program-catalog";
 import type { CatalogItem } from "./types";
+import {
+  buildSearchQuery,
+  shownProgramUrls,
+  webResultsToCatalog,
+} from "./web-catalog";
 
 const INVALID_INPUT = "入力内容を確認してください";
 
@@ -250,5 +257,88 @@ export async function fetchAreaCatalog(input: {
     municipalityName: municipality.name,
     items: programsToCatalog(result.data, ageMonths),
     attribution: result.attribution,
+  };
+}
+
+export type WebCatalogResult =
+  | { ok: true; searchedQuery: string; items: CatalogItem[] }
+  | {
+      ok: false;
+      reason: "not_configured" | "quota_exceeded" | "unavailable" | "invalid";
+    };
+
+/**
+ * 検索語で Web を検索し、結果のページをカタログ項目にして返す。
+ * 家族の自治体が設定済みなら、その名前を検索語に足し、画面に出ている制度のページは除く。
+ */
+export async function searchWebCatalog(input: {
+  childId: string;
+  query: string;
+}): Promise<WebCatalogResult> {
+  const parsed = searchWebCatalogSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, reason: "invalid" };
+
+  if (!isWebSearchConfigured()) {
+    return { ok: false, reason: "not_configured" };
+  }
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { data: child } = await supabase
+    .from("children")
+    .select("birth_date")
+    .eq("id", parsed.data.childId)
+    .eq("family_id", member.familyId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!child) return { ok: false, reason: "invalid" };
+
+  // 外部 API を呼ぶ前に枠を使う（失敗しても1回と数える）
+  const { data: allowed, error: quotaError } = await supabase.rpc(
+    "consume_web_search_quota",
+  );
+  if (quotaError) {
+    logActionError("searchWebCatalog", quotaError);
+    return { ok: false, reason: "unavailable" };
+  }
+  if (!allowed) return { ok: false, reason: "quota_exceeded" };
+
+  let municipality: Awaited<ReturnType<typeof getFamilyMunicipality>>;
+  try {
+    municipality = await getFamilyMunicipality(member.familyId);
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+
+  // 制度の一覧が取れなくても検索は続ける（重複を除けないだけ）
+  const programs = municipality
+    ? await getAreaPrograms(municipality.code)
+    : null;
+  const shownUrls = programs?.ok
+    ? shownProgramUrls(
+        programs.data,
+        child.birth_date ? ageInMonths(child.birth_date, todayInJst()) : null,
+        parsed.data.query,
+      )
+    : [];
+
+  const searchedQuery = buildSearchQuery(
+    parsed.data.query,
+    municipality?.name ?? null,
+  );
+  const result = await searchWeb(searchedQuery);
+  if (!result.ok) {
+    return {
+      ok: false,
+      reason:
+        result.reason === "not-configured" ? "not_configured" : "unavailable",
+    };
+  }
+
+  return {
+    ok: true,
+    searchedQuery,
+    items: webResultsToCatalog(result.results, shownUrls),
   };
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { addLifeEventItemToTaskSchema } from "@/features/life-events/item-schema";
 import { createRecipeSchema } from "@/features/recipes/schema";
 import { updateTaskSchema } from "@/features/tasks/schema";
-import { httpUrlSchema, isHttpUrl } from "@/lib/url";
+import { hostnameOf, httpUrlSchema, isHttpUrl } from "@/lib/url";
 
 const TASK_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -86,5 +86,17 @@ describe("各フォームのURL欄", () => {
       url: "data:text/html,x",
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("hostnameOf", () => {
+  it("returns the hostname", () => {
+    expect(hostnameOf("https://www.city.koganei.lg.jp/a/b.html?x=1")).toBe(
+      "www.city.koganei.lg.jp",
+    );
+  });
+
+  it("returns null for a string that is not a URL", () => {
+    expect(hostnameOf("not a url")).toBeNull();
   });
 });
