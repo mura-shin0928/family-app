@@ -67,6 +67,25 @@ export function isWebCatalogKey(key: string): boolean {
   return key.startsWith("web:");
 }
 
+// 地域型 JP ドメイン名で、jp の直下に置かれる都道府県と政令指定都市のラベル。
+// 一次情報を確認済み（2026-10時点）: https://jprs.jp/doc/rule/saisoku-1.html の付録「都道府県ラベル」
+const REGIONAL_LABELS =
+  "hokkaido aomori iwate miyagi akita yamagata fukushima ibaraki tochigi gunma saitama chiba tokyo kanagawa niigata toyama ishikawa fukui yamanashi nagano gifu shizuoka aichi mie shiga kyoto osaka hyogo nara wakayama tottori shimane okayama hiroshima yamaguchi tokushima kagawa ehime kochi fukuoka saga nagasaki kumamoto oita miyazaki kagoshima okinawa sapporo sendai yokohama kawasaki nagoya kobe kitakyushu".split(
+    " ",
+  );
+
+// 国（go.jp）、自治体（lg.jp）、都道府県と政令指定都市の地域型（pref.◯◯.jp など）。
+// 市区町村の地域型（city.◯◯.<県>.jp）は入れない。3階層目は都道府県型で誰でも登録でき、
+// その下の city は名乗れてしまうため、形だけでは自治体と言い切れない。
+const PUBLIC_SECTOR_HOST = new RegExp(
+  `(^|\\.)(go\\.jp|lg\\.jp|(pref|metro|city)\\.(${REGIONAL_LABELS.join("|")})\\.jp)$`,
+);
+
+/** 登録できる主体が国か自治体に限られているドメインのホスト名か。 */
+export function isPublicSectorHost(hostname: string): boolean {
+  return PUBLIC_SECTOR_HOST.test(hostname.toLowerCase());
+}
+
 export type ItemState =
   | { status: "in_task" }
   | { status: "done"; doneOn: DateString }

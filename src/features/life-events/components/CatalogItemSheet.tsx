@@ -40,6 +40,8 @@ export function CatalogItemSheet({
       anchor="bottom"
       open={item !== null}
       onClose={onClose}
+      // 全画面の Web 検索結果（Dialog）の上にも出す
+      sx={{ zIndex: "modal" }}
       slotProps={{
         paper: { sx: { borderRadius: "16px 16px 0 0", maxHeight: "85dvh" } },
       }}
