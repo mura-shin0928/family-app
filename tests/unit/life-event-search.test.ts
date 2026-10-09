@@ -222,10 +222,29 @@ describe("isPublicSectorHost", () => {
     expect(isPublicSectorHost("WWW.MHLW.GO.JP")).toBe(true);
   });
 
+  it("is true for prefecture and designated-city domains of the regional type", () => {
+    expect(isPublicSectorHost("www.metro.tokyo.jp")).toBe(true);
+    expect(isPublicSectorHost("www.pref.kanagawa.jp")).toBe(true);
+    expect(isPublicSectorHost("pref.hokkaido.jp")).toBe(true);
+    expect(isPublicSectorHost("www.city.yokohama.jp")).toBe(true);
+    expect(isPublicSectorHost("www.city.osaka.jp")).toBe(true);
+    expect(isPublicSectorHost("kosodate.city.nagoya.jp")).toBe(true);
+  });
+
   it("is false for other hosts, including look-alikes", () => {
     expect(isPublicSectorHost("example.jp")).toBe(false);
-    expect(isPublicSectorHost("www.metro.tokyo.jp")).toBe(false);
     expect(isPublicSectorHost("fakego.jp")).toBe(false);
     expect(isPublicSectorHost("go.jp.example.com")).toBe(false);
+    expect(isPublicSectorHost("www.tokyo.jp")).toBe(false);
+    expect(isPublicSectorHost("kosodate.tokyo.jp")).toBe(false);
+    expect(isPublicSectorHost("pref.example.jp")).toBe(false);
+    expect(isPublicSectorHost("xmetro.tokyo.jp")).toBe(false);
+    expect(isPublicSectorHost("metro.tokyo.jp.example.com")).toBe(false);
+  });
+
+  // 3階層目は都道府県型で誰でも登録でき、その下の city は名乗れてしまう
+  it("is false for municipality domains under a prefecture", () => {
+    expect(isPublicSectorHost("www.city.shibuya.tokyo.jp")).toBe(false);
+    expect(isPublicSectorHost("www.town.hayama.kanagawa.jp")).toBe(false);
   });
 });
