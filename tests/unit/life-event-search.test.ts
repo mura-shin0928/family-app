@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   describeChildStage,
   describeTiming,
+  isPublicSectorHost,
   isWebCatalogKey,
   itemStateFor,
   matchesQuery,
@@ -210,5 +211,21 @@ describe("isWebCatalogKey", () => {
     expect(isWebCatalogKey("web:0123abcd")).toBe(true);
     expect(isWebCatalogKey("program:abc")).toBe(false);
     expect(isWebCatalogKey("birth:birth-registration")).toBe(false);
+  });
+});
+
+describe("isPublicSectorHost", () => {
+  it("is true for go.jp and lg.jp hosts", () => {
+    expect(isPublicSectorHost("www.cfa.go.jp")).toBe(true);
+    expect(isPublicSectorHost("www.city.koganei.lg.jp")).toBe(true);
+    expect(isPublicSectorHost("go.jp")).toBe(true);
+    expect(isPublicSectorHost("WWW.MHLW.GO.JP")).toBe(true);
+  });
+
+  it("is false for other hosts, including look-alikes", () => {
+    expect(isPublicSectorHost("example.jp")).toBe(false);
+    expect(isPublicSectorHost("www.metro.tokyo.jp")).toBe(false);
+    expect(isPublicSectorHost("fakego.jp")).toBe(false);
+    expect(isPublicSectorHost("go.jp.example.com")).toBe(false);
   });
 });

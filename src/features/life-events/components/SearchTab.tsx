@@ -1,6 +1,7 @@
 "use client";
 
 import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
+import ClearIcon from "@mui/icons-material/Clear";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import PublicOutlinedIcon from "@mui/icons-material/PublicOutlined";
@@ -9,26 +10,20 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
-import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import InputAdornment from "@mui/material/InputAdornment";
 import MuiLink from "@mui/material/Link";
-import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import { type UseQueryResult, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { Child } from "@/features/children/types";
 import { todayInJst } from "@/lib/date";
 import { LIFE_EVENT_CATALOG, LIFE_EVENT_KINDS } from "../catalog";
-import {
-  fetchAreaCatalog,
-  searchWebCatalog,
-  type WebCatalogResult,
-} from "../item-actions";
+import { fetchAreaCatalog } from "../item-actions";
 import {
   describeChildStage,
   describeTiming,
@@ -43,6 +38,7 @@ import {
 import type { CatalogItem, LifeEventItem, LifeEventKind } from "../types";
 import { CatalogItemRow } from "./CatalogItemRow";
 import { CatalogItemSheet } from "./CatalogItemSheet";
+import { WebSearchScreen } from "./WebSearchScreen";
 
 type FilterChip = "current" | LifeEventKind;
 
@@ -64,6 +60,8 @@ export function SearchTab({
   const [query, setQuery] = useState("");
   const [chip, setChip] = useState<FilterChip>("current");
   const [sheetItem, setSheetItem] = useState<CatalogItem | null>(null);
+  // Web の結果画面に出している検索語。null の間は閉じている。
+  const [webQuery, setWebQuery] = useState<string | null>(null);
 
   const dates = {
     birthDate: child.birthDate,
@@ -95,19 +93,13 @@ export function SearchTab({
         )
       : [];
 
-  // Web は押したときだけ引く。検索語ごとに結果を持ち、同じ語に戻したら引き直さない。
   const trimmedQuery = query.trim();
-  const web = useQuery({
-    queryKey: ["life-event-web-search", child.id, trimmedQuery],
-    queryFn: () => searchWebCatalog({ childId: child.id, query: trimmedQuery }),
-    enabled: false,
-    staleTime: Number.POSITIVE_INFINITY,
-    retry: false,
-  });
 
   // 検索中は制度の結果が出るまで「見つかりませんでした」を出さない。
   const programsPending =
     searching && ((showPrograms && area.isPending) || programList.length > 0);
+
+  const closeWebSearch = useCallback(() => setWebQuery(null), []);
 
   function renderRow(item: CatalogItem) {
     const state = itemStateFor(item.key, child.id, items);
@@ -146,24 +138,50 @@ export function SearchTab({
                 <SearchIcon fontSize="small" />
               </InputAdornment>
             ),
+            endAdornment: query !== "" && (
+              <InputAdornment position="end">
+                <IconButton
+                  edge="end"
+                  size="small"
+                  aria-label="検索語を消す"
+                  onClick={() => setQuery("")}
+                >
+                  <ClearIcon fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ),
           },
         }}
       />
-      <Box sx={{ display: "flex", gap: 1, overflowX: "auto", pb: 0.5 }}>
-        <Chip
-          label="いまの時期"
-          color={chip === "current" ? "primary" : "default"}
-          onClick={() => setChip("current")}
-        />
-        {LIFE_EVENT_KINDS.map(({ kind, label }) => (
+      {/* 検索中はチップで絞らないので、同じ場所に Web 検索の入口を出す */}
+      {!searching && (
+        <Box sx={{ display: "flex", gap: 1, overflowX: "auto", pb: 0.5 }}>
           <Chip
-            key={kind}
-            label={label}
-            color={chip === kind ? "primary" : "default"}
-            onClick={() => setChip(kind)}
+            label="いまの時期"
+            color={chip === "current" ? "primary" : "default"}
+            onClick={() => setChip("current")}
           />
-        ))}
-      </Box>
+          {LIFE_EVENT_KINDS.map(({ kind, label }) => (
+            <Chip
+              key={kind}
+              label={label}
+              color={chip === kind ? "primary" : "default"}
+              onClick={() => setChip(kind)}
+            />
+          ))}
+        </Box>
+      )}
+      {searching && showWebSearch && (
+        <Button
+          variant="outlined"
+          fullWidth
+          startIcon={<PublicOutlinedIcon />}
+          onClick={() => setWebQuery(trimmedQuery)}
+          sx={{ justifyContent: "flex-start", textAlign: "left" }}
+        >
+          「{trimmedQuery}」を Web で検索
+        </Button>
+      )}
 
       {showPrograms && (
         <ProgramSection
@@ -222,15 +240,13 @@ export function SearchTab({
         )}
       </Box>
 
-      {showWebSearch && searching && (
-        <WebSearchSection
-          // 検索語が変わったら「もっと見る」を閉じた状態に戻す
-          key={trimmedQuery}
-          web={web}
-          query={trimmedQuery}
-          renderRow={renderRow}
-        />
-      )}
+      <WebSearchScreen
+        childId={child.id}
+        query={webQuery}
+        stateFor={(item) => itemStateFor(item.key, child.id, items)}
+        onOpenItem={setSheetItem}
+        onClose={closeWebSearch}
+      />
 
       <CatalogItemSheet
         item={sheetItem}
@@ -397,131 +413,6 @@ function ProgramSection({
           該当する制度はありません
         </Typography>
       )}
-    </Box>
-  );
-}
-
-function WebSearchSection({
-  web,
-  query,
-  renderRow,
-}: {
-  web: UseQueryResult<WebCatalogResult>;
-  query: string;
-  renderRow: (item: CatalogItem) => React.ReactNode;
-}) {
-  return (
-    <Box>
-      <SectionHeading icon={<PublicOutlinedIcon fontSize="small" />}>
-        Web の検索結果
-      </SectionHeading>
-      <WebSearchBody web={web} query={query} renderRow={renderRow} />
-    </Box>
-  );
-}
-
-function WebSearchBody({
-  web,
-  query,
-  renderRow,
-}: {
-  web: UseQueryResult<WebCatalogResult>;
-  query: string;
-  renderRow: (item: CatalogItem) => React.ReactNode;
-}) {
-  const { data } = web;
-
-  if (web.isFetching) {
-    return <WebSearchLoading />;
-  }
-  if (web.isError || (data && !data.ok && data.reason !== "quota_exceeded")) {
-    return (
-      <Box sx={{ py: 1 }}>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          Web 検索に失敗しました
-        </Typography>
-        <Button size="small" onClick={() => web.refetch()} sx={{ mt: 0.5 }}>
-          もう一度試す
-        </Button>
-      </Box>
-    );
-  }
-  if (!data) {
-    return (
-      <Button
-        variant="outlined"
-        fullWidth
-        startIcon={<SearchIcon />}
-        onClick={() => web.refetch()}
-        sx={{ mt: 1.5 }}
-      >
-        「{query}」を Web でも探す
-      </Button>
-    );
-  }
-  if (!data.ok) {
-    return (
-      <Typography variant="body2" sx={{ color: "text.secondary", py: 1 }}>
-        今日の Web 検索の回数を使い切りました。明日また試してください
-      </Typography>
-    );
-  }
-  if (data.items.length === 0) {
-    return (
-      <Typography variant="body2" sx={{ color: "text.secondary", py: 1 }}>
-        Web でも見つかりませんでした
-      </Typography>
-    );
-  }
-  return (
-    <>
-      <Typography
-        variant="caption"
-        component="p"
-        sx={{
-          color: "text.secondary",
-          mt: 1,
-          mb: 0.5,
-          px: 1.5,
-          py: 1,
-          bgcolor: "action.hover",
-          borderRadius: 1,
-        }}
-      >
-        {`「${data.searchedQuery}」の検索結果です。公式の情報かどうかは、ページを開いて確かめてください。`}
-      </Typography>
-      <CollapsibleRows list={data.items} renderRow={renderRow} />
-    </>
-  );
-}
-
-/** 検索中の表示。結果の行（タイトル＋ホスト名）と同じ高さの骨組みを並べる。 */
-function WebSearchLoading() {
-  return (
-    <Box role="status" aria-live="polite">
-      <Typography
-        variant="body2"
-        sx={{
-          color: "text.secondary",
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-          py: 1,
-        }}
-      >
-        <CircularProgress size={16} />
-        Web を検索しています…
-      </Typography>
-      {[70, 55, 80].map((width) => (
-        <Box
-          key={width}
-          aria-hidden
-          sx={{ py: 1.5, borderBottom: 1, borderColor: "divider" }}
-        >
-          <Skeleton variant="text" width={`${width}%`} />
-          <Skeleton variant="text" width="40%" sx={{ fontSize: "0.75rem" }} />
-        </Box>
-      ))}
     </Box>
   );
 }

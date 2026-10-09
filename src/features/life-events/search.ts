@@ -67,6 +67,14 @@ export function isWebCatalogKey(key: string): boolean {
   return key.startsWith("web:");
 }
 
+/** 国（go.jp）か自治体（lg.jp）のサイトのホスト名か。 */
+export function isPublicSectorHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return ["go.jp", "lg.jp"].some(
+    (domain) => host === domain || host.endsWith(`.${domain}`),
+  );
+}
+
 export type ItemState =
   | { status: "in_task" }
   | { status: "done"; doneOn: DateString }
