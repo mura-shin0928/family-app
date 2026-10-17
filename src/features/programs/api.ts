@@ -16,7 +16,8 @@ const REVALIDATE_SECONDS = 60 * 60 * 24;
 const attributionSchema = z.object({
   source: z.string(),
   license: z.string(),
-  license_url: z.string(),
+  // 画面でリンクとして開くので、http(s) 以外の応答は受け取らない
+  license_url: z.string().refine(isHttpUrl),
   notice: z.string(),
 });
 
