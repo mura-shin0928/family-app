@@ -14,6 +14,9 @@ on:
       - ".gitignore"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -55,9 +58,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # 本番 DB の資格情報を渡すジョブなので latest にしない。db.yml と揃える。
       - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
         with:
-          version: latest
+          version: 2.114.0
 
       - run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
 
