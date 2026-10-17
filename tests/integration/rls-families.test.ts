@@ -191,6 +191,40 @@ describe("families / family_members RLS", () => {
       expect(error).not.toBeNull();
     });
 
+    async function dailyLimitOf(familyId: string): Promise<number | null> {
+      const { data, error } = await admin
+        .from("families")
+        .select("recipe_analysis_daily_limit")
+        .eq("id", familyId)
+        .single();
+      if (error) throw new Error(error.message);
+      return data.recipe_analysis_daily_limit;
+    }
+
+    it("a member cannot change their family's recipe analysis daily limit", async () => {
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+      const { error } = await clientA
+        .from("families")
+        .update({ recipe_analysis_daily_limit: 100000 })
+        .eq("id", familyF1);
+      expect(error).not.toBeNull();
+      expect(await dailyLimitOf(familyF1)).toBeNull();
+    });
+
+    it("a member cannot slip the daily limit into a municipality update", async () => {
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+      const { error } = await clientA
+        .from("families")
+        .update({
+          municipality_code: "131130",
+          municipality_name: "渋谷区",
+          recipe_analysis_daily_limit: 100000,
+        })
+        .eq("id", familyF1);
+      expect(error).not.toBeNull();
+      expect(await dailyLimitOf(familyF1)).toBeNull();
+    });
+
     it("rejects a code without a name, or a malformed code", async () => {
       const clientA = await signInAsClient(userA.email, PASSWORD);
       const { error: onlyCode } = await clientA
