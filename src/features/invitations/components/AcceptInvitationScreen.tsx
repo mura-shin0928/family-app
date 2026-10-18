@@ -66,14 +66,6 @@ export function AcceptInvitationScreen({
           <Typography variant="body1" sx={{ maxWidth: 320 }}>
             <strong>{preview.familyName}</strong> に参加しますか？
           </Typography>
-          <Button
-            variant="contained"
-            onClick={handleAccept}
-            disabled={isPending}
-            sx={{ width: 1, maxWidth: 320 }}
-          >
-            参加する
-          </Button>
           <Typography
             variant="body2"
             color="textSecondary"
@@ -89,6 +81,14 @@ export function AcceptInvitationScreen({
             </Link>
             に同意したものとみなします。
           </Typography>
+          <Button
+            variant="contained"
+            onClick={handleAccept}
+            disabled={isPending}
+            sx={{ width: 1, maxWidth: 320 }}
+          >
+            参加する
+          </Button>
         </>
       ) : (
         <Typography

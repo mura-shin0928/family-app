@@ -45,4 +45,10 @@ export const PROCESSORS = [
     purpose: "利用状況の計測と、エラーの監視",
     data: "メンバーと家族の識別子、操作の種類、端末とブラウザの情報、エラーの内容",
   },
+  {
+    name: "Google LLC（Gmail）",
+    country: "米国",
+    purpose: "お問い合わせの受け付け",
+    data: "お問い合わせのメールアドレスと本文",
+  },
 ] as const;
