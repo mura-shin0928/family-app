@@ -22,6 +22,20 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // PostHog への送信を同じオリジン経由にして、広告ブロッカーで落ちないようにする
+  async rewrites() {
+    return [
+      {
+        source: "/ingest/static/:path*",
+        destination: "https://eu-assets.i.posthog.com/static/:path*",
+      },
+      {
+        source: "/ingest/:path*",
+        destination: "https://eu.i.posthog.com/:path*",
+      },
+    ];
+  },
+  skipTrailingSlashRedirect: true,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
