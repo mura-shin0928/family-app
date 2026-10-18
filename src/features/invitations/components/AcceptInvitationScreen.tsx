@@ -2,6 +2,7 @@
 
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Link from "@mui/material/Link";
 import Typography from "@mui/material/Typography";
 import { useState, useTransition } from "react";
 import { Mascot } from "@/components/Mascot";
@@ -73,6 +74,21 @@ export function AcceptInvitationScreen({
           >
             参加する
           </Button>
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            sx={{ maxWidth: 320 }}
+          >
+            参加すると、
+            <Link href="/terms" target="_blank" rel="noopener">
+              利用規約
+            </Link>
+            と
+            <Link href="/privacy" target="_blank" rel="noopener">
+              プライバシーポリシー
+            </Link>
+            に同意したものとみなします。
+          </Typography>
         </>
       ) : (
         <Typography
