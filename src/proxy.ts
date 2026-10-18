@@ -5,12 +5,8 @@ import {
   LOGIN_REDIRECT_COOKIE_OPTIONS,
   loginReturnPath,
 } from "@/lib/next-path";
+import { isPublicPath } from "@/lib/public-paths";
 import { getSupabaseEnv } from "@/lib/supabase/env";
-
-// /invite: 未ログインでも「このFamilyへの招待です」という文脈を見せてから
-// ログインへ誘導したいため、force-redirectの対象から外す
-// （ページ自体は authenticated 前提のRPCしか呼ばないので、Family名等は漏れない）。
-const PUBLIC_PATHS = ["/login", "/no-access", "/auth/callback", "/invite"];
 
 /**
  * セッションCookieの更新と、未認証ユーザーの楽観的リダイレクトのみを行う。
@@ -42,11 +38,7 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isPublicPath = PUBLIC_PATHS.some((path) =>
-    request.nextUrl.pathname.startsWith(path),
-  );
-
-  if (!user && !isPublicPath) {
+  if (!user && !isPublicPath(request.nextUrl.pathname)) {
     const redirect = NextResponse.redirect(new URL("/login", request.url));
     const returnPath = loginReturnPath(
       request.nextUrl.pathname,
