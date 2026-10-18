@@ -22,6 +22,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // posthog-js は /ingest/e/ のように末尾に / を付けて送る。リダイレクトさせずに
+  // src/app/ingest の中継にそのまま渡す
+  skipTrailingSlashRedirect: true,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
+import { AnalyticsGate } from "./AnalyticsGate";
 import { AppUpdateNotice } from "./AppUpdateNotice";
 import { BottomNav } from "./BottomNav";
 import { QueryProvider } from "./QueryProvider";
@@ -22,6 +23,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       {children}
       <AppUpdateNotice />
       <BottomNav />
+      <Suspense fallback={null}>
+        <AnalyticsGate />
+      </Suspense>
     </QueryProvider>
   );
 }
