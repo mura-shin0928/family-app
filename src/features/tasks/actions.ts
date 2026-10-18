@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireFamilyMember } from "@/features/auth/guard";
 import type { ActionResult } from "@/lib/action-result";
+import { captureEvent } from "@/lib/analytics/server";
 import { logActionError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import type { TaskUpdatePatch } from "./edit-draft";
@@ -85,7 +86,7 @@ export async function createTask(input: {
     };
   }
 
-  await requireFamilyMember();
+  const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
   // 空文字列 = 未設定。関数側の default null に任せる。
@@ -108,6 +109,7 @@ export async function createTask(input: {
     return { ok: false, error: known ?? "登録に失敗しました" };
   }
 
+  captureEvent(member, "task_created");
   return { ok: true };
 }
 
@@ -144,6 +146,7 @@ export async function setTaskDone(input: {
   }
 
   revalidateLifeEventsIfLinked(data);
+  if (parsed.data.done) captureEvent(member, "task_completed");
   return { ok: true };
 }
 

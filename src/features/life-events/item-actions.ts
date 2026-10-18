@@ -10,6 +10,7 @@ import { getFamilyMunicipality } from "@/features/programs/queries";
 import type { Attribution } from "@/features/programs/types";
 import { isWebSearchConfigured, searchWeb } from "@/features/web-search/tavily";
 import type { ActionResult } from "@/lib/action-result";
+import { captureEvent } from "@/lib/analytics/server";
 import { todayInJst } from "@/lib/date";
 import { logActionError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
@@ -55,7 +56,7 @@ export async function addLifeEventItemToTask(input: {
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
   const { childId, catalogKey, dueOn } = parsed.data;
 
-  await requireFamilyMember();
+  const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
   // テンプレはサーバー側のカタログを正とする。制度は呼び出し側の値を使う。
@@ -84,6 +85,7 @@ export async function addLifeEventItemToTask(input: {
     }
     return { ok: false, error: known ?? "タスクへの追加に失敗しました" };
   }
+  captureEvent(member, "life_event_item_updated");
   return { ok: true, taskId };
 }
 
@@ -98,7 +100,7 @@ export async function recordLifeEventItemDone(input: {
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
   const { childId, catalogKey, doneOn } = parsed.data;
 
-  await requireFamilyMember();
+  const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
   const template = findCatalogItem(catalogKey);
@@ -119,6 +121,7 @@ export async function recordLifeEventItemDone(input: {
     }
     return { ok: false, error: known ?? "記録に失敗しました" };
   }
+  captureEvent(member, "life_event_item_updated");
   return { ok: true };
 }
 
@@ -151,6 +154,7 @@ export async function updateLifeEventItemDoneOn(input: {
       error: "項目の状態が変わっています。画面を更新してください",
     };
   }
+  captureEvent(member, "life_event_item_updated");
   return { ok: true };
 }
 
@@ -175,6 +179,7 @@ export async function updateLifeEventItemNote(input: {
     logActionError("updateLifeEventItemNote", error);
     return { ok: false, error: "メモの更新に失敗しました" };
   }
+  captureEvent(member, "life_event_item_updated");
   return { ok: true };
 }
 
@@ -253,6 +258,7 @@ export async function fetchAreaCatalog(input: {
     ? ageInMonths(child.birth_date, today)
     : null;
 
+  captureEvent(member, "program_searched");
   return {
     ok: true,
     municipalityName: municipality.name,
@@ -339,6 +345,7 @@ export async function searchWebCatalog(input: {
     };
   }
 
+  captureEvent(member, "program_searched");
   return {
     ok: true,
     searchedQuery,

@@ -1,6 +1,7 @@
 "use server";
 
 import { requireFamilyMember } from "@/features/auth/guard";
+import { captureEvent } from "@/lib/analytics/server";
 import { logActionError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { isSnsHost, urlOnly } from "./extraction/detect";
@@ -58,7 +59,7 @@ export async function createRecipe(input: {
     };
   }
 
-  await requireFamilyMember();
+  const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
   const { error } = await supabase.rpc("create_recipe", {
@@ -79,6 +80,7 @@ export async function createRecipe(input: {
     return { ok: false, error: "登録に失敗しました" };
   }
 
+  captureEvent(member, "recipe_created");
   return { ok: true };
 }
 
@@ -165,7 +167,7 @@ export async function addIngredientsToPurchases(input: {
     };
   }
 
-  await requireFamilyMember();
+  const { member } = await requireFamilyMember();
   const supabase = await createClient();
 
   const { data: taskIds, error } = await supabase.rpc(
@@ -181,6 +183,7 @@ export async function addIngredientsToPurchases(input: {
     return { ok: false, error: "買うものへの追加に失敗しました" };
   }
 
+  captureEvent(member, "ingredients_added");
   return { ok: true, taskIds };
 }
 
@@ -250,6 +253,17 @@ async function consumeAnalysisQuota(action: string): Promise<string | null> {
 }
 
 export async function analyzeRecipeSource(input: {
+  text: string;
+}): Promise<AnalyzeRecipeSourceResult> {
+  const result = await runAnalyzeRecipeSource(input);
+  if (result.ok) {
+    const { member } = await requireFamilyMember();
+    captureEvent(member, "recipe_analyzed");
+  }
+  return result;
+}
+
+async function runAnalyzeRecipeSource(input: {
   text: string;
 }): Promise<AnalyzeRecipeSourceResult> {
   const parsed = analyzeRecipeSourceSchema.safeParse(input);
@@ -351,7 +365,7 @@ const IMAGE_TOO_MANY_ERROR = "画像は1枚だけ選択してください";
 export async function analyzeRecipeImage(
   formData: FormData,
 ): Promise<AnalyzeRecipeImageResult> {
-  await requireFamilyMember();
+  const { member } = await requireFamilyMember();
 
   const files = formData
     .getAll("images")
@@ -401,5 +415,6 @@ export async function analyzeRecipeImage(
     };
   }
 
+  captureEvent(member, "recipe_analyzed");
   return { ok: true, draft: result.draft, via: "gemini-image" };
 }
