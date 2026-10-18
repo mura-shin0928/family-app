@@ -222,12 +222,29 @@ describe("delete_my_family", () => {
     expect(await userExists(memberB1.userId)).toBe(true);
   });
 
-  it("消えた家族の行は、配偶者のセッションからも読めない", async () => {
+  it("配偶者のセッションはユーザーが見つからなくなり、家族の行も読めない", async () => {
+    const { data: auth } = await clientA2.auth.getUser();
+    expect(auth.user).toBeNull();
+
     const { data } = await clientA2
       .from("family_members")
       .select("id")
       .eq("family_id", familyA);
-
     expect(data ?? []).toEqual([]);
+  });
+
+  it("DB の家族名の前後に空白があっても、空白を除いた名前で退会できる", async () => {
+    const name = `空白つき-${runId}`;
+    const familyId = await createFamily(` ${name} `);
+    const member = await addMember("spaced", familyId);
+    const client = await signInAsClient(member.email, PASSWORD);
+
+    const { error } = await client.rpc("delete_my_family", {
+      p_family_id: familyId,
+      p_confirm_name: name,
+    });
+
+    expect(error).toBeNull();
+    expect(await userExists(member.userId)).toBe(false);
   });
 });

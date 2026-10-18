@@ -24,7 +24,8 @@ begin
 
   if not exists (
     select 1 from public.families
-    where id = p_family_id and name = btrim(p_confirm_name, E' \t\r\n')
+    where id = p_family_id
+      and btrim(name, E' \t\r\n') = btrim(p_confirm_name, E' \t\r\n')
   ) then
     raise exception 'family_name_mismatch' using errcode = 'P0001';
   end if;
