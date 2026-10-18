@@ -34,6 +34,7 @@ export function CatalogItemSheet({
   const isWeb = item !== null && isWebCatalogKey(item.key);
   const host = isWeb && item.url ? hostnameOf(item.url) : null;
   const meta = [kindLabel, timing].filter(Boolean).join(" ・ ");
+  const link = item?.link;
 
   return (
     <Drawer
@@ -88,6 +89,34 @@ export function CatalogItemSheet({
               {isWeb ? "ページを開く" : "公式ページを開く"}
             </MuiLink>
           )}
+          {link?.notice ? (
+            <Typography variant="caption" sx={{ color: "text.secondary" }}>
+              {link.notice}
+            </Typography>
+          ) : (
+            link?.checkedOn && (
+              <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                {link.checkedOn}
+              </Typography>
+            )
+          )}
+          {link && link.relatedUrls.length > 0 && (
+            <Stack spacing={0.5}>
+              <Typography variant="body2">関連していそうなページ</Typography>
+              {link.relatedUrls.map((url) => (
+                <MuiLink
+                  key={url}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="body2"
+                  sx={{ overflowWrap: "anywhere" }}
+                >
+                  {linkLabel(url)}
+                </MuiLink>
+              ))}
+            </Stack>
+          )}
           {state.status === "in_task" && (
             <Box>
               <Chip label="タスク追加済み" size="small" />
@@ -116,4 +145,10 @@ export function CatalogItemSheet({
       )}
     </Drawer>
   );
+}
+
+/** 関連リンクには題名が無いので、ホスト名とパスで見せる。 */
+function linkLabel(url: string): string {
+  const { hostname, pathname } = new URL(url);
+  return `${hostname}${pathname === "/" ? "" : pathname}`;
 }

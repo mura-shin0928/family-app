@@ -1,3 +1,4 @@
+import type { ProgramLinkNotice } from "@/features/programs/link-notice";
 import type { DateString } from "@/lib/date";
 
 /** 家族が選んで足せるライフイベントの種別（DBのcheck制約と同じ語彙）。 */
@@ -29,6 +30,8 @@ export type CatalogItem = {
   aliases: string[];
   timing: CatalogTiming | null;
   url: string | null;
+  /** 公式ページについての注記。自治体の制度（key が `program:`）だけが持つ。 */
+  link?: ProgramLinkNotice;
 };
 
 /** 子ごとの記録（life_event_items の1行）。catalogKey が null なら自分たちで足した項目。 */

@@ -1,5 +1,7 @@
 import { programTitle, selectPrograms } from "@/features/programs/filter";
+import { describeProgramLink } from "@/features/programs/link-notice";
 import type { Program } from "@/features/programs/types";
+import type { DateString } from "@/lib/date";
 import type { CatalogItem, LifeEventKind } from "./types";
 
 function kindOf(program: Program): LifeEventKind {
@@ -14,7 +16,10 @@ function kindOf(program: Program): LifeEventKind {
 }
 
 /** 自治体の制度を、カタログ項目と同じ形にする。 */
-export function programToCatalogItem(program: Program): CatalogItem {
+export function programToCatalogItem(
+  program: Program,
+  today: DateString,
+): CatalogItem {
   return {
     key: `program:${program.id}`,
     kind: kindOf(program),
@@ -23,7 +28,8 @@ export function programToCatalogItem(program: Program): CatalogItem {
     note: null,
     aliases: program.shortName ? [program.canonicalName] : [],
     timing: null,
-    url: program.sourceUrl,
+    url: program.url,
+    link: describeProgramLink(program, today),
   };
 }
 
@@ -31,8 +37,9 @@ export function programToCatalogItem(program: Program): CatalogItem {
 export function programsToCatalog(
   programs: Program[],
   ageMonths: number | null,
+  today: DateString,
 ): CatalogItem[] {
   return selectPrograms(programs, { ageMonths, category: "all" }).map(
-    programToCatalogItem,
+    (program) => programToCatalogItem(program, today),
   );
 }

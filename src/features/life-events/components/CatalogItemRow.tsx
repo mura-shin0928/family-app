@@ -45,6 +45,15 @@ export function CatalogItemRow({
             {timing}
           </Typography>
         )}
+        {item.link?.notice && (
+          <Typography
+            variant="caption"
+            component="p"
+            sx={{ color: "text.secondary" }}
+          >
+            {item.link.notice}
+          </Typography>
+        )}
         {state.status === "done" && (
           <Typography
             variant="caption"
