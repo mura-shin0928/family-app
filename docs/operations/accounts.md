@@ -71,6 +71,7 @@ Supabase のプランは org 単位で決まり、Pro の org では org 内の�
 ## 4. Tavily
 
 1. Tavily のダッシュボードで、プランが無料（月 1,000 クレジット）のままで、カードが登録されていないことを確かめる
+2. 設定の「Allow Use of Query Data」を OFF にする（検索の言葉を Tavily のサービス改善に使わせない）
 
 ## 5. 問い合わせ用の Gmail
 

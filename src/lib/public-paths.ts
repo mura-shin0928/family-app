@@ -7,6 +7,8 @@ export const PUBLIC_PATHS: readonly string[] = [
   "/auth/callback",
   "/invite",
   "/release-notes",
+  "/terms",
+  "/privacy",
 ];
 
 /** ログインしていなくても見られるパスか。 */

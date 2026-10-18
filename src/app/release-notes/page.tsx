@@ -46,6 +46,11 @@ export default function ReleaseNotesPage() {
             </Box>
           </Box>
         ))}
+        <Typography variant="body2" color="textSecondary">
+          <Link href="/terms">利用規約</Link>
+          {" ・ "}
+          <Link href="/privacy">プライバシーポリシー</Link>
+        </Typography>
         {mailto && (
           <Typography variant="body2" color="textSecondary">
             不具合やご要望は<Link href={mailto}>お問い合わせ</Link>

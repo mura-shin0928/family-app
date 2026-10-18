@@ -9,6 +9,8 @@ describe("isPublicPath", () => {
       "/auth/callback",
       "/invite/abc",
       "/release-notes",
+      "/terms",
+      "/privacy",
     ]) {
       expect(isPublicPath(path), path).toBe(true);
     }
