@@ -623,6 +623,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      delete_my_family: {
+        Args: { p_confirm_name: string; p_family_id: string }
+        Returns: undefined
+      }
       invitation_preview: {
         Args: { p_token_hash: string }
         Returns: {

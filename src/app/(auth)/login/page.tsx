@@ -1,11 +1,13 @@
 "use client";
 
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { type FormEvent, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { type FormEvent, Suspense, useState } from "react";
 import { Mascot } from "@/components/Mascot";
 import { createClient } from "@/lib/supabase/client";
 
@@ -55,6 +57,9 @@ export default function LoginPage() {
         p: 4,
       }}
     >
+      <Suspense fallback={null}>
+        <DeletedNotice />
+      </Suspense>
       <Mascot />
       <Typography variant="h5" component="h1">
         Family App
@@ -120,5 +125,15 @@ export default function LoginPage() {
         </Typography>
       )}
     </Box>
+  );
+}
+
+function DeletedNotice() {
+  const searchParams = useSearchParams();
+  if (searchParams.get("deleted") !== "1") return null;
+  return (
+    <Alert severity="success" sx={{ width: 1, maxWidth: 320 }}>
+      退会しました。ご利用ありがとうございました。
+    </Alert>
   );
 }
