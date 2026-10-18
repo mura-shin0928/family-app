@@ -10,7 +10,9 @@ PostHog Cloud EU の 1 プロジェクトで、利用計測とエラー監視の
 - イベント名: `src/lib/analytics/events.ts` の 8 種類。プロパティは付けない
 - エラー: 名前、メッセージ、スタック、ルート、アクション名、Postgres のエラーコード、digest。リクエストの本文と Postgres の `details` / `hint` は送らない
 
-名前・メール・入力した内容・URL は送らない。ブラウザの自動収集、ページビュー、録画、ヒートマップはすべて切ってある。
+名前・メール・入力した内容・URL は送らない。ブラウザの自動収集、ページビュー、録画、ヒートマップ、Web vitals はすべて切ってある。posthog-js が全イベントに自動で付ける URL・パス・ホスト・参照元（と人のプロパティの `$initial_*`）は、送る前に `src/lib/analytics/sanitize.ts` で消している。
+
+端末とブラウザの情報（OS、ブラウザ、画面の大きさ、ライブラリの版など）は posthog-js が自動で付けるので届く。IP アドレスは PostHog のプロジェクト設定で捨てている。
 
 | イベント | いつ送るか | 送る場所 |
 |---|---|---|
@@ -23,7 +25,7 @@ PostHog Cloud EU の 1 プロジェクトで、利用計測とエラー監視の
 | `program_searched` | 自治体の制度の一覧や Web の検索を開いたとき | サーバー |
 | `life_event_item_updated` | ライフイベントの項目をタスクにした、記録した、日付やメモを変えたとき | サーバー |
 
-ブラウザからの送信は `/ingest` を経由して PostHog EU に届く（`next.config.ts` の rewrites）。
+ブラウザからの送信は `/ingest` を経由して PostHog EU に届く（`src/app/ingest/[...path]/route.ts`）。同じオリジンへの送信には Supabase のセッション Cookie とページの URL（Referer）が付いてくるので、中継では決めたヘッダー（`accept`、`content-encoding`、`content-type`、`user-agent`）だけを渡す。
 
 ## エラーのアラート
 

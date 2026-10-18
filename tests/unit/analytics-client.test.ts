@@ -12,6 +12,10 @@ vi.mock("posthog-js", () => ({ default: posthog }));
 
 const identity = { memberId: "m1", familyId: "f1" };
 
+async function importSanitize() {
+  return (await import("@/lib/analytics/sanitize")).stripPageContext;
+}
+
 describe("analytics client", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -38,6 +42,7 @@ describe("analytics client", () => {
   it("init は自動収集・ページビュー・ページ離脱・録画を切り、例外の自動送信だけ入れる", async () => {
     vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "phc_test");
     const { initAnalytics } = await import("@/lib/analytics/client");
+    const stripPageContext = await importSanitize();
 
     expect(initAnalytics(identity)).toBe(true);
 
@@ -56,8 +61,26 @@ describe("analytics client", () => {
         disable_surveys: true,
         person_profiles: "identified_only",
         capture_exceptions: true,
+        capture_performance: false,
+        save_referrer: false,
+        advanced_disable_flags: true,
+        before_send: stripPageContext,
       }),
     );
+  });
+
+  it("初期化の前に起きたエラーは、初期化したときに送る", async () => {
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_KEY", "phc_test");
+    const { initAnalytics, captureClientException } = await import(
+      "@/lib/analytics/client"
+    );
+    const error = new Error("cold start");
+
+    captureClientException(error);
+    expect(posthog.captureException).not.toHaveBeenCalled();
+
+    initAnalytics(identity);
+    expect(posthog.captureException).toHaveBeenCalledWith(error);
   });
 
   it("identify は memberId だけ、register は family_id だけを渡す", async () => {
