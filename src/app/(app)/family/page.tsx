@@ -7,7 +7,8 @@ import { BackButton } from "@/components/BackButton";
 import { requireFamilyMember } from "@/features/auth/guard";
 import { ChildrenSection } from "@/features/children/components/ChildrenSection";
 import { getChildren } from "@/features/children/queries";
-import { removeMember } from "@/features/family/actions";
+import { deleteFamily, removeMember } from "@/features/family/actions";
+import { DeleteFamilySection } from "@/features/family/components/DeleteFamilySection";
 import { getFamily, getFamilyMembers } from "@/features/family/queries";
 import {
   createInvitation,
@@ -76,6 +77,11 @@ export default async function FamilyPage() {
         revokeInvitation={revokeInvitation}
         deleteInvitation={deleteInvitation}
         removeMember={removeMember}
+      />
+      <Divider />
+      <DeleteFamilySection
+        familyName={family.name}
+        deleteFamily={deleteFamily}
       />
     </Box>
   );
