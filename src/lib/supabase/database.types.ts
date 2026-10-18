@@ -108,6 +108,8 @@ export type Database = {
           family_id: string
           id: string
           joined_at: string
+          terms_accepted_at: string | null
+          terms_version: string | null
           user_id: string
         }
         Insert: {
@@ -115,6 +117,8 @@ export type Database = {
           family_id: string
           id?: string
           joined_at?: string
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           user_id: string
         }
         Update: {
@@ -122,6 +126,8 @@ export type Database = {
           family_id?: string
           id?: string
           joined_at?: string
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           user_id?: string
         }
         Relationships: [
@@ -571,7 +577,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      accept_invitation: { Args: { p_token_hash: string }; Returns: string }
+      accept_invitation: {
+        Args: { p_terms_version?: string; p_token_hash: string }
+        Returns: string
+      }
       add_ingredients_to_purchases: {
         Args: { p_ingredient_ids: string[]; p_recipe_id: string }
         Returns: string[]

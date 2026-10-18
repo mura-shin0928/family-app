@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { TERMS_VERSION } from "@/content/legal";
 import { requireFamilyMember } from "@/features/auth/guard";
 import type { ActionResult } from "@/lib/action-result";
 import { INVITATION_TTL_DAYS } from "@/lib/constants";
@@ -234,6 +235,7 @@ export async function acceptInvitation(input: {
 
   const { error } = await supabase.rpc("accept_invitation", {
     p_token_hash: hashInvitationToken(parsed.data.token),
+    p_terms_version: TERMS_VERSION,
   });
 
   if (error) {

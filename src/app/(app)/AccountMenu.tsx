@@ -1,6 +1,7 @@
 "use client";
 
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -50,6 +51,11 @@ export function AccountMenu({ displayName, isAppAdmin, signOut }: Props) {
   function handleReleaseNotes() {
     handleClose();
     router.push("/release-notes");
+  }
+
+  function handleNavigate(href: string) {
+    handleClose();
+    router.push(href);
   }
 
   function handleSignOut() {
@@ -109,6 +115,18 @@ export function AccountMenu({ displayName, isAppAdmin, signOut }: Props) {
             <ListItemText>お問い合わせ</ListItemText>
           </MenuItem>
         )}
+        <MenuItem onClick={() => handleNavigate("/terms")}>
+          <ListItemIcon>
+            <DescriptionOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>利用規約</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleNavigate("/privacy")}>
+          <ListItemIcon>
+            <DescriptionOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>プライバシーポリシー</ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleSignOut} disabled={isPending}>
           <ListItemIcon>
             <LogoutIcon fontSize="small" />

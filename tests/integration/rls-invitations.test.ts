@@ -329,6 +329,41 @@ describe("invitations RLS + accept_invitation / invitation_preview", () => {
       void token; // トークン自体はDBに残らないことの確認用に生成しているだけ
     });
 
+    it("records the accepted terms version and time", async () => {
+      const { hash } = makeToken();
+      const { error: insertError } = await admin.from("invitations").insert({
+        family_id: familyF1,
+        token_hash: hash,
+        invited_email: invitee.email,
+        display_name: "規約同意",
+        invited_by: memberAId,
+        expires_at: new Date(
+          Date.now() + 3 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+      });
+      if (insertError) throw new Error(insertError.message);
+
+      const clientInvitee = await signInAsClient(invitee.email, PASSWORD);
+      const { error } = await clientInvitee.rpc("accept_invitation", {
+        p_token_hash: hash,
+        p_terms_version: "2026-10-19",
+      });
+      expect(error).toBeNull();
+
+      const { data: memberRow } = await admin
+        .from("family_members")
+        .select("terms_version, terms_accepted_at")
+        .eq("user_id", userIds[invitee.email])
+        .single();
+      expect(memberRow?.terms_version).toBe("2026-10-19");
+      expect(memberRow?.terms_accepted_at).not.toBeNull();
+
+      await admin
+        .from("family_members")
+        .delete()
+        .eq("user_id", userIds[invitee.email]);
+    });
+
     it("rejects a second acceptance of an already-used invitation", async () => {
       const { hash } = makeToken();
       await admin.from("invitations").insert({

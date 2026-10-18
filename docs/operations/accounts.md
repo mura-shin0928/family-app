@@ -25,6 +25,8 @@ Supabase のプランは org 単位で決まり、Pro の org では org 内の�
 2. 同じ org にある場合は、無料プランの org を新しく作り、seido-data-hub をそこへ移す（プロジェクトの Settings > General の「Transfer project」）。移したあと、seido-data-hub の API URL とキーが変わっていないことを確かめる
 3. family-app の org の Billing で、プランを Pro にする
 4. 同じ Billing 画面で、Spend cap が ON になっていることを確かめる。OFF だと、使用量が Pro の枠を超えた分が従量で課金される
+5. Authentication の設定で「Disable writing auth audit logs to project database」を ON にする。OFF のままだと、ログインの監査記録（メールアドレスと IP）がプロジェクトの DB の `auth.audit_log_entries` に期限なく残り、家族ごと退会しても消えない。ON にすると、記録は Supabase のログの保存先だけに残り、プランの保持期間で消える
+6. 5 の前に溜まった記録を消す。SQL Editor で `delete from auth.audit_log_entries;` を流す
 
 確かめ方:
 
@@ -71,6 +73,7 @@ Supabase のプランは org 単位で決まり、Pro の org では org 内の�
 ## 4. Tavily
 
 1. Tavily のダッシュボードで、プランが無料（月 1,000 クレジット）のままで、カードが登録されていないことを確かめる
+2. 設定の「Allow Use of Query Data」を OFF にする（検索の言葉を Tavily のサービス改善に使わせない）
 
 ## 5. 問い合わせ用の Gmail
 
