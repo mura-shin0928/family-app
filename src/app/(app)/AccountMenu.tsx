@@ -2,7 +2,9 @@
 
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
 import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
+import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import LogoutIcon from "@mui/icons-material/Logout";
+import MailOutlinedIcon from "@mui/icons-material/MailOutlined";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
@@ -11,6 +13,7 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import { useRouter } from "next/navigation";
 import { type MouseEvent, useState, useTransition } from "react";
+import { CONTACT_SUBJECT, contactMailto } from "@/lib/contact";
 
 type Props = {
   displayName: string;
@@ -24,6 +27,7 @@ export function AccountMenu({ displayName, isAppAdmin, signOut }: Props) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [isPending, startTransition] = useTransition();
   const open = Boolean(anchorEl);
+  const mailto = contactMailto(CONTACT_SUBJECT);
 
   function handleOpen(event: MouseEvent<HTMLElement>) {
     setAnchorEl(event.currentTarget);
@@ -41,6 +45,11 @@ export function AccountMenu({ displayName, isAppAdmin, signOut }: Props) {
   function handleAdmin() {
     handleClose();
     router.push("/admin");
+  }
+
+  function handleReleaseNotes() {
+    handleClose();
+    router.push("/release-notes");
   }
 
   function handleSignOut() {
@@ -84,6 +93,20 @@ export function AccountMenu({ displayName, isAppAdmin, signOut }: Props) {
               <AdminPanelSettingsOutlinedIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText>Admin</ListItemText>
+          </MenuItem>
+        )}
+        <MenuItem onClick={handleReleaseNotes}>
+          <ListItemIcon>
+            <HistoryOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>更新内容</ListItemText>
+        </MenuItem>
+        {mailto && (
+          <MenuItem component="a" href={mailto} onClick={handleClose}>
+            <ListItemIcon>
+              <MailOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>お問い合わせ</ListItemText>
           </MenuItem>
         )}
         <MenuItem onClick={handleSignOut} disabled={isPending}>
