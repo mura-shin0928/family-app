@@ -63,13 +63,22 @@ export function AppUpdateNotice() {
       anchorOrigin={{ vertical: "top", horizontal: "center" }}
       message="新しいバージョンがあります"
       action={
-        <Button
-          color="inherit"
-          size="small"
-          onClick={() => window.location.reload()}
-        >
-          更新する
-        </Button>
+        <>
+          <Button
+            color="inherit"
+            size="small"
+            onClick={() => window.location.assign("/release-notes")}
+          >
+            更新内容を見る
+          </Button>
+          <Button
+            color="inherit"
+            size="small"
+            onClick={() => window.location.reload()}
+          >
+            更新する
+          </Button>
+        </>
       }
     />
   );
