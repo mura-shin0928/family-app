@@ -38,6 +38,7 @@ export function defaultCategoryFor(
 
 /**
  * 表示する制度に絞り、同じ自治体・同じ名前・同じページの行を1件にまとめる。
+ * 同じページかどうかは、レジストリの値ではなくいま開ける URL で見る。
  *
  * - 月齢（生まれていれば）: seido-data-hub API の age_months と同じ規則
  *   （min <= 月齢 < max、null はその側に制限なし）。範囲を持たない制度が大半なので
@@ -65,11 +66,9 @@ export function selectPrograms(
     if (category !== "all" && !matchesCategory(program, category)) {
       continue;
     }
-    const key = [
-      program.areaCode,
-      programTitle(program),
-      program.sourceUrl,
-    ].join("\n");
+    const key = [program.areaCode, programTitle(program), program.url].join(
+      "\n",
+    );
     if (seen.has(key)) continue;
     seen.add(key);
     selected.push(program);

@@ -155,6 +155,12 @@ function program(overrides: Partial<Program>): Program {
     canonicalName: "標準名",
     shortName: null,
     sourceUrl: "https://example.test/page",
+    url: "https://example.test/page",
+    state: "active",
+    checkedAt: "2026-09-21T03:20:00+09:00",
+    changedAt: null,
+    autoUpdate: true,
+    relatedLinks: [],
     categoryCodes: ["003"],
     targetCodes: ["087"],
     ageMinMonths: null,
@@ -163,12 +169,14 @@ function program(overrides: Partial<Program>): Program {
   };
 }
 
+const TODAY = "2026-10-18";
+
 describe("shownProgramUrls", () => {
   it("returns the url of a program whose name matches the query", () => {
     const programs = [
-      program({ shortName: "産後ケア事業", sourceUrl: "https://x.test/a" }),
+      program({ shortName: "産後ケア事業", url: "https://x.test/a" }),
     ];
-    expect(shownProgramUrls(programs, null, "産後ケア")).toEqual([
+    expect(shownProgramUrls(programs, null, "産後ケア", TODAY)).toEqual([
       "https://x.test/a",
     ]);
   });
@@ -177,20 +185,20 @@ describe("shownProgramUrls", () => {
     const programs = [
       program({
         shortName: "産後家事・育児支援事業",
-        sourceUrl: "https://x.test/a",
+        url: "https://x.test/a",
       }),
     ];
-    expect(shownProgramUrls(programs, null, "産後ヘルパー")).toEqual([]);
+    expect(shownProgramUrls(programs, null, "産後ヘルパー", TODAY)).toEqual([]);
   });
 
   it("leaves out a program outside the child's age", () => {
     const programs = [
       program({
         shortName: "産後ケア事業",
-        sourceUrl: "https://x.test/a",
+        url: "https://x.test/a",
         ageMaxMonths: 12,
       }),
     ];
-    expect(shownProgramUrls(programs, 24, "産後ケア")).toEqual([]);
+    expect(shownProgramUrls(programs, 24, "産後ケア", TODAY)).toEqual([]);
   });
 });

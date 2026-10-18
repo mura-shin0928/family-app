@@ -248,14 +248,15 @@ export async function fetchAreaCatalog(input: {
     };
   }
 
+  const today = todayInJst();
   const ageMonths = child.birth_date
-    ? ageInMonths(child.birth_date, todayInJst())
+    ? ageInMonths(child.birth_date, today)
     : null;
 
   return {
     ok: true,
     municipalityName: municipality.name,
-    items: programsToCatalog(result.data, ageMonths),
+    items: programsToCatalog(result.data, ageMonths, today),
     attribution: result.attribution,
   };
 }
@@ -315,11 +316,13 @@ export async function searchWebCatalog(input: {
   const programs = municipality
     ? await getAreaPrograms(municipality.code)
     : null;
+  const today = todayInJst();
   const shownUrls = programs?.ok
     ? shownProgramUrls(
         programs.data,
-        child.birth_date ? ageInMonths(child.birth_date, todayInJst()) : null,
+        child.birth_date ? ageInMonths(child.birth_date, today) : null,
         parsed.data.query,
+        today,
       )
     : [];
 

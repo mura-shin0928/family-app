@@ -37,6 +37,18 @@ const programSchema = z.object({
   target_codes: z.array(z.string()),
   age_min_months: z.number().int().nullable(),
   age_max_months: z.number().int().nullable(),
+  url: z.string(),
+  state: z.string().nullable(),
+  checked_at: z.string().nullable(),
+  changed_at: z.string().nullable(),
+  auto_update: z.boolean(),
+  related_links: z.array(
+    z.object({
+      url: z.string(),
+      state: z.string().nullable(),
+      checked_at: z.string().nullable(),
+    }),
+  ),
 });
 
 export type SeidoResult<T> =
@@ -157,13 +169,25 @@ export async function getAreaPrograms(
     ...result,
     // 公式ページはリンクとして開くので、http(s) 以外は一覧に出さない
     data: result.data
-      .filter((program) => isHttpUrl(program.source_url))
+      .filter((program) => isHttpUrl(program.url))
       .map((program) => ({
         id: program.id,
         areaCode: program.area_code,
         canonicalName: program.canonical_name,
         shortName: program.short_name,
         sourceUrl: program.source_url,
+        url: program.url,
+        state: program.state,
+        checkedAt: program.checked_at,
+        changedAt: program.changed_at,
+        autoUpdate: program.auto_update,
+        relatedLinks: program.related_links
+          .filter((link) => isHttpUrl(link.url))
+          .map((link) => ({
+            url: link.url,
+            state: link.state,
+            checkedAt: link.checked_at,
+          })),
         categoryCodes: program.category_codes,
         targetCodes: program.target_codes,
         ageMinMonths: program.age_min_months,

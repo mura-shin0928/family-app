@@ -13,6 +13,12 @@ function program(overrides: Partial<Program>): Program {
     canonicalName: "標準名",
     shortName: null,
     sourceUrl: "https://example.test/page",
+    url: "https://example.test/page",
+    state: "active",
+    checkedAt: "2026-09-21T03:20:00+09:00",
+    changedAt: null,
+    autoUpdate: true,
+    relatedLinks: [],
     categoryCodes: ["003"],
     targetCodes: ["087"],
     ageMinMonths: null,
@@ -127,7 +133,7 @@ describe("selectPrograms", () => {
     });
     const otherPage = program({
       shortName: "産後ケア事業",
-      sourceUrl: "https://example.test/other",
+      url: "https://example.test/other",
     });
     expect(
       selectPrograms([first, duplicate, otherArea, otherPage], {
@@ -135,6 +141,18 @@ describe("selectPrograms", () => {
         category: "all",
       }).map((p) => p.id),
     ).toEqual([first.id, otherArea.id, otherPage.id]);
+  });
+
+  it("compares pages by the url that opens now, not the registry value", () => {
+    // レジストリの値が違っても、巡回で同じページに着いたなら同じ項目になる
+    const a = program({
+      shortName: "産後ケア事業",
+      sourceUrl: "http://example.test/page",
+    });
+    const b = program({ shortName: "産後ケア事業" });
+    expect(
+      selectPrograms([a, b], { ageMonths: null, category: "all" }),
+    ).toHaveLength(1);
   });
 
   it("merges by the displayed title, falling back to the canonical name", () => {
