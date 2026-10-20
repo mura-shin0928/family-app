@@ -8,6 +8,7 @@ import Drawer from "@mui/material/Drawer";
 import MuiLink from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import { LinkNoticeText } from "@/features/programs/components/LinkNoticeText";
 import { hostnameOf, isHttpUrl } from "@/lib/url";
 import { LIFE_EVENT_KINDS } from "../catalog";
 import { type ItemState, isWebCatalogKey } from "../search";
@@ -91,7 +92,7 @@ export function CatalogItemSheet({
           )}
           {link?.notice ? (
             <Typography variant="caption" sx={{ color: "text.secondary" }}>
-              {link.notice}
+              <LinkNoticeText notice={link.notice} />
             </Typography>
           ) : (
             link?.checkedOn && (

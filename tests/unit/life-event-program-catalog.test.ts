@@ -64,7 +64,10 @@ describe("programToCatalogItem", () => {
       ],
     });
     expect(programToCatalogItem(p, TODAY).link).toEqual({
-      notice: "公式ページを開けませんでした（最終確認: 9月21日）",
+      notice: {
+        message: "公式ページを開けませんでした",
+        checkedOn: "最終確認: 9月21日",
+      },
       checkedOn: "最終確認: 9月21日",
       relatedUrls: ["https://example.test/r"],
     });

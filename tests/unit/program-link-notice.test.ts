@@ -43,16 +43,24 @@ describe("describeProgramLink", () => {
   it.each(["deleted", "deletion_candidate"])(
     "%s は開けなかったことと最終確認日を出す",
     (state) => {
-      expect(describeProgramLink(program({ state }), TODAY).notice).toBe(
-        "公式ページを開けませんでした（最終確認: 9月21日）",
-      );
+      expect(describeProgramLink(program({ state }), TODAY).notice).toEqual({
+        message: "公式ページを開けませんでした",
+        checkedOn: "最終確認: 9月21日",
+      });
     },
   );
+
+  it("最終確認日が無ければ、開けなかったことだけを出す", () => {
+    expect(
+      describeProgramLink(program({ state: "deleted", checkedAt: null }), TODAY)
+        .notice,
+    ).toEqual({ message: "公式ページを開けませんでした", checkedOn: null });
+  });
 
   it("自動で確認できない制度にはそのことを出す", () => {
     expect(
       describeProgramLink(program({ autoUpdate: false }), TODAY).notice,
-    ).toBe("自動で更新を確認できません");
+    ).toEqual({ message: "自動で更新を確認できません", checkedOn: null });
   });
 
   it("知らない状態には注記を付けない", () => {

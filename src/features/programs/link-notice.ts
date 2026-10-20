@@ -1,10 +1,20 @@
 import { type DateString, todayInJst } from "@/lib/date";
 import type { Program } from "./types";
 
+/**
+ * 一覧の行にも出す注記。日付は文言と分けて持ち、画面では日付の途中で折り返さないように出す
+ * （狭い画面で「10」「月18日」に割れるため。LinkNoticeText）。
+ */
+export type LinkNotice = {
+  message: string;
+  /** 「最終確認: 9月21日」。日付を添えない注記・一度も確かめていなければ null。 */
+  checkedOn: string | null;
+};
+
 /** 家族に見せる、公式ページについての注記。 */
 export type ProgramLinkNotice = {
-  /** 一覧の行にも出す注記。生きている・まだ確かめていない制度では null。 */
-  notice: string | null;
+  /** 生きている・まだ確かめていない制度では null。 */
+  notice: LinkNotice | null;
   /** 「最終確認: 9月21日」。一度も確かめていなければ null。 */
   checkedOn: string | null;
   /** 公式ページが消えた（か消えた疑いがある）ときだけ、生きている関連リンクを順位どおりに。 */
@@ -25,23 +35,21 @@ export function describeProgramLink(
   program: Program,
   today: DateString,
 ): ProgramLinkNotice {
-  const checkedDate = program.checkedAt
-    ? formatMonthDay(todayInJst(new Date(program.checkedAt)), today)
+  const checkedOn = program.checkedAt
+    ? `最終確認: ${formatMonthDay(todayInJst(new Date(program.checkedAt)), today)}`
     : null;
   const isDead = program.state !== null && DEAD_STATES.has(program.state);
 
-  let notice: string | null = null;
+  let notice: LinkNotice | null = null;
   if (isDead) {
-    notice = checkedDate
-      ? `公式ページを開けませんでした（最終確認: ${checkedDate}）`
-      : "公式ページを開けませんでした";
+    notice = { message: "公式ページを開けませんでした", checkedOn };
   } else if (!program.autoUpdate) {
-    notice = "自動で更新を確認できません";
+    notice = { message: "自動で更新を確認できません", checkedOn: null };
   }
 
   return {
     notice,
-    checkedOn: checkedDate ? `最終確認: ${checkedDate}` : null,
+    checkedOn,
     relatedUrls: isDead
       ? program.relatedLinks
           .filter((link) => link.state === "active")
