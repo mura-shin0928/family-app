@@ -23,58 +23,39 @@ function program(overrides: Partial<Program>): Program {
   };
 }
 
-const TODAY = "2026-10-18";
-
 describe("describeProgramLink", () => {
-  it("生きている制度には注記を付けない", () => {
-    expect(describeProgramLink(program({}), TODAY)).toEqual({
+  it("生きている制度には何も付けない（確かめた日付も出さない）", () => {
+    expect(describeProgramLink(program({}))).toEqual({
       notice: null,
-      checkedOn: "最終確認: 9月21日",
       relatedUrls: [],
     });
   });
 
   it("一度も確認していない制度には何も付けない", () => {
     expect(
-      describeProgramLink(program({ state: null, checkedAt: null }), TODAY),
-    ).toEqual({ notice: null, checkedOn: null, relatedUrls: [] });
+      describeProgramLink(program({ state: null, checkedAt: null })),
+    ).toEqual({ notice: null, relatedUrls: [] });
   });
 
   it.each(["deleted", "deletion_candidate"])(
-    "%s は開けなかったことと最終確認日を出す",
+    "%s は開けなかったことだけを出す（日付は付けない）",
     (state) => {
-      expect(describeProgramLink(program({ state }), TODAY).notice).toBe(
-        "公式ページを開けませんでした（最終確認: 9月21日）",
+      expect(describeProgramLink(program({ state })).notice).toBe(
+        "公式ページを開けませんでした",
       );
     },
   );
 
   it("自動で確認できない制度にはそのことを出す", () => {
-    expect(
-      describeProgramLink(program({ autoUpdate: false }), TODAY).notice,
-    ).toBe("自動で更新を確認できません");
+    expect(describeProgramLink(program({ autoUpdate: false })).notice).toBe(
+      "自動で更新を確認できません",
+    );
   });
 
   it("知らない状態には注記を付けない", () => {
     expect(
-      describeProgramLink(program({ state: "something_new" }), TODAY).notice,
+      describeProgramLink(program({ state: "something_new" })).notice,
     ).toBeNull();
-  });
-
-  it("日付は JST で数える", () => {
-    expect(
-      describeProgramLink(program({ checkedAt: "2026-09-20T15:30:00Z" }), TODAY)
-        .checkedOn,
-    ).toBe("最終確認: 9月21日");
-  });
-
-  it("今年でない日付には年を付ける", () => {
-    expect(
-      describeProgramLink(
-        program({ checkedAt: "2025-12-29T03:20:00+09:00" }),
-        TODAY,
-      ).checkedOn,
-    ).toBe("最終確認: 2025年12月29日");
   });
 
   it("死んだ制度には、生きた関連リンクだけを順に返す", () => {
@@ -87,7 +68,7 @@ describe("describeProgramLink", () => {
         { url: "https://x.test/4", state: "active", checkedAt: null },
       ],
     });
-    expect(describeProgramLink(p, TODAY).relatedUrls).toEqual([
+    expect(describeProgramLink(p).relatedUrls).toEqual([
       "https://x.test/1",
       "https://x.test/4",
     ]);
@@ -99,6 +80,6 @@ describe("describeProgramLink", () => {
         { url: "https://x.test/1", state: "active", checkedAt: null },
       ],
     });
-    expect(describeProgramLink(p, TODAY).relatedUrls).toEqual([]);
+    expect(describeProgramLink(p).relatedUrls).toEqual([]);
   });
 });
