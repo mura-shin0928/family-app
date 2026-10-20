@@ -15,6 +15,18 @@ export type ProgramLinkNotice = {
 const DEAD_STATES = new Set(["deleted", "deletion_candidate"]);
 
 /**
+ * 公式ページを開けず、生きている関連リンクも無い。押せるリンクが1つも無いので、一覧に出さない
+ * （selectPrograms）。関連リンクが生きていれば、そこから辿れるので出す。
+ */
+export function hasNothingToOpen(program: Program): boolean {
+  return (
+    program.state !== null &&
+    DEAD_STATES.has(program.state) &&
+    !program.relatedLinks.some((link) => link.state === "active")
+  );
+}
+
+/**
  * 公式ページの状態から文言を作る。こちらが観測した事実だけを書き、断定しない。
  * 日付は出さない。「最終確認: 9月21日」では誰が何を確かめた日か家族に伝わらず、
  * 家族の判断にも効かないため（checkedAt・changedAt は使わない）。

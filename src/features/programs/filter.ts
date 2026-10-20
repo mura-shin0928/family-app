@@ -1,4 +1,5 @@
 import type { DateString } from "@/lib/date";
+import { hasNothingToOpen } from "./link-notice";
 import type { Program } from "./types";
 
 /**
@@ -43,6 +44,7 @@ export function defaultCategoryFor(
  * - 月齢（生まれていれば）: seido-data-hub API の age_months と同じ規則
  *   （min <= 月齢 < max、null はその側に制限なし）。範囲を持たない制度が大半なので
  *   あまり減らないが、「児童手当は3歳未満」のような範囲はここで効く。
+ * - 開けない: 公式ページを開けず、生きている関連リンクも無い制度は出さない（hasNothingToOpen）。
  * - まとめる: レジストリには同じページに載った別の行（産後ケアの日帰り型・宿泊型など）が
  *   同じ呼び名で並ぶ。家族から見ると区別できず、追加しても同じ項目になるため1件にする。
  *   並び順は API のまま（市区町村が先、その中は UM 順）。
@@ -57,6 +59,7 @@ export function selectPrograms(
   const seen = new Set<string>();
   const selected: Program[] = [];
   for (const program of programs) {
+    if (hasNothingToOpen(program)) continue;
     if (ageMonths !== null) {
       if (program.ageMinMonths !== null && program.ageMinMonths > ageMonths)
         continue;
