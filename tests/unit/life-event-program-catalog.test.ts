@@ -26,12 +26,10 @@ function program(overrides: Partial<Program>): Program {
   };
 }
 
-const TODAY = "2026-10-18";
-
 describe("programToCatalogItem", () => {
   it("fills the fixed fields", () => {
     const p = program({ id: "abc", shortName: "呼び名" });
-    expect(programToCatalogItem(p, TODAY)).toEqual({
+    expect(programToCatalogItem(p)).toEqual({
       key: "program:abc",
       kind: "birth",
       title: "呼び名",
@@ -40,11 +38,7 @@ describe("programToCatalogItem", () => {
       aliases: ["標準名"],
       timing: null,
       url: "https://example.test/page",
-      link: {
-        notice: null,
-        checkedOn: "最終確認: 9月21日",
-        relatedUrls: [],
-      },
+      link: { notice: null, relatedUrls: [] },
     });
   });
 
@@ -53,7 +47,7 @@ describe("programToCatalogItem", () => {
       sourceUrl: "https://example.test/old",
       url: "https://example.test/new",
     });
-    expect(programToCatalogItem(p, TODAY).url).toBe("https://example.test/new");
+    expect(programToCatalogItem(p).url).toBe("https://example.test/new");
   });
 
   it("carries the notice for a page that could not be opened", () => {
@@ -63,24 +57,19 @@ describe("programToCatalogItem", () => {
         { url: "https://example.test/r", state: "active", checkedAt: null },
       ],
     });
-    expect(programToCatalogItem(p, TODAY).link).toEqual({
-      notice: {
-        message: "公式ページを開けませんでした",
-        checkedOn: "最終確認: 9月21日",
-      },
-      checkedOn: "最終確認: 9月21日",
+    expect(programToCatalogItem(p).link).toEqual({
+      notice: "公式ページを開けませんでした",
       relatedUrls: ["https://example.test/r"],
     });
   });
 
   it("has no aliases without shortName", () => {
-    expect(programToCatalogItem(program({}), TODAY).aliases).toEqual([]);
+    expect(programToCatalogItem(program({})).aliases).toEqual([]);
   });
 
   it("maps category 002 to pregnancy", () => {
     expect(
-      programToCatalogItem(program({ categoryCodes: ["002", "003"] }), TODAY)
-        .kind,
+      programToCatalogItem(program({ categoryCodes: ["002", "003"] })).kind,
     ).toBe("pregnancy");
   });
 
@@ -88,21 +77,20 @@ describe("programToCatalogItem", () => {
     expect(
       programToCatalogItem(
         program({ categoryCodes: ["003"], targetCodes: ["086"] }),
-        TODAY,
       ).kind,
     ).toBe("pregnancy");
   });
 
   it("maps 004 to nursery", () => {
-    expect(
-      programToCatalogItem(program({ categoryCodes: ["004"] }), TODAY).kind,
-    ).toBe("nursery");
+    expect(programToCatalogItem(program({ categoryCodes: ["004"] })).kind).toBe(
+      "nursery",
+    );
   });
 
   it("maps 003 only to birth", () => {
-    expect(
-      programToCatalogItem(program({ categoryCodes: ["003"] }), TODAY).kind,
-    ).toBe("birth");
+    expect(programToCatalogItem(program({ categoryCodes: ["003"] })).kind).toBe(
+      "birth",
+    );
   });
 });
 
@@ -112,12 +100,12 @@ describe("programsToCatalog", () => {
       program({ id: "a", canonicalName: "産後ケア" }),
       program({ id: "b", canonicalName: "産後ケア" }),
     ];
-    const items = programsToCatalog(programs, null, TODAY);
+    const items = programsToCatalog(programs, null);
     expect(items.map((i) => i.key)).toEqual(["program:a"]);
   });
 
   it("filters by age", () => {
     const programs = [program({ id: "a", ageMaxMonths: 12 })];
-    expect(programsToCatalog(programs, 24, TODAY)).toEqual([]);
+    expect(programsToCatalog(programs, 24)).toEqual([]);
   });
 });

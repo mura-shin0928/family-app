@@ -169,14 +169,12 @@ function program(overrides: Partial<Program>): Program {
   };
 }
 
-const TODAY = "2026-10-18";
-
 describe("shownProgramUrls", () => {
   it("returns the url of a program whose name matches the query", () => {
     const programs = [
       program({ shortName: "産後ケア事業", url: "https://x.test/a" }),
     ];
-    expect(shownProgramUrls(programs, null, "産後ケア", TODAY)).toEqual([
+    expect(shownProgramUrls(programs, null, "産後ケア")).toEqual([
       "https://x.test/a",
     ]);
   });
@@ -188,7 +186,7 @@ describe("shownProgramUrls", () => {
         url: "https://x.test/a",
       }),
     ];
-    expect(shownProgramUrls(programs, null, "産後ヘルパー", TODAY)).toEqual([]);
+    expect(shownProgramUrls(programs, null, "産後ヘルパー")).toEqual([]);
   });
 
   it("leaves out a program outside the child's age", () => {
@@ -199,6 +197,6 @@ describe("shownProgramUrls", () => {
         ageMaxMonths: 12,
       }),
     ];
-    expect(shownProgramUrls(programs, 24, "産後ケア", TODAY)).toEqual([]);
+    expect(shownProgramUrls(programs, 24, "産後ケア")).toEqual([]);
   });
 });

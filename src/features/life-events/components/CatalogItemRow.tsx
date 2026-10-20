@@ -5,7 +5,6 @@ import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
-import { LinkNoticeText } from "@/features/programs/components/LinkNoticeText";
 import type { ItemState } from "../search";
 import { formatSlashDate } from "../timing";
 import type { CatalogItem } from "../types";
@@ -52,7 +51,7 @@ export function CatalogItemRow({
             component="p"
             sx={{ color: "text.secondary" }}
           >
-            <LinkNoticeText notice={item.link.notice} />
+            {item.link.notice}
           </Typography>
         )}
         {state.status === "done" && (

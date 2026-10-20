@@ -8,7 +8,6 @@ import Drawer from "@mui/material/Drawer";
 import MuiLink from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { LinkNoticeText } from "@/features/programs/components/LinkNoticeText";
 import { hostnameOf, isHttpUrl } from "@/lib/url";
 import { LIFE_EVENT_KINDS } from "../catalog";
 import { type ItemState, isWebCatalogKey } from "../search";
@@ -90,16 +89,10 @@ export function CatalogItemSheet({
               {isWeb ? "ページを開く" : "公式ページを開く"}
             </MuiLink>
           )}
-          {link?.notice ? (
+          {link?.notice && (
             <Typography variant="caption" sx={{ color: "text.secondary" }}>
-              <LinkNoticeText notice={link.notice} />
+              {link.notice}
             </Typography>
-          ) : (
-            link?.checkedOn && (
-              <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                {link.checkedOn}
-              </Typography>
-            )
           )}
           {link && link.relatedUrls.length > 0 && (
             <Stack spacing={0.5}>

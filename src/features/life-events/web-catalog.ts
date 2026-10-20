@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Program } from "@/features/programs/types";
 import type { WebSearchResult } from "@/features/web-search/types";
-import type { DateString } from "@/lib/date";
 import { programsToCatalog } from "./program-catalog";
 import { matchesQuery } from "./search";
 import type { CatalogItem } from "./types";
@@ -54,9 +53,8 @@ export function shownProgramUrls(
   programs: Program[],
   ageMonths: number | null,
   query: string,
-  today: DateString,
 ): string[] {
-  return programsToCatalog(programs, ageMonths, today)
+  return programsToCatalog(programs, ageMonths)
     .filter((item) => matchesQuery(item, query))
     .flatMap((item) => (item.url ? [item.url] : []));
 }
