@@ -162,4 +162,32 @@ describe("selectPrograms", () => {
       selectPrograms([a, b], { ageMonths: null, category: "all" }),
     ).toHaveLength(1);
   });
+
+  it("hides pages that could not be opened unless a related page is alive", () => {
+    // 押しても開けないリンクしか無い制度は出さない。関連リンクが生きていれば、そこから辿れるので出す
+    const alive = program({ shortName: "生きている" });
+    const deadAlone = program({
+      shortName: "開けない",
+      state: "deletion_candidate",
+      relatedLinks: [
+        { url: "https://example.test/r1", state: "deleted", checkedAt: null },
+        { url: "https://example.test/r2", state: null, checkedAt: null },
+      ],
+    });
+    const deadWithRelated = program({
+      shortName: "関連が生きている",
+      state: "deleted",
+      relatedLinks: [
+        { url: "https://example.test/r3", state: "active", checkedAt: null },
+      ],
+    });
+    const notYetChecked = program({ shortName: "未確認", state: null });
+    const blocked = program({ shortName: "403", autoUpdate: false });
+    expect(
+      selectPrograms(
+        [alive, deadAlone, deadWithRelated, notYetChecked, blocked],
+        { ageMonths: null, category: "all" },
+      ).map((p) => p.id),
+    ).toEqual([alive.id, deadWithRelated.id, notYetChecked.id, blocked.id]);
+  });
 });
