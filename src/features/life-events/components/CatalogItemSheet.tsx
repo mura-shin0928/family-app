@@ -89,16 +89,10 @@ export function CatalogItemSheet({
               {isWeb ? "ページを開く" : "公式ページを開く"}
             </MuiLink>
           )}
-          {link?.notice ? (
+          {link?.notice && (
             <Typography variant="caption" sx={{ color: "text.secondary" }}>
               {link.notice}
             </Typography>
-          ) : (
-            link?.checkedOn && (
-              <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                {link.checkedOn}
-              </Typography>
-            )
           )}
           {link && link.relatedUrls.length > 0 && (
             <Stack spacing={0.5}>

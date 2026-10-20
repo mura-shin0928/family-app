@@ -1,12 +1,9 @@
-import { type DateString, todayInJst } from "@/lib/date";
 import type { Program } from "./types";
 
 /** 家族に見せる、公式ページについての注記。 */
 export type ProgramLinkNotice = {
   /** 一覧の行にも出す注記。生きている・まだ確かめていない制度では null。 */
   notice: string | null;
-  /** 「最終確認: 9月21日」。一度も確かめていなければ null。 */
-  checkedOn: string | null;
   /** 公式ページが消えた（か消えた疑いがある）ときだけ、生きている関連リンクを順位どおりに。 */
   relatedUrls: string[];
 };
@@ -18,41 +15,26 @@ export type ProgramLinkNotice = {
 const DEAD_STATES = new Set(["deleted", "deletion_candidate"]);
 
 /**
- * 公式ページの状態と日付から文言を作る。こちらが観測した事実だけを書き、断定しない。
- * changedAt は使わない（null でも「最新」とは言えず、変化の日付は家族の判断に効かないため）。
+ * 公式ページの状態から文言を作る。こちらが観測した事実だけを書き、断定しない。
+ * 日付は出さない。「最終確認: 9月21日」では誰が何を確かめた日か家族に伝わらず、
+ * 家族の判断にも効かないため（checkedAt・changedAt は使わない）。
  */
-export function describeProgramLink(
-  program: Program,
-  today: DateString,
-): ProgramLinkNotice {
-  const checkedDate = program.checkedAt
-    ? formatMonthDay(todayInJst(new Date(program.checkedAt)), today)
-    : null;
+export function describeProgramLink(program: Program): ProgramLinkNotice {
   const isDead = program.state !== null && DEAD_STATES.has(program.state);
 
   let notice: string | null = null;
   if (isDead) {
-    notice = checkedDate
-      ? `公式ページを開けませんでした（最終確認: ${checkedDate}）`
-      : "公式ページを開けませんでした";
+    notice = "公式ページを開けませんでした";
   } else if (!program.autoUpdate) {
     notice = "自動で更新を確認できません";
   }
 
   return {
     notice,
-    checkedOn: checkedDate ? `最終確認: ${checkedDate}` : null,
     relatedUrls: isDead
       ? program.relatedLinks
           .filter((link) => link.state === "active")
           .map((link) => link.url)
       : [],
   };
-}
-
-/** 「9月21日」。今年でなければ「2025年12月29日」。 */
-function formatMonthDay(date: DateString, today: DateString): string {
-  const [year, month, day] = date.split("-");
-  const monthDay = `${Number(month)}月${Number(day)}日`;
-  return year === today.slice(0, 4) ? monthDay : `${year}年${monthDay}`;
 }

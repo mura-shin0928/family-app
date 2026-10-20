@@ -262,7 +262,7 @@ export async function fetchAreaCatalog(input: {
   return {
     ok: true,
     municipalityName: municipality.name,
-    items: programsToCatalog(result.data, ageMonths, today),
+    items: programsToCatalog(result.data, ageMonths),
     attribution: result.attribution,
   };
 }
@@ -328,7 +328,6 @@ export async function searchWebCatalog(input: {
         programs.data,
         child.birth_date ? ageInMonths(child.birth_date, today) : null,
         parsed.data.query,
-        today,
       )
     : [];
 
