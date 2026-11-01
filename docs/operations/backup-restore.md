@@ -31,7 +31,7 @@ docker run --rm -it -v "$PWD":/work -w /work postgres:17 psql "<接続文字列>
 3. 終わったら次を確かめる
    - 本番のアプリでタスクの一覧とレシピの一覧が開ける
    - 二人の端末でタスクを 1 件作り、もう一方に即時に反映される（Realtime。Supabase が自動で作り直す）
-   - CI の `migrate` ジョブ: 戻した時点より後の migration は、もう一度当たる。壊れた原因の migration を直してから main に入れる
+   - CI の `migrate` ジョブ: 戻した時点より後の migration は、もう一度当たる。壊れた原因の migration を直して main に入れ、リリースする（[手順](release.md)）
 4. 利用者に、戻した時点を知らせる
 
 ## 場面 B: 一つの家族だけを戻す
