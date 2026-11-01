@@ -22,6 +22,7 @@ function makeTask(overrides: Partial<TaskDTO> = {}): TaskDTO {
     note: null,
     purchaseLocationId: null,
     recordChildId: null,
+    keepDetailsInRecord: false,
     ...overrides,
   };
 }
@@ -94,6 +95,19 @@ describe("buildTaskPatch", () => {
     ).toEqual({ recordChildId: "" });
   });
 
+  it("メモと URL を記録に残すかどうかは、変えたときだけ送る", () => {
+    expect(
+      buildTaskPatch(original, { ...original, keepDetailsInRecord: true }),
+    ).toEqual({ keepDetailsInRecord: true });
+    const kept = { ...original, keepDetailsInRecord: true };
+    expect(
+      buildTaskPatch(kept, { ...kept, keepDetailsInRecord: false }),
+    ).toEqual({
+      keepDetailsInRecord: false,
+    });
+    expect(buildTaskPatch(kept, kept)).toEqual({});
+  });
+
   it("買うものをオフにしても場所は送らない", () => {
     const withLoc = { ...original, isPurchase: true, purchaseLocationId: LOC };
     expect(buildTaskPatch(withLoc, { ...withLoc, isPurchase: false })).toEqual({
@@ -156,6 +170,9 @@ describe("patchToTaskFields", () => {
     });
     expect(patchToTaskFields({ recordChildId: "" })).toEqual({
       recordChildId: null,
+    });
+    expect(patchToTaskFields({ keepDetailsInRecord: true })).toEqual({
+      keepDetailsInRecord: true,
     });
   });
 });

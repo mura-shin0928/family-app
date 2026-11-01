@@ -33,6 +33,13 @@ export const recordLifeEventItemDoneSchema = z.object({
   url: urlSchema,
 });
 
+export const addLifeEventRecordSchema = z.object({
+  childId: childIdSchema,
+  title: titleSchema,
+  doneOn: dateStringSchema,
+  note: noteSchema,
+});
+
 export const updateLifeEventItemDoneOnSchema = z.object({
   id: z.string().uuid(),
   doneOn: dateStringSchema,

@@ -1,8 +1,10 @@
 "use client";
 
+import AddIcon from "@mui/icons-material/Add";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Fab from "@mui/material/Fab";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
@@ -21,15 +23,20 @@ import { BOTTOM_NAV_CLEARANCE } from "@/lib/layout";
 import { successToast } from "@/lib/result-toast";
 import {
   addLifeEventItemToTask,
+  addLifeEventRecord,
   recordLifeEventItemDone,
 } from "../item-actions";
 import type { CatalogItem, LifeEventItem } from "../types";
 import { AddToTaskDialog } from "./AddToTaskDialog";
+import { RecordAddDialog, type RecordAddInput } from "./RecordAddDialog";
 import { RecordDoneDialog } from "./RecordDoneDialog";
 import { RecordTab } from "./RecordTab";
 import { SearchTab } from "./SearchTab";
 
 type Mode = "search" | "record";
+
+/** 記録の最後の行が＋に隠れないよう空ける距離。Fab の高さ 56px + 16px。 */
+const FAB_CLEARANCE = "72px";
 
 export function LifeEventsScreen({
   familyChildren,
@@ -55,6 +62,7 @@ export function LifeEventsScreen({
     presetDueOn: string;
   } | null>(null);
   const [doneDialog, setDoneDialog] = useState<CatalogItem | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [toast, setToast] = useState<{ taskId: string } | null>(null);
 
   if (familyChildren.length === 0) {
@@ -135,8 +143,32 @@ export function LifeEventsScreen({
     });
   }
 
+  function handleSubmitAddRecord(input: RecordAddInput) {
+    setError(null);
+    startTransition(async () => {
+      const result = await addLifeEventRecord({
+        childId: activeChild.id,
+        ...input,
+      });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setAddDialogOpen(false);
+      router.refresh();
+    });
+  }
+
   return (
-    <Box sx={{ p: 2, pb: BOTTOM_NAV_CLEARANCE }}>
+    <Box
+      sx={{
+        p: 2,
+        pb:
+          mode === "record"
+            ? `calc(${BOTTOM_NAV_CLEARANCE} + ${FAB_CLEARANCE})`
+            : BOTTOM_NAV_CLEARANCE,
+      }}
+    >
       <Stack spacing={2}>
         {familyChildren.length > 1 && (
           <Tabs
@@ -165,7 +197,7 @@ export function LifeEventsScreen({
           <ToggleButton value="record">記録</ToggleButton>
         </ToggleButtonGroup>
 
-        {error && !taskDialog && !doneDialog && (
+        {error && !taskDialog && !doneDialog && !addDialogOpen && (
           <Alert severity="error" onClose={() => setError(null)}>
             {error}
           </Alert>
@@ -230,6 +262,33 @@ export function LifeEventsScreen({
         onClose={() => setDoneDialog(null)}
         onSubmit={handleSubmitDone}
       />
+
+      <RecordAddDialog
+        key={`add:${addDialogOpen}`}
+        open={addDialogOpen}
+        busy={isPending}
+        error={error}
+        onClose={() => setAddDialogOpen(false)}
+        onSubmit={handleSubmitAddRecord}
+      />
+
+      {mode === "record" && (
+        <Fab
+          color="primary"
+          aria-label="記録を追加"
+          onClick={() => {
+            setError(null);
+            setAddDialogOpen(true);
+          }}
+          sx={{
+            position: "fixed",
+            right: 16,
+            bottom: BOTTOM_NAV_CLEARANCE,
+          }}
+        >
+          <AddIcon />
+        </Fab>
+      )}
 
       <ResultSnackbar
         toast={toast ? successToast("タスクに追加しました") : null}

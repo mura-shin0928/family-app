@@ -9,8 +9,10 @@ import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import Box from "@mui/material/Box";
+import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -342,6 +344,21 @@ function TaskEditForm({
           htmlInput: inputStyle,
         }}
       />
+
+      {/* 記録へ写すのは完了の瞬間なので、完了済みのタスクでは選べない */}
+      {recordChild && task.status === "open" && (
+        <FormControlLabel
+          label={`完了時に${draft.url.trim() ? "メモとURL" : "メモ"}を${recordChild.displayName}の記録に残す`}
+          control={
+            <Checkbox
+              checked={draft.keepDetailsInRecord}
+              onChange={(event) =>
+                update({ keepDetailsInRecord: event.target.checked })
+              }
+            />
+          }
+        />
+      )}
     </EditSheetForm>
   );
 }

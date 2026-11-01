@@ -16,7 +16,7 @@ export async function getTasks(familyId: string): Promise<TaskDTO[]> {
   const { data, error } = await supabase
     .from("tasks")
     .select(
-      "id, title, due_on, is_purchase, status, completed_at, sort_order, url, note, purchase_location_id, life_event_items(child_id, deleted_at)",
+      "id, title, due_on, is_purchase, status, completed_at, sort_order, url, note, purchase_location_id, keep_details_in_record, life_event_items(child_id, deleted_at)",
     )
     .eq("family_id", familyId)
     .is("deleted_at", null)
@@ -43,6 +43,7 @@ export async function getTasks(familyId: string): Promise<TaskDTO[]> {
       recordChildId: row.life_event_items?.deleted_at
         ? null
         : (row.life_event_items?.child_id ?? null),
+      keepDetailsInRecord: row.keep_details_in_record,
     }),
   );
 }

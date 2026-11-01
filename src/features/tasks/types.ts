@@ -18,4 +18,6 @@ export type TaskDTO = {
   purchaseLocationId: string | null;
   // 子の記録に残すタスクのとき、その子のid。
   recordChildId: string | null;
+  // 完了時にメモと URL も記録へ写すか。recordChildId があるときだけ効く。
+  keepDetailsInRecord: boolean;
 };

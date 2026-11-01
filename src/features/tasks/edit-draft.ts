@@ -9,6 +9,7 @@ export type TaskDraft = {
   isPurchase: boolean;
   purchaseLocationId: string | null;
   recordChildId: string | null;
+  keepDetailsInRecord: boolean;
   url: string;
   note: string;
 };
@@ -20,6 +21,7 @@ export type TaskUpdatePatch = Partial<{
   isPurchase: boolean;
   purchaseLocationId: string;
   recordChildId: string;
+  keepDetailsInRecord: boolean;
   url: string;
   note: string;
 }>;
@@ -33,6 +35,7 @@ export function draftFromTask(task: TaskDTO): TaskDraft {
     isPurchase: task.isPurchase,
     purchaseLocationId: task.purchaseLocationId,
     recordChildId: task.recordChildId,
+    keepDetailsInRecord: task.keepDetailsInRecord,
     url: task.url ?? "",
     note: task.note ?? "",
   };
@@ -58,6 +61,9 @@ export function buildTaskPatch(
   }
   if (draft.recordChildId !== original.recordChildId) {
     patch.recordChildId = draft.recordChildId ?? "";
+  }
+  if (draft.keepDetailsInRecord !== original.keepDetailsInRecord) {
+    patch.keepDetailsInRecord = draft.keepDetailsInRecord;
   }
   const url = draft.url.trim();
   if (url !== original.url.trim()) patch.url = url;
@@ -100,6 +106,9 @@ export function patchToTaskFields(patch: TaskUpdatePatch): Partial<TaskDTO> {
   }
   if (patch.recordChildId !== undefined) {
     fields.recordChildId = patch.recordChildId || null;
+  }
+  if (patch.keepDetailsInRecord !== undefined) {
+    fields.keepDetailsInRecord = patch.keepDetailsInRecord;
   }
   if (patch.url !== undefined) fields.url = patch.url || null;
   if (patch.note !== undefined) fields.note = patch.note || null;

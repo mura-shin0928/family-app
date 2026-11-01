@@ -626,4 +626,215 @@ describe("タスク・ライフイベント項目の書き込み関数", () => {
       expect(await itemsByKey(childF2, key)).toEqual([]);
     });
   });
+
+  describe("タスク完了でメモと URL を記録に残す", () => {
+    const URL_A = "https://example.test/kenshin";
+
+    async function createLinkedTask(
+      note: string | null,
+      keepDetailsInRecord: boolean,
+    ) {
+      const id = randomUUID();
+      const { error } = await clientA.rpc("create_task", {
+        p_id: id,
+        p_title: `メモを残す-${runId}`,
+        p_is_purchase: false,
+        p_record_child_id: childF1,
+      });
+      if (error) throw new Error(error.message);
+      const { error: updateError } = await clientA
+        .from("tasks")
+        .update({ note, keep_details_in_record: keepDetailsInRecord })
+        .eq("id", id);
+      if (updateError) throw new Error(updateError.message);
+      return id;
+    }
+
+    async function setDone(id: string, done: boolean) {
+      const { error } = await clientA
+        .from("tasks")
+        .update(
+          done
+            ? {
+                status: "done",
+                completed_at: new Date().toISOString(),
+                completed_by: memberAId,
+              }
+            : { status: "open", completed_at: null, completed_by: null },
+        )
+        .eq("id", id);
+      if (error) throw new Error(error.message);
+    }
+
+    async function itemIdOf(taskId: string) {
+      const task = await taskById(taskId);
+      return task?.life_event_item_id as string;
+    }
+
+    async function itemNote(itemId: string) {
+      const { data, error } = await admin
+        .from("life_event_items")
+        .select("note")
+        .eq("id", itemId)
+        .single();
+      if (error) throw new Error(error.message);
+      return data.note;
+    }
+
+    async function setItemNote(itemId: string, note: string) {
+      const { error } = await admin
+        .from("life_event_items")
+        .update({ note })
+        .eq("id", itemId);
+      if (error) throw new Error(error.message);
+    }
+
+    it("オンなら、完了時にタスクのメモを記録へコピーする", async () => {
+      const id = await createLinkedTask("身長62cm", true);
+      await setDone(id, true);
+      expect(await itemNote(await itemIdOf(id))).toBe("身長62cm");
+    });
+
+    it("オフなら、メモがあっても記録へコピーしない", async () => {
+      const id = await createLinkedTask("身長62cm", false);
+      await setDone(id, true);
+      expect(await itemNote(await itemIdOf(id))).toBeNull();
+    });
+
+    it("オンでもメモが空なら、記録のメモを変えない", async () => {
+      const id = await createLinkedTask(null, true);
+      const itemId = await itemIdOf(id);
+      await setItemNote(itemId, "https://example.test/program");
+      await setDone(id, true);
+      expect(await itemNote(itemId)).toBe("https://example.test/program");
+    });
+
+    it("記録にメモがあれば、空行を挟んで後ろに足す", async () => {
+      const id = await createLinkedTask("身長62cm", true);
+      const itemId = await itemIdOf(id);
+      await setItemNote(itemId, "https://example.test/program");
+      await setDone(id, true);
+      expect(await itemNote(itemId)).toBe(
+        "https://example.test/program\n\n身長62cm",
+      );
+    });
+
+    it("足して2000文字を超えるなら切って、完了は失敗させない", async () => {
+      const id = await createLinkedTask("b".repeat(2000), true);
+      const itemId = await itemIdOf(id);
+      await setItemNote(itemId, "a".repeat(1000));
+      await setDone(id, true);
+      expect(await itemNote(itemId)).toBe(
+        `${"a".repeat(1000)}\n\n${"b".repeat(998)}`,
+      );
+    });
+
+    it("完了を取り消すと、写したメモを記録から取り除く", async () => {
+      const id = await createLinkedTask("身長62cm", true);
+      const itemId = await itemIdOf(id);
+      await setDone(id, true);
+      await setDone(id, false);
+      expect(await itemNote(itemId)).toBeNull();
+    });
+
+    it("取り消してメモを直して再完了すると、直したメモだけが残る", async () => {
+      const id = await createLinkedTask("身長62cm", true);
+      const itemId = await itemIdOf(id);
+      await setDone(id, true);
+      await setDone(id, false);
+      await clientA.from("tasks").update({ note: "身長63cm" }).eq("id", id);
+      await setDone(id, true);
+      expect(await itemNote(itemId)).toBe("身長63cm");
+    });
+
+    it("取り消しても、もともとの記録のメモは残す", async () => {
+      const id = await createLinkedTask("身長62cm", true);
+      const itemId = await itemIdOf(id);
+      await setItemNote(itemId, "https://example.test/program");
+      await setDone(id, true);
+      await setDone(id, false);
+      expect(await itemNote(itemId)).toBe("https://example.test/program");
+    });
+
+    it("完了後にタスクのメモを直しても、写した文を取り除ける", async () => {
+      const id = await createLinkedTask("身長62cm", true);
+      const itemId = await itemIdOf(id);
+      await setDone(id, true);
+      await clientA.from("tasks").update({ note: "身長63cm" }).eq("id", id);
+      await setDone(id, false);
+      expect(await itemNote(itemId)).toBeNull();
+    });
+
+    it("2000文字で切って写した分も、取り消しで取り除く", async () => {
+      const id = await createLinkedTask("b".repeat(2000), true);
+      const itemId = await itemIdOf(id);
+      await setItemNote(itemId, "a".repeat(1000));
+      await setDone(id, true);
+      await setDone(id, false);
+      expect(await itemNote(itemId)).toBe("a".repeat(1000));
+    });
+
+    it("記録側でメモを直していたら、取り消しても手を付けない", async () => {
+      const id = await createLinkedTask("身長62cm", true);
+      const itemId = await itemIdOf(id);
+      await setDone(id, true);
+      await setItemNote(itemId, "身長62cm、よく笑うようになった");
+      await setDone(id, false);
+      expect(await itemNote(itemId)).toBe("身長62cm、よく笑うようになった");
+      await setDone(id, true);
+      expect(await itemNote(itemId)).toBe("身長62cm、よく笑うようになった");
+    });
+
+    it("URL があれば、メモの前に写す", async () => {
+      const id = await createLinkedTask("身長62cm", true);
+      await clientA.from("tasks").update({ url: URL_A }).eq("id", id);
+      await setDone(id, true);
+      expect(await itemNote(await itemIdOf(id))).toBe(`${URL_A}\n\n身長62cm`);
+    });
+
+    it("メモがなくても URL は写す", async () => {
+      const id = await createLinkedTask(null, true);
+      await clientA.from("tasks").update({ url: URL_A }).eq("id", id);
+      await setDone(id, true);
+      expect(await itemNote(await itemIdOf(id))).toBe(URL_A);
+    });
+
+    it("オフなら URL も写さない", async () => {
+      const id = await createLinkedTask(null, false);
+      await clientA.from("tasks").update({ url: URL_A }).eq("id", id);
+      await setDone(id, true);
+      expect(await itemNote(await itemIdOf(id))).toBeNull();
+    });
+
+    it("同じ URL が記録にあれば、メモだけ足す", async () => {
+      const id = await createLinkedTask("身長62cm", true);
+      const itemId = await itemIdOf(id);
+      await clientA.from("tasks").update({ url: URL_A }).eq("id", id);
+      await setItemNote(itemId, URL_A);
+      await setDone(id, true);
+      expect(await itemNote(itemId)).toBe(`${URL_A}\n\n身長62cm`);
+    });
+
+    it("取り消すと、写した URL も取り除く", async () => {
+      const id = await createLinkedTask("身長62cm", true);
+      const itemId = await itemIdOf(id);
+      await clientA.from("tasks").update({ url: URL_A }).eq("id", id);
+      await setDone(id, true);
+      await setDone(id, false);
+      expect(await itemNote(itemId)).toBeNull();
+    });
+
+    it("同じ項目を指す別のタスクが先に完了していても、メモを足す", async () => {
+      const first = await createLinkedTask(null, false);
+      const itemId = await itemIdOf(first);
+      const second = await createLinkedTask("身長62cm", true);
+      await admin
+        .from("tasks")
+        .update({ life_event_item_id: itemId })
+        .eq("id", second);
+      await setDone(first, true);
+      await setDone(second, true);
+      expect(await itemNote(itemId)).toBe("身長62cm");
+    });
+  });
 });
