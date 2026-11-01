@@ -18,10 +18,10 @@
    ```
 
 2. 利用者に見える変更があれば、`src/content/release-notes.ts` にリリース日の項目を足して PR を出し、`main` にマージする。同じ日に 2 回リリースするときは、同じ項目に追記する。
-3. リリースする。
+3. リリースする。ステップ 2 のマージを取り込むため、push の前にもう一度 fetch する。
 
    ```bash
-   git push origin origin/main:refs/heads/release
+   git fetch origin && git push origin origin/main:refs/heads/release
    ```
 
 4. CI の `migrate` と Vercel のデプロイの成功を見てから、実機で確認する。
@@ -37,7 +37,7 @@
 原則は `main` に入れて、未リリース分ごとリリースする。`main` に出せない変更が残っているときだけ、次の手順にする。
 
 1. `release` からブランチを切り、PR を `release` にマージする。これがリリースになる。
-2. `release` を `main` にマージする。これをしないと次のリリースが fast-forward できない。
+2. `release` を `main` にマージする。これをしないと次のリリースが fast-forward できない。GitHub の PR は "Create a merge commit" でマージする。Squash や Rebase だと `release` の先頭が `main` に入らず、次の push も拒否される。
 
 ### `check` か `migrate` が失敗した
 
@@ -45,7 +45,7 @@ Vercel は CI を待たずにデプロイするので、アプリだけが DB �
 
 ### push が拒否された
 
-`release` に `main` にないコミットがある。`release` を `main` にマージしてから、もう一度リリースする。
+`release` に `main` にないコミットがある。`release` を "Create a merge commit" で `main` にマージしてから、もう一度リリースする。
 
 ### 切り戻し
 
