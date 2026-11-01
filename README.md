@@ -101,13 +101,13 @@ Gemini の疎通確認用に `scripts/gemini-smoke.mjs` / `scripts/gemini-image-
 
 ## CI / デプロイ
 
-- `.github/workflows/ci.yml` が PR と main への push で typecheck / lint / unit test / build を実行する
+- `.github/workflows/ci.yml` が PR と main / release への push で typecheck / lint / unit test / build を実行する
   （`*.md` だけの変更では動かない）。
 - `.github/workflows/db.yml` が、`supabase/`・`tests/integration/`・型ファイルを変更した PR で、migration を
   空の DB に当てて統合テスト（RLS と DB 関数）を実行し、型を生成し直してコミット済みの
   `database.types.ts` と一致するかを確認する。
-- main への push では、続けて `supabase db push` で本番DBに migration を適用する。
-- デプロイは Vercel が main から行う。
+- release への push では、続けて `supabase db push` で本番DBに migration を適用する。
+- デプロイは Vercel が release から行う。リリースの手順は [docs/operations/release.md](docs/operations/release.md)。
 
 ## Family作成・招待
 

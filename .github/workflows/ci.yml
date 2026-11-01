@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, release]
     # ドキュメントだけの変更でCI/migrationを回さない。
     # GitHub ActionsはYAMLアンカーを解釈しないため、push/pull_requestで同じ内容を書く。
     paths-ignore:
@@ -49,7 +49,7 @@ jobs:
 
   migrate:
     needs: check
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/release'
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
