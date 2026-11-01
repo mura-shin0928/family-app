@@ -238,6 +238,31 @@ describe("life_event_items RLS / tasks との同期トリガー", () => {
       });
       expect(error).not.toBeNull();
     });
+
+    it("cannot update child_id to point at another family's child", async () => {
+      // 他家族の child_id に書き換えて (child_id, catalog_key) のユニーク枠を
+      // 乗っ取れないことの確認。insert と同じ家族内チェックが update にも必要。
+      const clientA = await signInAsClient(userA.email, PASSWORD);
+      const { data: item, error: insertError } = await insertItem(clientA, {
+        catalogKey: `birth:update-child-${runId}`,
+      });
+      if (insertError || !item) {
+        throw new Error(`failed to seed item: ${insertError?.message}`);
+      }
+
+      const { error } = await clientA
+        .from("life_event_items")
+        .update({ child_id: childF2 })
+        .eq("id", item.id);
+      expect(error).not.toBeNull();
+
+      const { data: unchanged } = await admin
+        .from("life_event_items")
+        .select("child_id")
+        .eq("id", item.id)
+        .single();
+      expect(unchanged?.child_id).toBe(childF1);
+    });
   });
 
   describe("partial unique (child_id, catalog_key)", () => {
