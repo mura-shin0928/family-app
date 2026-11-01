@@ -28,7 +28,15 @@ export function createAnonClient(): SupabaseClient {
 
 type TestUser = { id: string; email: string };
 
-/** email_confirm済みのテストユーザーを作成する。 */
+/**
+ * email_confirm済みのテストユーザーを作成する。
+ *
+ * createUser に email_confirm:true とパスワードを同時に渡すと、GoTrue は内部で
+ * email_confirmed_at を UPDATE するため、確認前パスワード事前登録を防ぐ
+ * clear_password_on_first_confirm トリガー（supabase/migrations参照）が発火して
+ * パスワードが消える。確認済みで作成したあとにパスワードを設定すれば、
+ * そのUPDATEはトリガーの対象（old.email_confirmed_at is null）に当たらない。
+ */
 export async function createConfirmedUser(
   admin: SupabaseClient,
   email: string,
@@ -36,11 +44,19 @@ export async function createConfirmedUser(
 ): Promise<TestUser> {
   const { data, error } = await admin.auth.admin.createUser({
     email,
-    password,
     email_confirm: true,
   });
   if (error || !data.user) {
     throw new Error(`failed to create test user ${email}: ${error?.message}`);
+  }
+  const { error: passwordError } = await admin.auth.admin.updateUserById(
+    data.user.id,
+    { password },
+  );
+  if (passwordError) {
+    throw new Error(
+      `failed to set test password for ${email}: ${passwordError.message}`,
+    );
   }
   return { id: data.user.id, email };
 }

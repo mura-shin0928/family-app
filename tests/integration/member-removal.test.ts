@@ -1,10 +1,16 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   createAdminClient,
   createConfirmedUser,
   signInAsClient,
 } from "./support/supabase";
+
+function makeToken(): { token: string; hash: string } {
+  const token = randomBytes(32).toString("base64url");
+  const hash = createHash("sha256").update(token).digest("hex");
+  return { token, hash };
+}
 
 const PASSWORD = "Test-Password-123!";
 
@@ -209,6 +215,97 @@ describe("作成済みデータを持つメンバーの削除", () => {
 
     expect(error).toBeNull();
     expect(await memberExists(target.memberId)).toBe(false);
+  });
+
+  it("削除されたメンバーが発行した招待は取り消される", async () => {
+    const target = await addMember("invite-source");
+    const { hash } = makeToken();
+    const { data: inv, error: insertError } = await admin
+      .from("invitations")
+      .insert({
+        family_id: familyId,
+        token_hash: hash,
+        invited_email: `revoke-by-removal-${randomUUID().slice(0, 8)}@example.test`,
+        display_name: "削除後取り消しテスト",
+        invited_by: target.memberId,
+        expires_at: new Date(
+          Date.now() + 29 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+      })
+      .select("id")
+      .single();
+    if (insertError || !inv) {
+      throw new Error(`failed to seed invitation: ${insertError?.message}`);
+    }
+
+    await admin.from("family_members").delete().eq("id", target.memberId);
+
+    const { data: after } = await admin
+      .from("invitations")
+      .select("revoked_at")
+      .eq("id", inv.id)
+      .single();
+    expect(after?.revoked_at).not.toBeNull();
+  });
+
+  it("削除されたメンバー自身のログインメール宛の招待も取り消される（発行者が別でも）", async () => {
+    const owner = await addMember("remover");
+    const target = await addMember("invite-target");
+    const { hash } = makeToken();
+    const { data: inv, error: insertError } = await admin
+      .from("invitations")
+      .insert({
+        family_id: familyId,
+        token_hash: hash,
+        invited_email: target.email,
+        display_name: "本人宛・発行者別",
+        invited_by: owner.memberId,
+        expires_at: new Date(
+          Date.now() + 29 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+      })
+      .select("id")
+      .single();
+    if (insertError || !inv) {
+      throw new Error(`failed to seed invitation: ${insertError?.message}`);
+    }
+
+    await admin.from("family_members").delete().eq("id", target.memberId);
+
+    const { data: after } = await admin
+      .from("invitations")
+      .select("revoked_at")
+      .eq("id", inv.id)
+      .single();
+    expect(after?.revoked_at).not.toBeNull();
+  });
+
+  it("削除されたメンバーは、自分が発行した招待を受諾して家族に復帰できない", async () => {
+    // 修正前は、削除された本人が自分宛・または別アドレス宛に発行した招待から
+    // accept_invitation を通じて復帰できてしまった。
+    const target = await addMember("self-reinvite");
+    const { hash } = makeToken();
+    const { error: insertError } = await admin.from("invitations").insert({
+      family_id: familyId,
+      token_hash: hash,
+      invited_email: target.email,
+      display_name: "自己招待テスト",
+      invited_by: target.memberId,
+      expires_at: new Date(Date.now() + 29 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+    if (insertError) {
+      throw new Error(`failed to seed invitation: ${insertError.message}`);
+    }
+
+    await admin.from("family_members").delete().eq("id", target.memberId);
+    expect(await memberExists(target.memberId)).toBe(false);
+
+    const clientTarget = await signInAsClient(target.email, PASSWORD);
+    const { error } = await clientTarget.rpc("accept_invitation", {
+      p_token_hash: hash,
+    });
+    expect(error).not.toBeNull();
+    expect(error?.message).toContain("invitation_revoked");
   });
 
   it("タスクを作成したメンバーがいる家族を削除できる", async () => {

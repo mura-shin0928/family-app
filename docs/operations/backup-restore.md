@@ -67,7 +67,13 @@ docker run --rm -it -v "$PWD":/work -w /work postgres:17 psql "<接続文字列>
 
 次を `restore.sql` として同じディレクトリに置き、本番に `psql -1 -v ON_ERROR_STOP=1 -f restore.sql` で流す。`-1` で全体が 1 トランザクションになり、途中で失敗したら何も変わらない。
 
+バックアップより後にメンバーを削除したり招待を取り消したりしていた場合、行をそのまま書き戻すとその人が復帰してしまう。そこで消す前に「今、実際に残っているメンバー」を控えておき、書き戻した後にその集合へ合わせ直す（招待は全部取り消し直す）。
+
 ```sql
+-- 消す前に、今のメンバー（バックアップより後に削除されていない人たち）を控える
+create temp table current_members as
+  select user_id from public.family_members where family_id = '<FID>';
+
 -- 今の（壊れた）行を消す。families から cascade で全部消える。auth.users は消えない
 delete from public.families where id = '<FID>';
 
@@ -83,10 +89,24 @@ delete from public.families where id = '<FID>';
 \copy public.invitations from 'invitations.csv' csv header
 \copy public.recipe_analysis_usage from 'recipe_analysis_usage.csv' csv header
 \copy public.web_search_usage from 'web_search_usage.csv' csv header
+
+-- バックアップより後に削除されたメンバーは、書き戻しでも戻さない
+-- （family_members の delete トリガーが、その人宛・その人発行の保留中の招待も取り消す）
+delete from public.family_members
+  where family_id = '<FID>' and user_id not in (select user_id from current_members);
+
+-- 保留中の招待はバックアップ時点の取り消し・受諾状態に戻ってしまっているので、
+-- 残っている分は一度すべて取り消す。まだ使いたい招待は家族に送り直してもらう
+update public.invitations
+  set revoked_at = now()
+  where family_id = '<FID>' and accepted_at is null and revoked_at is null;
 ```
 
 - トリガー（`tasks_sync_life_event_item` と `set_updated_at`）は update のときだけ動くので、insert では動かない
 - `family_members.user_id` は `auth.users` を参照している。バックアップの後にメンバーがログインごと消えていると、ここで失敗する。その場合は、その人の行を `family_members.csv` から外してからやり直す
+- バックアップの後にそのメンバーが別の家族に参加していると、`family_members.user_id` の unique 制約で `\copy public.family_members` が失敗する。その場合も、その人の行を `family_members.csv` から先に外しておく（`current_members` には書き戻し前の今の行から入っているので、この人は最後の削除で改めて除かれる）
+- 上の「今のメンバーへ合わせ直す」「招待を取り消す」の 2 つは、消したい家族自体の `family_members` や `invitations` が壊れているとき（復元の目的がその2テーブル自身の修復のとき）は当てはまらない。その場合は `current_members` を使わず、個別に判断する
+- このシナリオ B はいま壊れている家族を戻す手順であり、シナリオ A（プロジェクト全体の復元）には同じ巻き戻りの問題がそのまま残る。システム全体を戻す必要があるときは、バックアップ以降に削除・取消・退会した家族がないか個別に確認してから行う
 - テーブルを足したときは、`select conrelid::regclass, confrelid::regclass from pg_constraint where contype = 'f' and connamespace = 'public'::regnamespace` で外部キーの向きを確かめ、上の 2 つの一覧に足す
 
 ### 4. 片付け

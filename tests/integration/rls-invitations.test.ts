@@ -146,6 +146,55 @@ describe("invitations RLS + accept_invitation / invitation_preview", () => {
     expect(error).not.toBeNull();
   });
 
+  it("cannot create an invitation naming a different member of the same family as invited_by", async () => {
+    // invited_by が「呼び出し元自身の member_id」であることを検証するテスト。
+    // 同じFamilyの別のメンバーの名義で発行できると、そのメンバーが削除されたときの
+    // 招待取り消し（family_members_revoke_invitations トリガー）を素通りできてしまう。
+    const { data: otherUser, error: otherUserError } =
+      await admin.auth.admin.createUser({
+        email: `b-${runId}@example.test`,
+        password: PASSWORD,
+        email_confirm: true,
+      });
+    if (otherUserError || !otherUser.user) {
+      throw new Error(
+        `failed to create other member: ${otherUserError?.message}`,
+      );
+    }
+    userIds[`b-${runId}@example.test`] = otherUser.user.id;
+
+    const { data: otherMember, error: otherMemberError } = await admin
+      .from("family_members")
+      .insert({
+        family_id: familyF1,
+        user_id: otherUser.user.id,
+        display_name: "B",
+      })
+      .select("id")
+      .single();
+    if (otherMemberError || !otherMember) {
+      throw new Error(
+        `failed to seed other member: ${otherMemberError?.message}`,
+      );
+    }
+
+    const clientA = await signInAsClient(userA.email, PASSWORD);
+    const { hash } = makeToken();
+
+    const { error } = await clientA.from("invitations").insert({
+      family_id: familyF1,
+      token_hash: hash,
+      invited_email: invitee.email,
+      display_name: "同一家族内なりすまし",
+      invited_by: otherMember.id,
+      expires_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+
+    expect(error).not.toBeNull();
+
+    await admin.from("family_members").delete().eq("id", otherMember.id);
+  });
+
   it("cannot create an invitation with expires_at more than 30 days out", async () => {
     const clientA = await signInAsClient(userA.email, PASSWORD);
     const { hash } = makeToken();
