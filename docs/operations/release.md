@@ -2,10 +2,10 @@
 
 `main` にマージしただけでは本番は変わらない。`release` に push したときに、本番のアプリと DB が変わる。
 
-| ブランチ | 意味 | push で起きること |
-|---|---|---|
-| `main` | 次のリリース候補 | CI の `check`、Vercel の Preview |
-| `release` | 本番の実体 | CI の `check` と `migrate`、Vercel の本番デプロイ |
+| ブランチ  | 意味             | push で起きること                                 |
+| --------- | ---------------- | ------------------------------------------------- |
+| `main`    | 次のリリース候補 | CI の `check`、Vercel の Preview                  |
+| `release` | 本番の実体       | CI の `check` と `migrate`、Vercel の本番デプロイ |
 
 検証はローカルで行う。Preview は本番 DB を見ていて、未リリースの migration は当たっていないので、検証には使わない。
 
