@@ -1,6 +1,6 @@
 export type ReleaseNote = { date: string; items: string[] };
 
-/** 利用者から見て変わったことだけを、新しい順に書く。 */
+/** 新しい順に書く。書き方は同じディレクトリの CLAUDE.md。 */
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-10-18",

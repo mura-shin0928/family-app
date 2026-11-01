@@ -17,7 +17,7 @@
    git fetch origin && git log origin/release..origin/main --oneline
    ```
 
-2. 利用者に見える変更があれば、`src/content/release-notes.ts` にリリース日の項目を足して PR を出し、`main` にマージする。同じ日に 2 回リリースするときは、同じ項目に追記する。
+2. 各 PR の本文の「リリースノート」を集めて `src/content/release-notes.ts` にリリース日の項目を足し、PR を出して `main` にマージする。書き方は [src/content/CLAUDE.md](../../src/content/CLAUDE.md)。
 3. リリースする。ステップ 2 のマージを取り込むため、push の前にもう一度 fetch する。
 
    ```bash
@@ -26,7 +26,7 @@
 
 4. CI の `migrate` と Vercel のデプロイの成功を見てから、実機で確認する。
 
-利用者に見える変更がないときはノートなしでリリースできる。ただし更新通知は出るので、内部の修正だけなら次の機能リリースにまとめて出すことを優先する。
+更新通知はどのリリースでも出るので、裏側の修正だけのリリースでもノートを書く。
 
 手元の `main` は古いことがあるので、ステップ 3 は `origin/main` を指定する。`origin/main` はリモート追跡ブランチなので、宛先は `refs/heads/release` と完全な形で書く。`--force` は使わない。
 
