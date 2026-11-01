@@ -461,8 +461,10 @@ export type Database = {
           family_id: string
           id: string
           is_purchase: boolean
+          keep_details_in_record: boolean
           life_event_item_id: string | null
           note: string | null
+          note_copied_to_record: string | null
           purchase_location_id: string | null
           sort_order: number
           status: string
@@ -480,8 +482,10 @@ export type Database = {
           family_id: string
           id?: string
           is_purchase?: boolean
+          keep_details_in_record?: boolean
           life_event_item_id?: string | null
           note?: string | null
+          note_copied_to_record?: string | null
           purchase_location_id?: string | null
           sort_order: number
           status?: string
@@ -499,8 +503,10 @@ export type Database = {
           family_id?: string
           id?: string
           is_purchase?: boolean
+          keep_details_in_record?: boolean
           life_event_item_id?: string | null
           note?: string | null
+          note_copied_to_record?: string | null
           purchase_location_id?: string | null
           sort_order?: number
           status?: string

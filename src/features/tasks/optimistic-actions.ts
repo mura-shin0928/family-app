@@ -59,5 +59,6 @@ export function optimisticTaskFromCreateInput(input: CreateTaskInput): TaskDTO {
     purchaseLocationId:
       input.purchaseLocationId === "" ? null : input.purchaseLocationId,
     recordChildId: input.recordChildId === "" ? null : input.recordChildId,
+    keepDetailsInRecord: true,
   };
 }

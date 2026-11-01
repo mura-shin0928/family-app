@@ -168,6 +168,7 @@ export async function updateTask(
     isPurchase,
     purchaseLocationId,
     recordChildId,
+    keepDetailsInRecord,
     url,
     note,
   } = parsed.data;
@@ -176,12 +177,16 @@ export async function updateTask(
     due_on?: string | null;
     is_purchase?: boolean;
     purchase_location_id?: string | null;
+    keep_details_in_record?: boolean;
     url?: string | null;
     note?: string | null;
   } = {};
   if (title !== undefined) update.title = title;
   if (dueOn !== undefined) update.due_on = dueOn || null;
   if (isPurchase !== undefined) update.is_purchase = isPurchase;
+  if (keepDetailsInRecord !== undefined) {
+    update.keep_details_in_record = keepDetailsInRecord;
+  }
   if (url !== undefined) update.url = url || null;
   if (note !== undefined) update.note = note || null;
 

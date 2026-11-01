@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase/server";
 import { findCatalogItem } from "./catalog";
 import {
   addLifeEventItemToTaskSchema,
+  addLifeEventRecordSchema,
   fetchAreaCatalogSchema,
   lifeEventItemIdSchema,
   recordLifeEventItemDoneSchema,
@@ -120,6 +121,37 @@ export async function recordLifeEventItemDone(input: {
       logActionError("recordLifeEventItemDone", error);
     }
     return { ok: false, error: known ?? "記録に失敗しました" };
+  }
+  captureEvent(member, "life_event_item_updated");
+  return { ok: true };
+}
+
+/** カタログにない出来事を、タスクを経由せず記録に足す。 */
+export async function addLifeEventRecord(input: {
+  childId: string;
+  title: string;
+  doneOn: string;
+  note: string;
+}): Promise<ActionResult> {
+  const parsed = addLifeEventRecordSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+
+  const { member } = await requireFamilyMember();
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("life_event_items").insert({
+    family_id: member.familyId,
+    child_id: parsed.data.childId,
+    title: parsed.data.title,
+    note: parsed.data.note === "" ? null : parsed.data.note,
+    status: "done",
+    done_on: parsed.data.doneOn,
+    created_by: member.id,
+  });
+
+  if (error) {
+    logActionError("addLifeEventRecord", error);
+    return { ok: false, error: "記録に失敗しました" };
   }
   captureEvent(member, "life_event_item_updated");
   return { ok: true };

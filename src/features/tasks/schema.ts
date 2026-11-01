@@ -50,6 +50,7 @@ export const updateTaskSchema = z.object({
   isPurchase: z.boolean().optional(),
   purchaseLocationId: purchaseLocationIdSchema.optional(),
   recordChildId: recordChildIdSchema.optional(),
+  keepDetailsInRecord: z.boolean().optional(),
   url: urlSchema.optional(),
   note: noteSchema.optional(),
 });
