@@ -31,14 +31,8 @@ describe("メール初回確認時にパスワードを無効化する", () => {
     }
     userIds.push(created.user.id);
 
-    // 確認前は、当然そのパスワードでログインできる。
-    const anonBefore = createAnonClient();
-    const before = await anonBefore.auth.signInWithPassword({
-      email,
-      password: PASSWORD,
-    });
-    expect(before.error).toBeNull();
-    await anonBefore.auth.signOut();
+    // 確認前は GoTrue 自体が未確認ユーザーのパスワードログインを拒否するため、
+    // この時点でパスワードが使えるかどうかは確認しない（確認前後の対比が本題）。
 
     // 本人がログインリンクを開いた、という想定で email_confirmed_at を立てる。
     const { error: confirmError } = await admin.auth.admin.updateUserById(
