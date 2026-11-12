@@ -165,16 +165,28 @@ function PrepFlow({
           url: item.sourceUrl ?? "",
         })),
       }),
-    onSuccess: (result, chosen) => {
-      if (!result.ok) {
-        setAddError(result.error);
-        return;
+    // 画面を閉じた後に終わっても、タスクの一覧は新しくする
+    onSuccess: (result) => {
+      if (result.ok) {
+        queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
       }
-      queryClient.invalidateQueries({ queryKey: TASKS_QUERY_KEY });
-      onAdded(chosen.length);
     },
-    onError: () => setAddError("タスクの追加に失敗しました"),
   });
+
+  // mutate に渡した callback は、閉じた（unmount した）後には呼ばれない
+  function addChosen(chosen: PlannedItem[]) {
+    setAddError(null);
+    add.mutate(chosen, {
+      onSuccess: (result) => {
+        if (!result.ok) {
+          setAddError(result.error);
+          return;
+        }
+        onAdded(chosen.length);
+      },
+      onError: () => setAddError("タスクの追加に失敗しました"),
+    });
+  }
 
   if (items !== null) {
     return (
@@ -190,10 +202,7 @@ function PrepFlow({
             return next;
           })
         }
-        onAdd={() => {
-          setAddError(null);
-          add.mutate(items.filter((item) => selected.has(item.id)));
-        }}
+        onAdd={() => addChosen(items.filter((item) => selected.has(item.id)))}
         adding={add.isPending}
         error={addError}
       />

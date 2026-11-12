@@ -16,6 +16,12 @@ export const MAX_ITEMS = 12;
 const MAX_TITLE_LENGTH = 100;
 const MAX_REASON_LENGTH = 200;
 const MAX_OFFSET_DAYS = 3650;
+// 答えとして proposePlan に送り返すので、schema.ts の上限と揃える
+const MAX_QUESTION_LENGTH = 200;
+const MAX_OPTION_LENGTH = 100;
+const MAX_OPTIONS = 5;
+// lib/url の httpUrlSchema と同じ
+const MAX_URL_LENGTH = 2000;
 
 const COMMON_INSTRUCTION =
   "あなたは日本の子育て家庭が、ライフイベントの準備を進めるのを手伝うアシスタントです。" +
@@ -191,6 +197,10 @@ function truncate(text: string, max: number): string {
   return Array.from(text).slice(0, max).join("");
 }
 
+function charLength(text: string): number {
+  return Array.from(text).length;
+}
+
 const questionsSchema = z.object({
   questions: z.array(
     z.object({ text: z.string(), options: z.array(z.string()) }),
@@ -207,10 +217,17 @@ export function parseQuestions(json: unknown): PrepQuestion[] | null {
   const questions: PrepQuestion[] = [];
   for (const raw of parsed.data.questions) {
     const text = raw.text.trim();
-    const options = [...new Set(raw.options.map((o) => o.trim()))].filter(
-      (o) => o !== "" && o !== UNDECIDED_OPTION,
-    );
-    if (text === "" || options.length < 2) continue;
+    if (text === "" || charLength(text) > MAX_QUESTION_LENGTH) continue;
+    if (questions.some((q) => q.text === text)) continue;
+    const options = [...new Set(raw.options.map((o) => o.trim()))]
+      .filter(
+        (o) =>
+          o !== "" &&
+          o !== UNDECIDED_OPTION &&
+          charLength(o) <= MAX_OPTION_LENGTH,
+      )
+      .slice(0, MAX_OPTIONS);
+    if (options.length < 2) continue;
     questions.push({ text, options: [...options, UNDECIDED_OPTION] });
     if (questions.length === MAX_QUESTIONS) break;
   }
@@ -249,6 +266,7 @@ export function parsePlan(json: unknown): PrepItem[] | null {
         : null;
     const sourceUrl =
       raw.sourceUrl !== null &&
+      raw.sourceUrl.length <= MAX_URL_LENGTH &&
       output.citedUrls.has(raw.sourceUrl) &&
       isHttpUrl(raw.sourceUrl)
         ? raw.sourceUrl
