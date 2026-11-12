@@ -1,11 +1,14 @@
 import Box from "@mui/material/Box";
 import { getIsAppAdmin, requireFamilyMember } from "@/features/auth/guard";
 import { getChildren } from "@/features/children/queries";
+import { isEventPrepConfigured } from "@/features/event-prep/gemini";
 import { LifeEventsScreen } from "@/features/life-events/components/LifeEventsScreen";
 import { getLifeEventItems } from "@/features/life-events/item-queries";
 import { isSeidoDataHubConfigured } from "@/features/programs/api";
-import { isWebSearchConfigured } from "@/features/web-search/tavily";
 import { AppHeader } from "../AppHeader";
+
+// 準備の提案（Gemini ＋検索）の Server Action が数十秒かかる
+export const maxDuration = 60;
 
 export default async function LifeEventsPage() {
   const { member } = await requireFamilyMember();
@@ -30,7 +33,7 @@ export default async function LifeEventsPage() {
         familyChildren={familyChildren}
         items={items}
         showPrograms={isSeidoDataHubConfigured()}
-        showWebSearch={isWebSearchConfigured()}
+        showEventPrep={isEventPrepConfigured()}
       />
     </Box>
   );

@@ -109,7 +109,7 @@ export function itemStateFor(
 
 /** 「2026/9/30までが目安」「2026/10/1ごろが目安」。日付が出せなければ null。 */
 export function describeTiming(
-  item: CatalogItem,
+  item: Pick<CatalogItem, "timing">,
   child: ChildDates,
 ): string | null {
   const date = resolveTargetDate(item, child);

@@ -1,6 +1,7 @@
 "use client";
 
 import AddIcon from "@mui/icons-material/Add";
+import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -22,6 +23,7 @@ export function CatalogItemSheet({
   onClose,
   onAdd,
   onRecord,
+  onPrep,
 }: {
   item: CatalogItem | null;
   state: ItemState;
@@ -29,6 +31,8 @@ export function CatalogItemSheet({
   onClose: () => void;
   onAdd: () => void;
   onRecord: () => void;
+  /** 渡されたときだけ「準備を考えてもらう」を出す。 */
+  onPrep?: () => void;
 }) {
   const kindLabel = LIFE_EVENT_KINDS.find((k) => k.kind === item?.kind)?.label;
   const isWeb = item !== null && isWebCatalogKey(item.key);
@@ -134,6 +138,17 @@ export function CatalogItemSheet({
                 もうやった
               </Button>
             </Stack>
+          )}
+          {onPrep && (
+            <Box>
+              <Button
+                variant="text"
+                startIcon={<AutoAwesomeOutlinedIcon />}
+                onClick={onPrep}
+              >
+                準備を考えてもらう
+              </Button>
+            </Box>
           )}
         </Stack>
       )}

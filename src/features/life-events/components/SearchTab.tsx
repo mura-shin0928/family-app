@@ -1,10 +1,10 @@
 "use client";
 
 import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
+import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import ClearIcon from "@mui/icons-material/Clear";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
-import PublicOutlinedIcon from "@mui/icons-material/PublicOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -20,8 +20,12 @@ import Typography from "@mui/material/Typography";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useCallback, useState } from "react";
+import { ResultSnackbar } from "@/components/ResultSnackbar";
 import type { Child } from "@/features/children/types";
+import { EventPrepScreen } from "@/features/event-prep/components/EventPrepScreen";
+import type { PrepSubjectInput } from "@/features/event-prep/schema";
 import { todayInJst } from "@/lib/date";
+import { successToast } from "@/lib/result-toast";
 import { LIFE_EVENT_CATALOG, LIFE_EVENT_KINDS } from "../catalog";
 import { fetchAreaCatalog } from "../item-actions";
 import {
@@ -38,7 +42,6 @@ import {
 import type { CatalogItem, LifeEventItem, LifeEventKind } from "../types";
 import { CatalogItemRow } from "./CatalogItemRow";
 import { CatalogItemSheet } from "./CatalogItemSheet";
-import { WebSearchScreen } from "./WebSearchScreen";
 
 type FilterChip = "current" | LifeEventKind;
 
@@ -46,22 +49,23 @@ export function SearchTab({
   child,
   items,
   showPrograms,
-  showWebSearch,
+  showEventPrep,
   onAddToTask,
   onRecordDone,
 }: {
   child: Child;
   items: LifeEventItem[];
   showPrograms: boolean;
-  showWebSearch: boolean;
+  showEventPrep: boolean;
   onAddToTask: (item: CatalogItem, presetDueOn: string) => void;
   onRecordDone: (item: CatalogItem) => void;
 }) {
   const [query, setQuery] = useState("");
   const [chip, setChip] = useState<FilterChip>("current");
   const [sheetItem, setSheetItem] = useState<CatalogItem | null>(null);
-  // Web の結果画面に出している検索語。null の間は閉じている。
-  const [webQuery, setWebQuery] = useState<string | null>(null);
+  // 準備の提案の画面に出している題材。null の間は閉じている。
+  const [prepSubject, setPrepSubject] = useState<PrepSubjectInput | null>(null);
+  const [addedCount, setAddedCount] = useState<number | null>(null);
 
   const dates = {
     birthDate: child.birthDate,
@@ -99,7 +103,7 @@ export function SearchTab({
   const programsPending =
     searching && ((showPrograms && area.isPending) || programList.length > 0);
 
-  const closeWebSearch = useCallback(() => setWebQuery(null), []);
+  const closePrep = useCallback(() => setPrepSubject(null), []);
 
   function renderRow(item: CatalogItem) {
     const state = itemStateFor(item.key, child.id, items);
@@ -153,7 +157,7 @@ export function SearchTab({
           },
         }}
       />
-      {/* 検索中はチップで絞らないので、同じ場所に Web 検索の入口を出す */}
+      {/* 検索中はチップで絞らないので、同じ場所に準備の提案の入口を出す */}
       {!searching && (
         <Box sx={{ display: "flex", gap: 1, overflowX: "auto", pb: 0.5 }}>
           <Chip
@@ -171,15 +175,17 @@ export function SearchTab({
           ))}
         </Box>
       )}
-      {searching && showWebSearch && (
+      {searching && showEventPrep && (
         <Button
           variant="outlined"
           fullWidth
-          startIcon={<PublicOutlinedIcon />}
-          onClick={() => setWebQuery(trimmedQuery)}
+          startIcon={<AutoAwesomeOutlinedIcon />}
+          onClick={() =>
+            setPrepSubject({ title: trimmedQuery, summary: "", note: null })
+          }
           sx={{ justifyContent: "flex-start", textAlign: "left" }}
         >
-          「{trimmedQuery}」を Web で検索
+          「{trimmedQuery}」の準備を考えてもらう
         </Button>
       )}
 
@@ -240,12 +246,24 @@ export function SearchTab({
         )}
       </Box>
 
-      <WebSearchScreen
+      <EventPrepScreen
         childId={child.id}
-        query={webQuery}
-        stateFor={(item) => itemStateFor(item.key, child.id, items)}
-        onOpenItem={setSheetItem}
-        onClose={closeWebSearch}
+        child={dates}
+        subject={prepSubject}
+        onClose={closePrep}
+        onAdded={setAddedCount}
+      />
+
+      <ResultSnackbar
+        toast={
+          addedCount === null
+            ? null
+            : successToast(`${addedCount}件をタスクに追加しました`)
+        }
+        onClose={() => setAddedCount(null)}
+        autoHideDuration={3000}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        sx={{ bottom: 72 }}
       />
 
       <CatalogItemSheet
@@ -263,6 +281,20 @@ export function SearchTab({
           onRecordDone(sheetItem);
           setSheetItem(null);
         }}
+        onPrep={
+          showEventPrep
+            ? () => {
+                if (!sheetItem) return;
+                setPrepSubject({
+                  title: sheetItem.title,
+                  summary: sheetItem.summary,
+                  note: sheetItem.note,
+                  catalogKey: sheetItem.key,
+                });
+                setSheetItem(null);
+              }
+            : undefined
+        }
       />
     </Stack>
   );
