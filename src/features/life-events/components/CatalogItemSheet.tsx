@@ -9,9 +9,9 @@ import Drawer from "@mui/material/Drawer";
 import MuiLink from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { hostnameOf, isHttpUrl } from "@/lib/url";
+import { isHttpUrl } from "@/lib/url";
 import { LIFE_EVENT_KINDS } from "../catalog";
-import { type ItemState, isWebCatalogKey } from "../search";
+import type { ItemState } from "../search";
 import { formatSlashDate } from "../timing";
 import type { CatalogItem } from "../types";
 
@@ -35,8 +35,6 @@ export function CatalogItemSheet({
   onPrep?: () => void;
 }) {
   const kindLabel = LIFE_EVENT_KINDS.find((k) => k.kind === item?.kind)?.label;
-  const isWeb = item !== null && isWebCatalogKey(item.key);
-  const host = isWeb && item.url ? hostnameOf(item.url) : null;
   const meta = [kindLabel, timing].filter(Boolean).join(" ・ ");
   const link = item?.link;
 
@@ -45,8 +43,6 @@ export function CatalogItemSheet({
       anchor="bottom"
       open={item !== null}
       onClose={onClose}
-      // 全画面の Web 検索結果（Dialog）の上にも出す
-      sx={{ zIndex: "modal" }}
       slotProps={{
         paper: { sx: { borderRadius: "16px 16px 0 0", maxHeight: "85dvh" } },
       }}
@@ -57,21 +53,8 @@ export function CatalogItemSheet({
           sx={{ p: 2, pb: "calc(16px + env(safe-area-inset-bottom))" }}
         >
           <Typography variant="h6">{item.title}</Typography>
-          {host && (
-            <Typography
-              variant="caption"
-              sx={{ color: "text.secondary", overflowWrap: "anywhere" }}
-            >
-              {host}
-            </Typography>
-          )}
           {item.summary !== "" && (
             <Typography variant="body2">{item.summary}</Typography>
-          )}
-          {isWeb && (
-            <Typography variant="caption" sx={{ color: "text.secondary" }}>
-              Web 検索の抜粋です。内容はページで確かめてください。
-            </Typography>
           )}
           {meta !== "" && (
             <Typography variant="caption" sx={{ color: "text.secondary" }}>
@@ -90,7 +73,7 @@ export function CatalogItemSheet({
               rel="noopener noreferrer"
               variant="body2"
             >
-              {isWeb ? "ページを開く" : "公式ページを開く"}
+              公式ページを開く
             </MuiLink>
           )}
           {link?.notice && (

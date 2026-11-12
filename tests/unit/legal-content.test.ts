@@ -11,10 +11,12 @@ describe("規約とポリシーの内容", () => {
   });
 
   it("プライバシーポリシーに、使っている外部サービスがすべて載っている", () => {
-    for (const name of ["Supabase", "Vercel", "Gemini", "Tavily", "PostHog"]) {
+    for (const name of ["Supabase", "Vercel", "Gemini", "PostHog"]) {
       expect(text(PRIVACY_SECTIONS), name).toContain(name);
     }
-    expect(PROCESSORS).toHaveLength(6);
+    expect(PROCESSORS).toHaveLength(5);
+    // 準備の提案も Gemini に送る
+    expect(text(PRIVACY_SECTIONS)).toContain("準備の提案");
   });
 
   it("退会で即時に削除し、バックアップに最大7日残ることを両方に書いている", () => {

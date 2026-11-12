@@ -20,7 +20,6 @@ const FAMILY_TABLES = [
   "recipe_ingredients",
   "recipes",
   "tasks",
-  "web_search_usage",
 ] as const;
 
 type Member = { memberId: string; userId: string; email: string };
@@ -130,11 +129,6 @@ describe("delete_my_family", () => {
     });
     const today = new Date().toISOString().slice(0, 10);
     await insert("recipe_analysis_usage", {
-      family_id: familyA,
-      day: today,
-      count: 1,
-    });
-    await insert("web_search_usage", {
       family_id: familyA,
       day: today,
       count: 1,

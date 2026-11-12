@@ -30,14 +30,9 @@ export const PROCESSORS = [
   {
     name: "Google LLC（Gemini API）",
     country: "米国",
-    purpose: "レシピの本文や画像からの、料理名と材料の読み取り",
-    data: "解析を頼んだレシピの本文、ページの内容、画像",
-  },
-  {
-    name: "AlphaAI Technologies Inc.（Tavily）",
-    country: "米国",
-    purpose: "子育て支援制度の Web 検索",
-    data: "検索の言葉と、設定した自治体の名前",
+    purpose:
+      "レシピの本文や画像からの、料理名と材料の読み取りと、ライフイベントの準備の提案",
+    data: "解析を頼んだレシピの本文、ページの内容、画像。提案を頼んだイベントの名前と説明、子どもの時期と生年月日・出産予定日、自治体の名前、質問への答え",
   },
   {
     name: "PostHog, Inc.",
