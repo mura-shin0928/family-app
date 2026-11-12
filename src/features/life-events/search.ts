@@ -14,7 +14,7 @@ export const WINDOW_DAYS_AFTER = 60;
 
 /** 項目の目安日。時期がない、または基準日が未入力なら null。 */
 export function resolveTargetDate(
-  item: CatalogItem,
+  item: Pick<CatalogItem, "timing">,
   child: ChildDates,
 ): DateString | null {
   if (item.timing === null) return null;
