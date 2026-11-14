@@ -74,7 +74,7 @@ Supabase のプランは org 単位で決まり、Pro の org では org 内の�
 
 1. レシピ解析とは別の Google Cloud プロジェクトを作り、課金を有効にして API キーを発行する（検索グラウンディングは有料枠でしか使えない）
 2. Cloud Billing でそのプロジェクトの予算アラートを作る（3,000 円で通知）
-3. キーを Vercel の `GEMINI_EVENT_PREP_API_KEY` に登録する。`TAVILY_API_KEY` は消す
+3. キーを Vercel の `GEMINI_PAID_API_KEY` に登録する。`TAVILY_API_KEY` は消す
 
 ## 5. 問い合わせ用の Gmail
 

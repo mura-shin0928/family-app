@@ -7,7 +7,7 @@ export type CallOutcome =
 
 /** 提案用のキーが設定されているか。未設定の環境では入口を出さない。 */
 export function isEventPrepConfigured(): boolean {
-  return Boolean(process.env.GEMINI_EVENT_PREP_API_KEY);
+  return Boolean(process.env.GEMINI_PAID_API_KEY);
 }
 
 /** Interactions API を1回呼ぶ。呼ぶのはサーバー側だけ。 */
@@ -15,7 +15,7 @@ export async function callEventPrep(
   body: object,
   timeoutMs: number,
 ): Promise<CallOutcome> {
-  const apiKey = process.env.GEMINI_EVENT_PREP_API_KEY;
+  const apiKey = process.env.GEMINI_PAID_API_KEY;
   if (!apiKey) return { ok: false, reason: "api-error" };
 
   try {
