@@ -7,7 +7,7 @@ import { getLifeEventItems } from "@/features/life-events/item-queries";
 import { isSeidoDataHubConfigured } from "@/features/programs/api";
 import { AppHeader } from "../AppHeader";
 
-// 準備の提案（Gemini ＋検索）の Server Action が数十秒かかる
+// AI への相談（Gemini の Google 検索つき）の Server Action が数十秒かかる
 export const maxDuration = 60;
 
 export default async function LifeEventsPage() {

@@ -150,12 +150,12 @@ export async function proposePlan(input: {
 
 const UNIQUE_VIOLATION = "23505";
 
-/** 選んだ提案をタスクにする。id は画面側で振ったもので、再試行で二重にならない。 */
 /** create_task (SQL) の raise exception メッセージ → 画面表示文言。 */
 const CREATE_TASK_ERROR_MESSAGES: Record<string, string> = {
   child_not_found: "子供が見つかりません",
 };
 
+/** 選んだ提案をタスクにする。id は画面側で振ったもので、再試行で二重にならない。 */
 export async function addConsultTasks(input: {
   childId: string;
   items: {

@@ -42,7 +42,7 @@ export function selectCurrentItems(
     .map((entry) => entry.item);
 }
 
-/** 検索欄の入力上限。準備の提案の題材のタイトルの上限（100文字）と揃える。 */
+/** 検索欄の入力上限。AI への相談の題材のタイトルの上限（100文字）と揃える。 */
 export const SEARCH_QUERY_MAX_LENGTH = 100;
 
 /** NFKC → 小文字 → カタカナをひらがなに。 */

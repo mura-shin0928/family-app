@@ -42,7 +42,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "event_prep_usage_family_id_fkey"
+            foreignKeyName: "ai_consult_usage_family_id_fkey"
             columns: ["family_id"]
             isOneToOne: true
             referencedRelation: "families"

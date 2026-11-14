@@ -36,6 +36,7 @@ export function ConsultEntryCard({
       }}
     >
       <Box
+        component="span"
         sx={{
           display: "flex",
           alignItems: "center",
@@ -55,8 +56,8 @@ export function ConsultEntryCard({
       </Box>
       <Typography
         variant="caption"
-        component="p"
-        sx={{ color: "text.secondary", mt: 0.25 }}
+        component="span"
+        sx={{ display: "block", color: "text.secondary", mt: 0.25 }}
       >
         {line}
       </Typography>

@@ -301,7 +301,7 @@ export function SearchTab({
           onRecordDone(sheetItem);
           setSheetItem(null);
         }}
-        onPrep={
+        onConsult={
           showAiConsult
             ? () => {
                 if (!sheetItem) return;
