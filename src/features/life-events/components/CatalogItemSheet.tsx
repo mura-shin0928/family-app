@@ -31,7 +31,7 @@ export function CatalogItemSheet({
   onClose: () => void;
   onAdd: () => void;
   onRecord: () => void;
-  /** 渡されたときだけ「準備を考えてもらう」を出す。 */
+  /** 渡されたときだけ「AI に相談する」を出す。 */
   onPrep?: () => void;
 }) {
   const kindLabel = LIFE_EVENT_KINDS.find((k) => k.kind === item?.kind)?.label;
@@ -129,7 +129,7 @@ export function CatalogItemSheet({
                 startIcon={<AutoAwesomeOutlinedIcon />}
                 onClick={onPrep}
               >
-                準備を考えてもらう
+                AI に相談する
               </Button>
             </Box>
           )}

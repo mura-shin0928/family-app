@@ -6,12 +6,12 @@ import {
   parsePlan,
   parseQuestions,
   UNDECIDED_OPTION,
-} from "@/features/event-prep/protocol";
-import type { PrepContext } from "@/features/event-prep/types";
-import planFixture from "../fixtures/event-prep/plan-response.json";
-import questionsFixture from "../fixtures/event-prep/questions-response.json";
+} from "@/features/ai-consult/protocol";
+import type { ConsultContext } from "@/features/ai-consult/types";
+import planFixture from "../fixtures/ai-consult/plan-response.json";
+import questionsFixture from "../fixtures/ai-consult/questions-response.json";
 
-const ctx: PrepContext = {
+const ctx: ConsultContext = {
   subject: {
     title: "お宮参り",
     summary: "生後1か月ごろに神社へお参りする。",

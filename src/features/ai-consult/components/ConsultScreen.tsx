@@ -16,20 +16,20 @@ import type { ChildDates } from "@/features/life-events/search";
 import { resolveTargetDate } from "@/features/life-events/search";
 import { TASKS_QUERY_KEY } from "@/features/tasks/types";
 import {
-  addPrepTasks,
-  type PrepFailure,
+  addConsultTasks,
+  type ConsultFailure,
   proposePlan,
   proposeQuestions,
 } from "../actions";
-import type { PrepSubjectInput } from "../schema";
-import { type PlannedItem, PrepPlanStep } from "./PrepPlanStep";
-import { PrepQuestionsStep } from "./PrepQuestionsStep";
+import type { ConsultSubjectInput } from "../schema";
+import { ConsultPlanStep, type PlannedItem } from "./ConsultPlanStep";
+import { ConsultQuestionsStep } from "./ConsultQuestionsStep";
 import { useCloseOnBack } from "./useCloseOnBack";
 
-const TITLE_ID = "event-prep-screen-title";
+const TITLE_ID = "ai-consult-screen-title";
 
-/** 準備の提案を全画面で出す。subject が null の間は閉じている。 */
-export function EventPrepScreen({
+/** AI への相談を全画面で出す。subject が null の間は閉じている。 */
+export function ConsultScreen({
   childId,
   child,
   subject,
@@ -38,7 +38,7 @@ export function EventPrepScreen({
 }: {
   childId: string;
   child: ChildDates;
-  subject: PrepSubjectInput | null;
+  subject: ConsultSubjectInput | null;
   onClose: () => void;
   onAdded: (count: number) => void;
 }) {
@@ -69,7 +69,7 @@ export function EventPrepScreen({
             <ArrowBackIcon fontSize="small" />
           </IconButton>
           <Typography id={TITLE_ID} variant="h6" component="h2" noWrap>
-            {subject ? `${subject.title}の準備` : "準備の提案"}
+            {subject ? `${subject.title}のやること` : "AI に相談する"}
           </Typography>
         </Toolbar>
       </AppBar>
@@ -84,7 +84,7 @@ export function EventPrepScreen({
       >
         {/* 閉じたら中身ごと捨てる。走っている要求の結果は閉じた画面に反映されない */}
         {subject && (
-          <PrepFlow
+          <ConsultFlow
             childId={childId}
             child={child}
             subject={subject}
@@ -99,13 +99,13 @@ export function EventPrepScreen({
   );
 }
 
-function failureMessage(reason: PrepFailure): string {
+function failureMessage(reason: ConsultFailure): string {
   return reason === "quota_exceeded"
     ? "今日の提案の回数を使い切りました。明日また試してください"
     : "提案を作れませんでした";
 }
 
-function PrepFlow({
+function ConsultFlow({
   childId,
   child,
   subject,
@@ -113,7 +113,7 @@ function PrepFlow({
 }: {
   childId: string;
   child: ChildDates;
-  subject: PrepSubjectInput;
+  subject: ConsultSubjectInput;
   onAdded: (count: number) => void;
 }) {
   const queryClient = useQueryClient();
@@ -128,7 +128,7 @@ function PrepFlow({
   // 同じ題材で開き直したら質問を引き直さない（枠を使わない）
   const questions = useQuery({
     queryKey: [
-      "event-prep-questions",
+      "ai-consult-questions",
       childId,
       subject.catalogKey ?? subject.title,
     ],
@@ -160,7 +160,7 @@ function PrepFlow({
 
   const add = useMutation({
     mutationFn: (chosen: PlannedItem[]) =>
-      addPrepTasks({
+      addConsultTasks({
         items: chosen.map((item) => ({
           id: item.id,
           title: item.title,
@@ -193,7 +193,7 @@ function PrepFlow({
 
   if (items !== null) {
     return (
-      <PrepPlanStep
+      <ConsultPlanStep
         items={items}
         searchSuggestions={searchSuggestions}
         child={child}
@@ -214,7 +214,7 @@ function PrepFlow({
   }
 
   if (plan.isPending) {
-    return <PrepLoading message="準備を考えています…" />;
+    return <ConsultLoading message="やることを考えています…" />;
   }
   const planFailure =
     plan.data && !plan.data.ok
@@ -224,7 +224,7 @@ function PrepFlow({
         : null;
 
   if (questions.isFetching) {
-    return <PrepLoading message="質問を考えています…" />;
+    return <ConsultLoading message="質問を考えています…" />;
   }
   const questionsFailure =
     questions.data && !questions.data.ok
@@ -246,7 +246,7 @@ function PrepFlow({
       {planFailure && (
         <Failure reason={planFailure} onRetry={() => plan.mutate()} />
       )}
-      <PrepQuestionsStep
+      <ConsultQuestionsStep
         questions={questions.data.questions}
         answers={answers}
         onAnswer={(index, answer) =>
@@ -262,7 +262,7 @@ function Failure({
   reason,
   onRetry,
 }: {
-  reason: PrepFailure;
+  reason: ConsultFailure;
   onRetry: () => void;
 }) {
   return (
@@ -280,7 +280,7 @@ function Failure({
 }
 
 /** 生成中の表示。提案の行に近い高さの骨組みを並べる。 */
-function PrepLoading({ message }: { message: string }) {
+function ConsultLoading({ message }: { message: string }) {
   return (
     <Box role="status" aria-live="polite" sx={{ pt: 1 }}>
       <Typography

@@ -1,22 +1,22 @@
--- 準備の提案（Gemini の呼び出し）の回数を、家族ごとに1日単位で制限する。
+-- AI への相談（Gemini の呼び出し）の回数を、家族ごとに1日単位で制限する。
 
 -- 家族ごとに1行。日付が変わったら同じ行を上書きする。
 -- authenticated には権限もポリシーも与えないので、下の関数を通してしか読み書きできない。
-create table public.event_prep_usage (
+create table public.ai_consult_usage (
   family_id uuid primary key references public.families (id) on delete cascade,
   day date not null,
   count integer not null check (count > 0)
 );
 
-alter table public.event_prep_usage enable row level security;
+alter table public.ai_consult_usage enable row level security;
 
-grant select, insert, update, delete on public.event_prep_usage to service_role;
+grant select, insert, update, delete on public.ai_consult_usage to service_role;
 
 -- 今日の枠を1回分使う。使えたら true、上限に達していたら false。
 -- security definer にする（呼び出したユーザーに書き込みを許すと、自分で回数を戻せてしまう）。
 -- 家族は引数で受け取らず auth.uid() の所属から引き、上限も引数にしない。
 -- 日付は日本時間で切り替える。
-create or replace function public.consume_event_prep_quota()
+create or replace function public.consume_ai_consult_quota()
 returns boolean
 language plpgsql
 security definer
@@ -36,7 +36,7 @@ begin
     raise exception 'not_a_family_member' using errcode = '42501';
   end if;
 
-  insert into public.event_prep_usage as u (family_id, day, count)
+  insert into public.ai_consult_usage as u (family_id, day, count)
   values (v_family_id, v_today, 1)
   on conflict (family_id) do update
     set day = excluded.day,
@@ -48,5 +48,5 @@ begin
 end;
 $$;
 
-revoke all on function public.consume_event_prep_quota() from public;
-grant execute on function public.consume_event_prep_quota() to authenticated;
+revoke all on function public.consume_ai_consult_quota() from public;
+grant execute on function public.consume_ai_consult_quota() to authenticated;

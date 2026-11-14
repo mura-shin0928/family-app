@@ -24,6 +24,32 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_consult_usage: {
+        Row: {
+          count: number
+          day: string
+          family_id: string
+        }
+        Insert: {
+          count: number
+          day: string
+          family_id: string
+        }
+        Update: {
+          count?: number
+          day?: string
+          family_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_prep_usage_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: true
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       children: {
         Row: {
           birth_date: string | null
@@ -70,32 +96,6 @@ export type Database = {
             foreignKeyName: "children_family_id_fkey"
             columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      event_prep_usage: {
-        Row: {
-          count: number
-          day: string
-          family_id: string
-        }
-        Insert: {
-          count: number
-          day: string
-          family_id: string
-        }
-        Update: {
-          count?: number
-          day?: string
-          family_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_prep_usage_family_id_fkey"
-            columns: ["family_id"]
-            isOneToOne: true
             referencedRelation: "families"
             referencedColumns: ["id"]
           },
@@ -578,6 +578,32 @@ export type Database = {
           },
         ]
       }
+      web_search_usage: {
+        Row: {
+          count: number
+          day: string
+          family_id: string
+        }
+        Insert: {
+          count: number
+          day: string
+          family_id: string
+        }
+        Update: {
+          count?: number
+          day?: string
+          family_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "web_search_usage_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: true
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -611,8 +637,9 @@ export type Database = {
           status: string
         }[]
       }
-      consume_event_prep_quota: { Args: never; Returns: boolean }
+      consume_ai_consult_quota: { Args: never; Returns: boolean }
       consume_recipe_analysis_quota: { Args: never; Returns: boolean }
+      consume_web_search_quota: { Args: never; Returns: boolean }
       create_recipe: {
         Args: {
           p_id: string

@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
-  addPrepTasksSchema,
+  addConsultTasksSchema,
   proposePlanSchema,
   resolveSubject,
-} from "@/features/event-prep/schema";
+} from "@/features/ai-consult/schema";
 import { findCatalogItem } from "@/features/life-events/catalog";
 
 const childId = randomUUID();
@@ -77,10 +77,10 @@ describe("proposePlanSchema", () => {
   });
 });
 
-describe("addPrepTasksSchema", () => {
+describe("addConsultTasksSchema", () => {
   it("期日の空文字は通す", () => {
     expect(
-      addPrepTasksSchema.safeParse({ items: [task({ dueOn: "" })] }).success,
+      addConsultTasksSchema.safeParse({ items: [task({ dueOn: "" })] }).success,
     ).toBe(true);
   });
 
@@ -92,7 +92,7 @@ describe("addPrepTasksSchema", () => {
       { items: [task({ id: "not-a-uuid" })] },
     ];
     for (const input of cases) {
-      expect(addPrepTasksSchema.safeParse(input).success).toBe(false);
+      expect(addConsultTasksSchema.safeParse(input).success).toBe(false);
     }
   });
 });

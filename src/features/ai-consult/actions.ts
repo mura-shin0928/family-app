@@ -7,7 +7,7 @@ import { captureEvent } from "@/lib/analytics/server";
 import { todayInJst } from "@/lib/date";
 import { logActionError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
-import { callEventPrep, isEventPrepConfigured } from "./gemini";
+import { callAiConsult, isAiConsultConfigured } from "./gemini";
 import {
   buildPlanRequestBody,
   buildQuestionsRequestBody,
@@ -15,19 +15,24 @@ import {
   parseQuestions,
 } from "./protocol";
 import {
-  addPrepTasksSchema,
-  type PrepSubjectInput,
+  addConsultTasksSchema,
+  type ConsultSubjectInput,
   proposePlanSchema,
   proposeQuestionsSchema,
   resolveSubject,
 } from "./schema";
-import type { PrepAnswer, PrepContext, PrepPlan, PrepQuestion } from "./types";
+import type {
+  ConsultAnswer,
+  ConsultContext,
+  ConsultPlan,
+  ConsultQuestion,
+} from "./types";
 
 const QUESTIONS_TIMEOUT_MS = 20_000;
 // ページの maxDuration（60秒）に収める
 const PLAN_TIMEOUT_MS = 50_000;
 
-export type PrepFailure =
+export type ConsultFailure =
   | "not_configured"
   | "quota_exceeded"
   | "unavailable"
@@ -36,17 +41,17 @@ export type PrepFailure =
 type Prepared =
   | {
       ok: true;
-      ctx: PrepContext;
+      ctx: ConsultContext;
       member: Awaited<ReturnType<typeof requireFamilyMember>>["member"];
     }
-  | { ok: false; reason: PrepFailure };
+  | { ok: false; reason: ConsultFailure };
 
 /** 子と自治体を引き、枠を1回使ってから文脈を組み立てる。 */
 async function prepare(
   childId: string,
-  subjectInput: PrepSubjectInput,
+  subjectInput: ConsultSubjectInput,
 ): Promise<Prepared> {
-  if (!isEventPrepConfigured()) return { ok: false, reason: "not_configured" };
+  if (!isAiConsultConfigured()) return { ok: false, reason: "not_configured" };
 
   const { member } = await requireFamilyMember();
   const supabase = await createClient();
@@ -62,10 +67,10 @@ async function prepare(
 
   // 外部 API を呼ぶ前に枠を使う（失敗しても1回と数える）
   const { data: allowed, error } = await supabase.rpc(
-    "consume_event_prep_quota",
+    "consume_ai_consult_quota",
   );
   if (error) {
-    logActionError("eventPrep.quota", error);
+    logActionError("aiConsult.quota", error);
     return { ok: false, reason: "unavailable" };
   }
   if (!allowed) return { ok: false, reason: "quota_exceeded" };
@@ -99,9 +104,10 @@ async function prepare(
 
 export async function proposeQuestions(input: {
   childId: string;
-  subject: PrepSubjectInput;
+  subject: ConsultSubjectInput;
 }): Promise<
-  { ok: true; questions: PrepQuestion[] } | { ok: false; reason: PrepFailure }
+  | { ok: true; questions: ConsultQuestion[] }
+  | { ok: false; reason: ConsultFailure }
 > {
   const parsed = proposeQuestionsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, reason: "invalid" };
@@ -109,7 +115,7 @@ export async function proposeQuestions(input: {
   const prepared = await prepare(parsed.data.childId, parsed.data.subject);
   if (!prepared.ok) return prepared;
 
-  const result = await callEventPrep(
+  const result = await callAiConsult(
     buildQuestionsRequestBody(prepared.ctx),
     QUESTIONS_TIMEOUT_MS,
   );
@@ -120,30 +126,32 @@ export async function proposeQuestions(input: {
 
 export async function proposePlan(input: {
   childId: string;
-  subject: PrepSubjectInput;
-  answers: PrepAnswer[];
-}): Promise<({ ok: true } & PrepPlan) | { ok: false; reason: PrepFailure }> {
+  subject: ConsultSubjectInput;
+  answers: ConsultAnswer[];
+}): Promise<
+  ({ ok: true } & ConsultPlan) | { ok: false; reason: ConsultFailure }
+> {
   const parsed = proposePlanSchema.safeParse(input);
   if (!parsed.success) return { ok: false, reason: "invalid" };
 
   const prepared = await prepare(parsed.data.childId, parsed.data.subject);
   if (!prepared.ok) return prepared;
 
-  const result = await callEventPrep(
+  const result = await callAiConsult(
     buildPlanRequestBody(prepared.ctx, parsed.data.answers),
     PLAN_TIMEOUT_MS,
   );
   const plan = result.ok ? parsePlan(result.json) : null;
   if (plan === null) return { ok: false, reason: "unavailable" };
 
-  captureEvent(prepared.member, "event_prep_proposed");
+  captureEvent(prepared.member, "ai_consult_proposed");
   return { ok: true, ...plan };
 }
 
 const UNIQUE_VIOLATION = "23505";
 
 /** 選んだ提案をタスクにする。id は画面側で振ったもので、再試行で二重にならない。 */
-export async function addPrepTasks(input: {
+export async function addConsultTasks(input: {
   items: {
     id: string;
     title: string;
@@ -151,7 +159,7 @@ export async function addPrepTasks(input: {
     note: string;
   }[];
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const parsed = addPrepTasksSchema.safeParse(input);
+  const parsed = addConsultTasksSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: "入力内容を確認してください" };
   }
@@ -168,7 +176,7 @@ export async function addPrepTasks(input: {
       p_note: item.note || undefined,
     });
     if (error && error.code !== UNIQUE_VIOLATION) {
-      logActionError("addPrepTasks", error);
+      logActionError("addConsultTasks", error);
       return { ok: false, error: "タスクの追加に失敗しました" };
     }
   }

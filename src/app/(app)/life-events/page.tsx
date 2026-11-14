@@ -1,7 +1,7 @@
 import Box from "@mui/material/Box";
+import { isAiConsultConfigured } from "@/features/ai-consult/gemini";
 import { getIsAppAdmin, requireFamilyMember } from "@/features/auth/guard";
 import { getChildren } from "@/features/children/queries";
-import { isEventPrepConfigured } from "@/features/event-prep/gemini";
 import { LifeEventsScreen } from "@/features/life-events/components/LifeEventsScreen";
 import { getLifeEventItems } from "@/features/life-events/item-queries";
 import { isSeidoDataHubConfigured } from "@/features/programs/api";
@@ -33,7 +33,7 @@ export default async function LifeEventsPage() {
         familyChildren={familyChildren}
         items={items}
         showPrograms={isSeidoDataHubConfigured()}
-        showEventPrep={isEventPrepConfigured()}
+        showAiConsult={isAiConsultConfigured()}
       />
     </Box>
   );

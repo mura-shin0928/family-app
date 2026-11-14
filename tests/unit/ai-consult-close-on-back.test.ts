@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { closeViaHistory } from "@/features/event-prep/components/useCloseOnBack";
+import { closeViaHistory } from "@/features/ai-consult/components/useCloseOnBack";
 
 describe("closeViaHistory", () => {
   it("積んだ履歴があるときだけ1回戻る", () => {

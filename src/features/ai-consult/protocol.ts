@@ -1,17 +1,17 @@
 import { z } from "zod";
 import type { CatalogTiming } from "@/features/life-events/types";
 import type {
-  PrepAnswer,
-  PrepContext,
-  PrepItem,
-  PrepPlan,
-  PrepQuestion,
+  ConsultAnswer,
+  ConsultContext,
+  ConsultItem,
+  ConsultPlan,
+  ConsultQuestion,
 } from "./types";
 
 // 一次情報を確認済み（2026-11時点）: https://ai.google.dev/gemini-api/docs/google-search
 // 検索と構造化出力の併用は Gemini 3 以降（Preview）。
-export const EVENT_PREP_MODEL = "gemini-3.8-flash";
-export const EVENT_PREP_ENDPOINT =
+export const AI_CONSULT_MODEL = "gemini-3.8-flash";
+export const AI_CONSULT_ENDPOINT =
   "https://generativelanguage.googleapis.com/v1beta/interactions";
 
 export const UNDECIDED_OPTION = "まだ決めていない";
@@ -27,7 +27,7 @@ const MAX_OPTION_LENGTH = 100;
 const MAX_OPTIONS = 5;
 
 const COMMON_INSTRUCTION =
-  "あなたは日本の子育て家庭が、ライフイベントの準備を進めるのを手伝うアシスタントです。" +
+  "あなたは日本の子育て家庭が、ライフイベントや手続きで、やること・決めることを洗い出すのを手伝うアシスタントです。" +
   "家庭の事情は与えられた情報だけを前提にし、名前などの個人情報は推測しないでください。";
 
 const QUESTIONS_INSTRUCTION =
@@ -87,7 +87,7 @@ const PLAN_SCHEMA = {
   required: ["items"],
 } as const;
 
-function describeContext(ctx: PrepContext): string {
+function describeContext(ctx: ConsultContext): string {
   const lines = [
     `イベント: ${ctx.subject.title}`,
     ctx.subject.summary && `説明: ${ctx.subject.summary}`,
@@ -108,7 +108,7 @@ function requestBody(
   extra: object = {},
 ) {
   return {
-    model: EVENT_PREP_MODEL,
+    model: AI_CONSULT_MODEL,
     input,
     system_instruction: instruction,
     store: false,
@@ -122,7 +122,7 @@ function requestBody(
   };
 }
 
-export function buildQuestionsRequestBody(ctx: PrepContext) {
+export function buildQuestionsRequestBody(ctx: ConsultContext) {
   return requestBody(
     QUESTIONS_INSTRUCTION,
     describeContext(ctx),
@@ -130,7 +130,10 @@ export function buildQuestionsRequestBody(ctx: PrepContext) {
   );
 }
 
-export function buildPlanRequestBody(ctx: PrepContext, answers: PrepAnswer[]) {
+export function buildPlanRequestBody(
+  ctx: ConsultContext,
+  answers: ConsultAnswer[],
+) {
   const answerLines = answers.map((a) => `- ${a.question}: ${a.answer}`);
   const input = [describeContext(ctx), "質問への答え:", ...answerLines].join(
     "\n",
@@ -199,13 +202,13 @@ const questionsSchema = z.object({
 });
 
 /** 1〜3問の質問。各問の末尾に「まだ決めていない」を足す。使える問が無ければ null。 */
-export function parseQuestions(json: unknown): PrepQuestion[] | null {
+export function parseQuestions(json: unknown): ConsultQuestion[] | null {
   const output = readModelOutput(json);
   if (!output) return null;
   const parsed = questionsSchema.safeParse(parseJson(output.text));
   if (!parsed.success) return null;
 
-  const questions: PrepQuestion[] = [];
+  const questions: ConsultQuestion[] = [];
   for (const raw of parsed.data.questions) {
     const text = raw.text.trim();
     if (text === "" || charLength(text) > MAX_QUESTION_LENGTH) continue;
@@ -238,13 +241,13 @@ const planSchema = z.object({
 });
 
 /** 提案の一覧（最大12件）と、一緒に表示する検索候補。 */
-export function parsePlan(json: unknown): PrepPlan | null {
+export function parsePlan(json: unknown): ConsultPlan | null {
   const output = readModelOutput(json);
   if (!output) return null;
   const parsed = planSchema.safeParse(parseJson(output.text));
   if (!parsed.success) return null;
 
-  const items: PrepItem[] = [];
+  const items: ConsultItem[] = [];
   for (const raw of parsed.data.items) {
     const title = truncate(raw.title.trim(), MAX_TITLE_LENGTH);
     if (title === "") continue;

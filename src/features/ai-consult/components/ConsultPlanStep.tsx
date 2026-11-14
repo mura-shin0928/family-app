@@ -7,13 +7,13 @@ import Checkbox from "@mui/material/Checkbox";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { type ChildDates, describeTiming } from "@/features/life-events/search";
-import type { PrepItem } from "../types";
+import type { ConsultItem } from "../types";
 import { SearchSuggestions } from "./SearchSuggestions";
 
-export type PlannedItem = PrepItem & { id: string };
+export type PlannedItem = ConsultItem & { id: string };
 
 /** 提案の一覧。要らないものを外して、選んだ分をタスクにする。 */
-export function PrepPlanStep({
+export function ConsultPlanStep({
   items,
   searchSuggestions,
   child,
@@ -97,7 +97,7 @@ function PlanRow({
   checked: boolean;
   onToggle: () => void;
 }) {
-  const labelId = `prep-item-${item.id}`;
+  const labelId = `consult-item-${item.id}`;
 
   return (
     <Box

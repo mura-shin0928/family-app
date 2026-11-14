@@ -8,7 +8,7 @@ export const ANALYTICS_EVENTS = [
   "ingredients_added",
   "program_searched",
   "life_event_item_updated",
-  "event_prep_proposed",
+  "ai_consult_proposed",
 ] as const;
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];

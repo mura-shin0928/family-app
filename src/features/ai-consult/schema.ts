@@ -2,22 +2,22 @@ import { z } from "zod";
 import { findCatalogItem } from "@/features/life-events/catalog";
 import { dateStringSchema, noteSchema } from "@/lib/schema";
 import { MAX_ITEMS, MAX_QUESTIONS } from "./protocol";
-import type { PrepSubject } from "./types";
+import type { ConsultSubject } from "./types";
 
-export const prepSubjectInputSchema = z.object({
+export const consultSubjectInputSchema = z.object({
   title: z.string().trim().min(1).max(100),
   summary: z.string().trim().max(200),
   note: z.string().trim().max(500).nullable(),
   catalogKey: z.string().min(1).max(200).optional(),
 });
 
-export type PrepSubjectInput = z.infer<typeof prepSubjectInputSchema>;
+export type ConsultSubjectInput = z.infer<typeof consultSubjectInputSchema>;
 
 const childIdSchema = z.string().uuid();
 
 export const proposeQuestionsSchema = z.object({
   childId: childIdSchema,
-  subject: prepSubjectInputSchema,
+  subject: consultSubjectInputSchema,
 });
 
 export const proposePlanSchema = proposeQuestionsSchema.extend({
@@ -32,7 +32,7 @@ export const proposePlanSchema = proposeQuestionsSchema.extend({
     .max(MAX_QUESTIONS),
 });
 
-export const addPrepTasksSchema = z.object({
+export const addConsultTasksSchema = z.object({
   items: z
     .array(
       z.object({
@@ -48,7 +48,7 @@ export const addPrepTasksSchema = z.object({
 });
 
 /** テンプレの項目はサーバー側のカタログを正とする。 */
-export function resolveSubject(input: PrepSubjectInput): PrepSubject {
+export function resolveSubject(input: ConsultSubjectInput): ConsultSubject {
   const template = input.catalogKey
     ? findCatalogItem(input.catalogKey)
     : undefined;

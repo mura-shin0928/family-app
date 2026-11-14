@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   parseQuestions,
   UNDECIDED_OPTION,
-} from "@/features/event-prep/protocol";
-import { addPrepTasksSchema } from "@/features/event-prep/schema";
+} from "@/features/ai-consult/protocol";
+import { addConsultTasksSchema } from "@/features/ai-consult/schema";
 
 function response(output: unknown, citations: string[] = []): unknown {
   return {
@@ -46,9 +46,9 @@ describe("parseQuestions の長さと数", () => {
   });
 });
 
-describe("addPrepTasksSchema のタイトル", () => {
+describe("addConsultTasksSchema のタイトル", () => {
   it("提案で切った 100 文字のタイトルは、絵文字を含んでも通す", () => {
-    const result = addPrepTasksSchema.safeParse({
+    const result = addConsultTasksSchema.safeParse({
       items: [
         {
           id: randomUUID(),

@@ -21,9 +21,9 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { ResultSnackbar } from "@/components/ResultSnackbar";
+import { ConsultScreen } from "@/features/ai-consult/components/ConsultScreen";
+import type { ConsultSubjectInput } from "@/features/ai-consult/schema";
 import type { Child } from "@/features/children/types";
-import { EventPrepScreen } from "@/features/event-prep/components/EventPrepScreen";
-import type { PrepSubjectInput } from "@/features/event-prep/schema";
 import { todayInJst } from "@/lib/date";
 import { successToast } from "@/lib/result-toast";
 import { LIFE_EVENT_CATALOG, LIFE_EVENT_KINDS } from "../catalog";
@@ -49,22 +49,23 @@ export function SearchTab({
   child,
   items,
   showPrograms,
-  showEventPrep,
+  showAiConsult,
   onAddToTask,
   onRecordDone,
 }: {
   child: Child;
   items: LifeEventItem[];
   showPrograms: boolean;
-  showEventPrep: boolean;
+  showAiConsult: boolean;
   onAddToTask: (item: CatalogItem, presetDueOn: string) => void;
   onRecordDone: (item: CatalogItem) => void;
 }) {
   const [query, setQuery] = useState("");
   const [chip, setChip] = useState<FilterChip>("current");
   const [sheetItem, setSheetItem] = useState<CatalogItem | null>(null);
-  // 準備の提案の画面に出している題材。null の間は閉じている。
-  const [prepSubject, setPrepSubject] = useState<PrepSubjectInput | null>(null);
+  // AI への相談の画面に出している題材。null の間は閉じている。
+  const [consultSubject, setConsultSubject] =
+    useState<ConsultSubjectInput | null>(null);
   const [addedCount, setAddedCount] = useState<number | null>(null);
 
   const dates = {
@@ -103,7 +104,7 @@ export function SearchTab({
   const programsPending =
     searching && ((showPrograms && area.isPending) || programList.length > 0);
 
-  const closePrep = useCallback(() => setPrepSubject(null), []);
+  const closeConsult = useCallback(() => setConsultSubject(null), []);
 
   function renderRow(item: CatalogItem) {
     const state = itemStateFor(item.key, child.id, items);
@@ -157,7 +158,7 @@ export function SearchTab({
           },
         }}
       />
-      {/* 検索中はチップで絞らないので、同じ場所に準備の提案の入口を出す */}
+      {/* 検索中はチップで絞らないので、同じ場所に AI への相談の入口を出す */}
       {!searching && (
         <Box sx={{ display: "flex", gap: 1, overflowX: "auto", pb: 0.5 }}>
           <Chip
@@ -175,17 +176,17 @@ export function SearchTab({
           ))}
         </Box>
       )}
-      {searching && showEventPrep && (
+      {searching && showAiConsult && (
         <Button
           variant="outlined"
           fullWidth
           startIcon={<AutoAwesomeOutlinedIcon />}
           onClick={() =>
-            setPrepSubject({ title: trimmedQuery, summary: "", note: null })
+            setConsultSubject({ title: trimmedQuery, summary: "", note: null })
           }
           sx={{ justifyContent: "flex-start", textAlign: "left" }}
         >
-          「{trimmedQuery}」の準備を考えてもらう
+          「{trimmedQuery}」について AI に相談する
         </Button>
       )}
 
@@ -246,11 +247,11 @@ export function SearchTab({
         )}
       </Box>
 
-      <EventPrepScreen
+      <ConsultScreen
         childId={child.id}
         child={dates}
-        subject={prepSubject}
-        onClose={closePrep}
+        subject={consultSubject}
+        onClose={closeConsult}
         onAdded={setAddedCount}
       />
 
@@ -282,10 +283,10 @@ export function SearchTab({
           setSheetItem(null);
         }}
         onPrep={
-          showEventPrep
+          showAiConsult
             ? () => {
                 if (!sheetItem) return;
-                setPrepSubject({
+                setConsultSubject({
                   title: sheetItem.title,
                   summary: sheetItem.summary,
                   note: sheetItem.note,

@@ -15,8 +15,8 @@ describe("規約とポリシーの内容", () => {
       expect(text(PRIVACY_SECTIONS), name).toContain(name);
     }
     expect(PROCESSORS).toHaveLength(5);
-    // 準備の提案も Gemini に送る
-    expect(text(PRIVACY_SECTIONS)).toContain("準備の提案");
+    // AI への相談も Gemini に送る
+    expect(text(PRIVACY_SECTIONS)).toContain("AI への相談");
   });
 
   it("退会で即時に削除し、バックアップに最大7日残ることを両方に書いている", () => {
