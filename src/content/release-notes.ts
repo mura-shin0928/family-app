@@ -4,9 +4,7 @@ export type ReleaseNote = { date: string; items: string[] };
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     date: "2026-11-15",
-    items: [
-      "ライフイベントにおけるやることをAIに相談できるようになりました。",
-    ],
+    items: ["ライフイベントにおけるやることをAIに相談できるようになりました。"],
   },
   {
     date: "2026-11-01",
