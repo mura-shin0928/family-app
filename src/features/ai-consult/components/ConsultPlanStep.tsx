@@ -73,7 +73,6 @@ export function ConsultPlanStep({
           />
         ))}
       </Box>
-      {suggestions}
       {error && <Alert severity="error">{error}</Alert>}
       <Button
         variant="contained"
@@ -82,6 +81,8 @@ export function ConsultPlanStep({
       >
         選んだ{selected.size}件をタスクに追加
       </Button>
+      {/* 規約で一緒に表示する。目立たないよう一番下に置く */}
+      {suggestions}
     </Stack>
   );
 }

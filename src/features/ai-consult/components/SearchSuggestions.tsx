@@ -15,11 +15,11 @@ export function SearchSuggestions({ html }: { html: string }) {
   const [height, setHeight] = useState(DEFAULT_HEIGHT);
 
   return (
-    <Box>
+    <Box sx={{ pt: 2 }}>
       <Typography
         variant="caption"
         component="p"
-        sx={{ color: "text.secondary", mb: 0.5 }}
+        sx={{ color: "text.disabled", mb: 0.5 }}
       >
         Google で調べる
       </Typography>

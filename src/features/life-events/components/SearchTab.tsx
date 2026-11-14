@@ -21,8 +21,12 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { ResultSnackbar } from "@/components/ResultSnackbar";
-import { ConsultScreen } from "@/features/ai-consult/components/ConsultScreen";
-import type { ConsultSubjectInput } from "@/features/ai-consult/schema";
+import { consultCandidates } from "@/features/ai-consult/candidates";
+import { ConsultEntryCard } from "@/features/ai-consult/components/ConsultEntryCard";
+import {
+  ConsultScreen,
+  type ConsultTarget,
+} from "@/features/ai-consult/components/ConsultScreen";
 import type { Child } from "@/features/children/types";
 import { todayInJst } from "@/lib/date";
 import { successToast } from "@/lib/result-toast";
@@ -64,8 +68,9 @@ export function SearchTab({
   const [chip, setChip] = useState<FilterChip>("current");
   const [sheetItem, setSheetItem] = useState<CatalogItem | null>(null);
   // AI への相談の画面に出している題材。null の間は閉じている。
-  const [consultSubject, setConsultSubject] =
-    useState<ConsultSubjectInput | null>(null);
+  const [consultTarget, setConsultTarget] = useState<ConsultTarget | null>(
+    null,
+  );
   const [addedCount, setAddedCount] = useState<number | null>(null);
 
   const dates = {
@@ -104,7 +109,7 @@ export function SearchTab({
   const programsPending =
     searching && ((showPrograms && area.isPending) || programList.length > 0);
 
-  const closeConsult = useCallback(() => setConsultSubject(null), []);
+  const closeConsult = useCallback(() => setConsultTarget(null), []);
 
   function renderRow(item: CatalogItem) {
     const state = itemStateFor(item.key, child.id, items);
@@ -125,6 +130,17 @@ export function SearchTab({
 
   return (
     <Stack spacing={2}>
+      {showAiConsult && (
+        <ConsultEntryCard
+          currentTitles={consultCandidates(dates, today, 2).map((i) => i.title)}
+          onOpen={() =>
+            setConsultTarget({
+              kind: "pick",
+              candidates: consultCandidates(dates, today, 5),
+            })
+          }
+        />
+      )}
       <TextField
         value={query}
         onChange={(event) => setQuery(event.target.value)}
@@ -182,7 +198,10 @@ export function SearchTab({
           fullWidth
           startIcon={<AutoAwesomeOutlinedIcon />}
           onClick={() =>
-            setConsultSubject({ title: trimmedQuery, summary: "", note: null })
+            setConsultTarget({
+              kind: "subject",
+              subject: { title: trimmedQuery, summary: "", note: null },
+            })
           }
           sx={{ justifyContent: "flex-start", textAlign: "left" }}
         >
@@ -250,7 +269,7 @@ export function SearchTab({
       <ConsultScreen
         childId={child.id}
         child={dates}
-        subject={consultSubject}
+        target={consultTarget}
         onClose={closeConsult}
         onAdded={setAddedCount}
       />
@@ -286,11 +305,14 @@ export function SearchTab({
           showAiConsult
             ? () => {
                 if (!sheetItem) return;
-                setConsultSubject({
-                  title: sheetItem.title,
-                  summary: sheetItem.summary,
-                  note: sheetItem.note,
-                  catalogKey: sheetItem.key,
+                setConsultTarget({
+                  kind: "subject",
+                  subject: {
+                    title: sheetItem.title,
+                    summary: sheetItem.summary,
+                    note: sheetItem.note,
+                    catalogKey: sheetItem.key,
+                  },
                 });
                 setSheetItem(null);
               }
