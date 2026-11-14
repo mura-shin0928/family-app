@@ -4,11 +4,12 @@ import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
+import { alpha } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 
 const FALLBACK_LINE = "お宮参りや児童手当など、やることを一緒に洗い出します";
 
-/** 探すタブの一番上に出す、AI への相談の入口。 */
+/** 探すタブの一番上に出す、AI への相談の入口。検索欄と同じ形で、色は面だけにする。 */
 export function ConsultEntryCard({
   currentTitles,
   onOpen,
@@ -24,40 +25,34 @@ export function ConsultEntryCard({
   return (
     <ButtonBase
       onClick={onOpen}
-      sx={{
+      sx={(theme) => ({
         display: "block",
         width: "100%",
         textAlign: "left",
-        border: 2,
-        borderColor: "primary.main",
-        borderRadius: 3,
+        borderRadius: 1,
+        bgcolor: alpha(theme.palette.primary.main, 0.12),
         px: 1.5,
-        py: 1.25,
-      }}
+        py: 1,
+      })}
     >
       <Box
         component="span"
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.75,
-          color: "primary.main",
-        }}
+        sx={{ display: "flex", alignItems: "center", gap: 0.75 }}
       >
-        <AutoAwesomeOutlinedIcon fontSize="small" />
-        <Typography
-          variant="subtitle1"
-          component="span"
-          sx={{ fontWeight: 700 }}
-        >
-          やることを AI に相談する
+        <AutoAwesomeOutlinedIcon fontSize="small" color="primary" />
+        <Typography variant="body1" component="span">
+          AI に相談する
         </Typography>
-        <ChevronRightIcon sx={{ ml: "auto" }} />
+        <ChevronRightIcon
+          fontSize="small"
+          sx={{ ml: "auto", color: "text.secondary" }}
+        />
       </Box>
       <Typography
         variant="caption"
         component="span"
-        sx={{ display: "block", color: "text.secondary", mt: 0.25 }}
+        noWrap
+        sx={{ display: "block", color: "text.secondary" }}
       >
         {line}
       </Typography>
