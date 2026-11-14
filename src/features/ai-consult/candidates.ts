@@ -6,11 +6,14 @@ import {
 import type { CatalogItem } from "@/features/life-events/types";
 import type { DateString } from "@/lib/date";
 
-/** 相談の入口に出す候補。いまの時期のテンプレ項目を先頭から limit 件。 */
+/** 相談の入口に出す候補。いまの時期のテンプレ項目から、記録済みを除いて先頭から limit 件。 */
 export function consultCandidates(
   child: ChildDates,
   today: DateString,
   limit: number,
+  doneKeys: ReadonlySet<string>,
 ): CatalogItem[] {
-  return selectCurrentItems(LIFE_EVENT_CATALOG, child, today).slice(0, limit);
+  return selectCurrentItems(LIFE_EVENT_CATALOG, child, today)
+    .filter((item) => !doneKeys.has(item.key))
+    .slice(0, limit);
 }

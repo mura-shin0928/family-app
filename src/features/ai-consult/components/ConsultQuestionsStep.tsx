@@ -27,7 +27,15 @@ export function ConsultQuestionsStep({
     <Stack spacing={3} sx={{ py: 2 }}>
       {questions.map((question, i) => (
         <FormControl key={question.text}>
-          <FormLabel id={`consult-question-${i}`} sx={{ mb: 0.5 }}>
+          <FormLabel
+            id={`consult-question-${i}`}
+            sx={{
+              mb: 0.5,
+              color: "text.primary",
+              fontWeight: 700,
+              "&.Mui-focused": { color: "text.primary" },
+            }}
+          >
             {question.text}
           </FormLabel>
           <RadioGroup

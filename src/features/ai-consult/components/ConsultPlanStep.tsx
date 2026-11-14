@@ -102,10 +102,12 @@ function PlanRow({
 
   return (
     <Box
+      component="label"
       sx={{
         display: "flex",
         alignItems: "flex-start",
         gap: 0.5,
+        cursor: "pointer",
         py: 1,
         borderBottom: 1,
         borderColor: "divider",

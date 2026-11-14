@@ -112,7 +112,7 @@ function ConsultContent({
             <ArrowBackIcon fontSize="small" />
           </IconButton>
           <Typography id={TITLE_ID} variant="h6" component="h2" noWrap>
-            {subject ? `${subject.title}のやること` : "AI に相談する"}
+            {subject ? `やること：${subject.title}` : "AI に相談する"}
           </Typography>
         </Toolbar>
       </AppBar>

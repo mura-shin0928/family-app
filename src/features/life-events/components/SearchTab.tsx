@@ -110,6 +110,11 @@ export function SearchTab({
     searching && ((showPrograms && area.isPending) || programList.length > 0);
 
   const closeConsult = useCallback(() => setConsultTarget(null), []);
+  const doneKeys = new Set(
+    items
+      .filter((i) => i.childId === child.id && i.status === "done")
+      .flatMap((i) => (i.catalogKey === null ? [] : [i.catalogKey])),
+  );
 
   function renderRow(item: CatalogItem) {
     const state = itemStateFor(item.key, child.id, items);
@@ -132,11 +137,13 @@ export function SearchTab({
     <Stack spacing={2}>
       {showAiConsult && (
         <ConsultEntryCard
-          currentTitles={consultCandidates(dates, today, 2).map((i) => i.title)}
+          currentTitles={consultCandidates(dates, today, 2, doneKeys).map(
+            (i) => i.title,
+          )}
           onOpen={() =>
             setConsultTarget({
               kind: "pick",
-              candidates: consultCandidates(dates, today, 5),
+              candidates: consultCandidates(dates, today, 5, doneKeys),
             })
           }
         />

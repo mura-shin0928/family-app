@@ -19,14 +19,14 @@ export function SearchSuggestions({ html }: { html: string }) {
       <Typography
         variant="caption"
         component="p"
-        sx={{ color: "text.disabled", mb: 0.5 }}
+        sx={{ color: "text.secondary", mb: 0.5 }}
       >
         Google で調べる
       </Typography>
       <Box
         component="iframe"
         title="Google 検索の候補"
-        srcDoc={`<base target="_blank">${html}`}
+        srcDoc={`<meta name="color-scheme" content="light dark"><base target="_blank">${html}`}
         sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin"
         onLoad={(event: React.SyntheticEvent<HTMLIFrameElement>) => {
           const body = event.currentTarget.contentDocument?.body;

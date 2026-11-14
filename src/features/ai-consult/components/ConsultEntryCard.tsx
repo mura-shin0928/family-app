@@ -4,7 +4,6 @@ import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
-import { alpha } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 
 const FALLBACK_LINE = "お宮参りや児童手当など、やることを一緒に洗い出します";
@@ -25,15 +24,16 @@ export function ConsultEntryCard({
   return (
     <ButtonBase
       onClick={onOpen}
-      sx={(theme) => ({
+      sx={{
         display: "block",
         width: "100%",
         textAlign: "left",
         borderRadius: 1,
-        bgcolor: alpha(theme.palette.primary.main, 0.12),
+        // チップと同じ色。CSS 変数なのでライトとダークで切り替わる
+        bgcolor: "var(--mui-palette-brand-tagBg)",
         px: 1.5,
         py: 1,
-      })}
+      }}
     >
       <Box
         component="span"
