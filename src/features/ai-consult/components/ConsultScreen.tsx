@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { ChildDates } from "@/features/life-events/search";
 import { resolveTargetDate } from "@/features/life-events/search";
+import type { CatalogItem } from "@/features/life-events/types";
 import { TASKS_QUERY_KEY } from "@/features/tasks/types";
 import {
   addConsultTasks,
@@ -24,25 +25,31 @@ import {
 import type { ConsultSubjectInput } from "../schema";
 import { ConsultPlanStep, type PlannedItem } from "./ConsultPlanStep";
 import { ConsultQuestionsStep } from "./ConsultQuestionsStep";
+import { ConsultSubjectStep } from "./ConsultSubjectStep";
 import { useCloseOnBack } from "./useCloseOnBack";
 
 const TITLE_ID = "ai-consult-screen-title";
 
-/** AI への相談を全画面で出す。subject が null の間は閉じている。 */
+/** 何について相談するか。pick は選ぶところから、subject は質問から始める。 */
+export type ConsultTarget =
+  | { kind: "pick"; candidates: CatalogItem[] }
+  | { kind: "subject"; subject: ConsultSubjectInput };
+
+/** AI への相談を全画面で出す。target が null の間は閉じている。 */
 export function ConsultScreen({
   childId,
   child,
-  subject,
+  target,
   onClose,
   onAdded,
 }: {
   childId: string;
   child: ChildDates;
-  subject: ConsultSubjectInput | null;
+  target: ConsultTarget | null;
   onClose: () => void;
   onAdded: (count: number) => void;
 }) {
-  const open = subject !== null;
+  const open = target !== null;
   const requestClose = useCloseOnBack(open, onClose);
 
   return (
@@ -57,6 +64,42 @@ export function ConsultScreen({
         },
       }}
     >
+      {/* 閉じたら中身ごと捨てる。走っている要求の結果は閉じた画面に反映されない */}
+      {target && (
+        <ConsultContent
+          childId={childId}
+          child={child}
+          target={target}
+          onBack={requestClose}
+          onAdded={(count) => {
+            onAdded(count);
+            requestClose();
+          }}
+        />
+      )}
+    </Dialog>
+  );
+}
+
+function ConsultContent({
+  childId,
+  child,
+  target,
+  onBack,
+  onAdded,
+}: {
+  childId: string;
+  child: ChildDates;
+  target: ConsultTarget;
+  onBack: () => void;
+  onAdded: (count: number) => void;
+}) {
+  const [subject, setSubject] = useState<ConsultSubjectInput | null>(
+    target.kind === "subject" ? target.subject : null,
+  );
+
+  return (
+    <>
       <AppBar position="static" color="default" elevation={1}>
         <Toolbar>
           <IconButton
@@ -64,12 +107,14 @@ export function ConsultScreen({
             size="small"
             sx={{ mr: 1 }}
             aria-label="戻る"
-            onClick={requestClose}
+            onClick={onBack}
           >
             <ArrowBackIcon fontSize="small" />
           </IconButton>
           <Typography id={TITLE_ID} variant="h6" component="h2" noWrap>
-            {subject ? `${subject.title}のやること` : "AI に相談する"}
+            {subject
+              ? `${subject.title}のやること`
+              : "やることを AI に相談する"}
           </Typography>
         </Toolbar>
       </AppBar>
@@ -82,20 +127,21 @@ export function ConsultScreen({
           overflowY: "auto",
         }}
       >
-        {/* 閉じたら中身ごと捨てる。走っている要求の結果は閉じた画面に反映されない */}
-        {subject && (
+        {subject ? (
           <ConsultFlow
             childId={childId}
             child={child}
             subject={subject}
-            onAdded={(count) => {
-              onAdded(count);
-              requestClose();
-            }}
+            onAdded={onAdded}
+          />
+        ) : (
+          <ConsultSubjectStep
+            candidates={target.kind === "pick" ? target.candidates : []}
+            onPick={setSubject}
           />
         )}
       </Box>
-    </Dialog>
+    </>
   );
 }
 
@@ -161,6 +207,7 @@ function ConsultFlow({
   const add = useMutation({
     mutationFn: (chosen: PlannedItem[]) =>
       addConsultTasks({
+        childId,
         items: chosen.map((item) => ({
           id: item.id,
           title: item.title,

@@ -151,7 +151,13 @@ export async function proposePlan(input: {
 const UNIQUE_VIOLATION = "23505";
 
 /** 選んだ提案をタスクにする。id は画面側で振ったもので、再試行で二重にならない。 */
+/** create_task (SQL) の raise exception メッセージ → 画面表示文言。 */
+const CREATE_TASK_ERROR_MESSAGES: Record<string, string> = {
+  child_not_found: "子供が見つかりません",
+};
+
 export async function addConsultTasks(input: {
+  childId: string;
   items: {
     id: string;
     title: string;
@@ -172,12 +178,14 @@ export async function addConsultTasks(input: {
       p_id: item.id,
       p_title: item.title,
       p_is_purchase: false,
+      p_record_child_id: parsed.data.childId,
       p_due_on: item.dueOn || undefined,
       p_note: item.note || undefined,
     });
     if (error && error.code !== UNIQUE_VIOLATION) {
-      logActionError("addConsultTasks", error);
-      return { ok: false, error: "タスクの追加に失敗しました" };
+      const known = CREATE_TASK_ERROR_MESSAGES[error.message];
+      if (!known) logActionError("addConsultTasks", error);
+      return { ok: false, error: known ?? "タスクの追加に失敗しました" };
     }
   }
 

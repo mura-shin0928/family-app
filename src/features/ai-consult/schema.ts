@@ -33,6 +33,8 @@ export const proposePlanSchema = proposeQuestionsSchema.extend({
 });
 
 export const addConsultTasksSchema = z.object({
+  // 記録に残す子。タスクの行に名前が出る
+  childId: childIdSchema,
   items: z
     .array(
       z.object({

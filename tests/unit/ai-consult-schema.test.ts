@@ -80,16 +80,19 @@ describe("proposePlanSchema", () => {
 describe("addConsultTasksSchema", () => {
   it("期日の空文字は通す", () => {
     expect(
-      addConsultTasksSchema.safeParse({ items: [task({ dueOn: "" })] }).success,
+      addConsultTasksSchema.safeParse({ childId, items: [task({ dueOn: "" })] })
+        .success,
     ).toBe(true);
   });
 
-  it("13 件以上・0 件・形の違う期日・uuid でない id は通さない", () => {
+  it("13 件以上・0 件・形の違う期日・uuid でない id・子が無いか uuid でないものは通さない", () => {
     const cases = [
-      { items: Array.from({ length: 13 }, () => task()) },
-      { items: [] },
-      { items: [task({ dueOn: "2027/1/10" })] },
-      { items: [task({ id: "not-a-uuid" })] },
+      { childId, items: Array.from({ length: 13 }, () => task()) },
+      { childId, items: [] },
+      { childId, items: [task({ dueOn: "2027/1/10" })] },
+      { childId, items: [task({ id: "not-a-uuid" })] },
+      { items: [task()] },
+      { childId: "not-a-uuid", items: [task()] },
     ];
     for (const input of cases) {
       expect(addConsultTasksSchema.safeParse(input).success).toBe(false);

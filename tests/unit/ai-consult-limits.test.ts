@@ -49,6 +49,7 @@ describe("parseQuestions の長さと数", () => {
 describe("addConsultTasksSchema のタイトル", () => {
   it("提案で切った 100 文字のタイトルは、絵文字を含んでも通す", () => {
     const result = addConsultTasksSchema.safeParse({
+      childId: randomUUID(),
       items: [
         {
           id: randomUUID(),
