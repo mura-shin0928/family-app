@@ -21,7 +21,7 @@ import {
   proposeQuestionsSchema,
   resolveSubject,
 } from "./schema";
-import type { PrepAnswer, PrepContext, PrepItem, PrepQuestion } from "./types";
+import type { PrepAnswer, PrepContext, PrepPlan, PrepQuestion } from "./types";
 
 const QUESTIONS_TIMEOUT_MS = 20_000;
 // ページの maxDuration（60秒）に収める
@@ -122,9 +122,7 @@ export async function proposePlan(input: {
   childId: string;
   subject: PrepSubjectInput;
   answers: PrepAnswer[];
-}): Promise<
-  { ok: true; items: PrepItem[] } | { ok: false; reason: PrepFailure }
-> {
+}): Promise<({ ok: true } & PrepPlan) | { ok: false; reason: PrepFailure }> {
   const parsed = proposePlanSchema.safeParse(input);
   if (!parsed.success) return { ok: false, reason: "invalid" };
 
@@ -135,11 +133,11 @@ export async function proposePlan(input: {
     buildPlanRequestBody(prepared.ctx, parsed.data.answers),
     PLAN_TIMEOUT_MS,
   );
-  const items = result.ok ? parsePlan(result.json) : null;
-  if (items === null) return { ok: false, reason: "unavailable" };
+  const plan = result.ok ? parsePlan(result.json) : null;
+  if (plan === null) return { ok: false, reason: "unavailable" };
 
   captureEvent(prepared.member, "event_prep_proposed");
-  return { ok: true, items };
+  return { ok: true, ...plan };
 }
 
 const UNIQUE_VIOLATION = "23505";
@@ -151,7 +149,6 @@ export async function addPrepTasks(input: {
     title: string;
     dueOn: string;
     note: string;
-    url: string;
   }[];
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const parsed = addPrepTasksSchema.safeParse(input);
@@ -168,7 +165,6 @@ export async function addPrepTasks(input: {
       p_title: item.title,
       p_is_purchase: false,
       p_due_on: item.dueOn || undefined,
-      p_url: item.url || undefined,
       p_note: item.note || undefined,
     });
     if (error && error.code !== UNIQUE_VIOLATION) {

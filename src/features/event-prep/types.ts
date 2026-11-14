@@ -29,5 +29,13 @@ export type PrepItem = {
   title: string;
   reason: string;
   timing: CatalogTiming | null;
-  sourceUrl: string | null;
+};
+
+/**
+ * 提案の一覧。searchSuggestions は Google の検索候補の HTML で、検索を使ったときの
+ * 規約上、一覧と一緒に表示する。検索しなかったときは null。
+ */
+export type PrepPlan = {
+  items: PrepItem[];
+  searchSuggestions: string | null;
 };

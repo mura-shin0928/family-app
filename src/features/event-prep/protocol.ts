@@ -1,7 +1,12 @@
 import { z } from "zod";
 import type { CatalogTiming } from "@/features/life-events/types";
-import { isHttpUrl } from "@/lib/url";
-import type { PrepAnswer, PrepContext, PrepItem, PrepQuestion } from "./types";
+import type {
+  PrepAnswer,
+  PrepContext,
+  PrepItem,
+  PrepPlan,
+  PrepQuestion,
+} from "./types";
 
 // 一次情報を確認済み（2026-11時点）: https://ai.google.dev/gemini-api/docs/google-search
 // 検索と構造化出力の併用は Gemini 3 以降（Preview）。
@@ -20,8 +25,6 @@ const MAX_OFFSET_DAYS = 3650;
 const MAX_QUESTION_LENGTH = 200;
 const MAX_OPTION_LENGTH = 100;
 const MAX_OPTIONS = 5;
-// lib/url の httpUrlSchema と同じ
-const MAX_URL_LENGTH = 2000;
 
 const COMMON_INSTRUCTION =
   "あなたは日本の子育て家庭が、ライフイベントの準備を進めるのを手伝うアシスタントです。" +
@@ -40,8 +43,7 @@ const PLAN_INSTRUCTION =
   "時期は基準日（birth=出生日、expected_birth=出産予定日）からの日数で、前なら負の数にしてください。" +
   "基準日が与えられていないか、時期が決められない項目は anchor と offsetDays を null にしてください。" +
   "kind は期限があるなら deadline、目安なら around にしてください。" +
-  "自治体の手続き・神社・店・サービスなど具体的な情報は、検索で確かめたものだけを挙げ、" +
-  "根拠にしたページの URL を sourceUrl に入れてください。無ければ null にしてください。";
+  "自治体の手続き・神社・店・サービスなど具体的な情報は、検索で確かめたものだけを挙げてください。";
 
 const QUESTIONS_SCHEMA = {
   type: "object",
@@ -77,16 +79,8 @@ const PLAN_SCHEMA = {
             enum: ["birth", "expected_birth", null],
           },
           offsetDays: { type: ["integer", "null"] },
-          sourceUrl: { type: ["string", "null"] },
         },
-        required: [
-          "title",
-          "reason",
-          "kind",
-          "anchor",
-          "offsetDays",
-          "sourceUrl",
-        ],
+        required: ["title", "reason", "kind", "anchor", "offsetDays"],
       },
     },
   },
@@ -146,43 +140,40 @@ export function buildPlanRequestBody(ctx: PrepContext, answers: PrepAnswer[]) {
   });
 }
 
-const textBlockSchema = z.object({
-  type: z.string(),
-  text: z.string().optional(),
-  annotations: z
-    .array(z.object({ type: z.string(), url: z.string().optional() }))
-    .optional(),
-});
-
 const envelopeSchema = z.object({
   steps: z.array(
     z.object({
       type: z.string(),
-      content: z.array(textBlockSchema).optional(),
+      content: z
+        .array(z.object({ type: z.string(), text: z.string().optional() }))
+        .optional(),
+      result: z
+        .array(z.object({ search_suggestions: z.string().optional() }))
+        .optional(),
     }),
   ),
 });
 
-/** model_output の本文と、そこに付いた引用の URL。形が違えば null。 */
+/** model_output の本文と、検索の結果に付いた検索候補の HTML。形が違えば null。 */
 function readModelOutput(
   json: unknown,
-): { text: string; citedUrls: Set<string> } | null {
+): { text: string; searchSuggestions: string | null } | null {
   const envelope = envelopeSchema.safeParse(json);
   if (!envelope.success) return null;
-  const blocks = envelope.data.steps
+  const { steps } = envelope.data;
+  const text = steps
     .filter((step) => step.type === "model_output")
     .flatMap((step) => step.content ?? [])
-    .filter((block) => block.type === "text");
-  const text = blocks.map((block) => block.text ?? "").join("");
+    .filter((block) => block.type === "text")
+    .map((block) => block.text ?? "")
+    .join("");
   if (text === "") return null;
-  const citedUrls = new Set(
-    blocks.flatMap((block) =>
-      (block.annotations ?? [])
-        .filter((a) => a.type === "url_citation" && a.url)
-        .map((a) => a.url as string),
-    ),
-  );
-  return { text, citedUrls };
+  const suggestions = steps
+    .filter((step) => step.type === "google_search_result")
+    .flatMap((step) => step.result ?? [])
+    .map((r) => r.search_suggestions ?? "")
+    .join("");
+  return { text, searchSuggestions: suggestions === "" ? null : suggestions };
 }
 
 function parseJson(text: string): unknown {
@@ -242,13 +233,12 @@ const planSchema = z.object({
       kind: z.enum(["deadline", "around"]).catch("around"),
       anchor: z.enum(["birth", "expected_birth"]).nullable().catch(null),
       offsetDays: z.number().int().nullable().catch(null),
-      sourceUrl: z.string().nullable().catch(null),
     }),
   ),
 });
 
-/** 提案の一覧（最大12件）。sourceUrl は引用にある http(s) の URL だけ残す。 */
-export function parsePlan(json: unknown): PrepItem[] | null {
+/** 提案の一覧（最大12件）と、一緒に表示する検索候補。 */
+export function parsePlan(json: unknown): PrepPlan | null {
   const output = readModelOutput(json);
   if (!output) return null;
   const parsed = planSchema.safeParse(parseJson(output.text));
@@ -264,20 +254,12 @@ export function parsePlan(json: unknown): PrepItem[] | null {
       Math.abs(raw.offsetDays) <= MAX_OFFSET_DAYS
         ? { kind: raw.kind, anchor: raw.anchor, offsetDays: raw.offsetDays }
         : null;
-    const sourceUrl =
-      raw.sourceUrl !== null &&
-      raw.sourceUrl.length <= MAX_URL_LENGTH &&
-      output.citedUrls.has(raw.sourceUrl) &&
-      isHttpUrl(raw.sourceUrl)
-        ? raw.sourceUrl
-        : null;
     items.push({
       title,
       reason: truncate(raw.reason.trim(), MAX_REASON_LENGTH),
       timing,
-      sourceUrl,
     });
     if (items.length === MAX_ITEMS) break;
   }
-  return items;
+  return { items, searchSuggestions: output.searchSuggestions };
 }

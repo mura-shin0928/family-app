@@ -16,7 +16,6 @@ function task(overrides: Record<string, unknown> = {}) {
     title: "写真館を予約する",
     dueOn: "2027-01-10",
     note: "混む時期がある",
-    url: "https://example.com/",
     ...overrides,
   };
 }
@@ -79,18 +78,16 @@ describe("proposePlanSchema", () => {
 });
 
 describe("addPrepTasksSchema", () => {
-  it("期日と URL の空文字は通す", () => {
+  it("期日の空文字は通す", () => {
     expect(
-      addPrepTasksSchema.safeParse({ items: [task({ dueOn: "", url: "" })] })
-        .success,
+      addPrepTasksSchema.safeParse({ items: [task({ dueOn: "" })] }).success,
     ).toBe(true);
   });
 
-  it("13 件以上・0 件・http(s) でない URL・形の違う期日は通さない", () => {
+  it("13 件以上・0 件・形の違う期日・uuid でない id は通さない", () => {
     const cases = [
       { items: Array.from({ length: 13 }, () => task()) },
       { items: [] },
-      { items: [task({ url: "javascript:alert(1)" })] },
       { items: [task({ dueOn: "2027/1/10" })] },
       { items: [task({ id: "not-a-uuid" })] },
     ];

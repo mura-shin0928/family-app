@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { findCatalogItem } from "@/features/life-events/catalog";
 import { dateStringSchema, noteSchema } from "@/lib/schema";
-import { httpUrlSchema } from "@/lib/url";
 import { MAX_ITEMS, MAX_QUESTIONS } from "./protocol";
 import type { PrepSubject } from "./types";
 
@@ -42,7 +41,6 @@ export const addPrepTasksSchema = z.object({
         // 空文字列 = 期限なし
         dueOn: z.union([dateStringSchema, z.literal("")]),
         note: noteSchema,
-        url: z.union([httpUrlSchema, z.literal("")]),
       }),
     )
     .min(1)

@@ -8,6 +8,8 @@ import {
   UNDECIDED_OPTION,
 } from "@/features/event-prep/protocol";
 import type { PrepContext } from "@/features/event-prep/types";
+import planFixture from "../fixtures/event-prep/plan-response.json";
+import questionsFixture from "../fixtures/event-prep/questions-response.json";
 
 const ctx: PrepContext = {
   subject: {
@@ -145,52 +147,49 @@ function planItem(overrides: Record<string, unknown> = {}) {
     kind: "around",
     anchor: "birth",
     offsetDays: 20,
-    sourceUrl: null,
     ...overrides,
+  };
+}
+
+/** ② の応答。検索の結果（検索候補の HTML）を先に置く。 */
+function planResponse(output: unknown, suggestions: string[] = []): unknown {
+  const base = response(output) as { steps: unknown[] };
+  return {
+    steps: [
+      ...suggestions.map((html) => ({
+        type: "google_search_result",
+        result: [{ search_suggestions: html }],
+      })),
+      ...base.steps,
+    ],
   };
 }
 
 describe("parsePlan", () => {
   it("項目を取り、timing はモデルの kind と基準日からの日数にする", () => {
-    const items = parsePlan(response({ items: [planItem()] }));
-    expect(items).toEqual([
+    const plan = parsePlan(planResponse({ items: [planItem()] }));
+    expect(plan?.items).toEqual([
       {
         title: "祈祷を受ける神社を決める",
         reason: "予約が要る神社がある",
         timing: { kind: "around", anchor: "birth", offsetDays: 20 },
-        sourceUrl: null,
       },
     ]);
   });
 
-  it("sourceUrl は引用にある URL だけ残す", () => {
-    const cited = "https://www.city.koganei.lg.jp/page.html";
-    const items = parsePlan(
-      response(
-        {
-          items: [
-            planItem({ sourceUrl: cited }),
-            planItem({ sourceUrl: "https://example.com/made-up" }),
-          ],
-        },
-        [cited],
-      ),
-    );
-    expect(items?.map((i) => i.sourceUrl)).toEqual([cited, null]);
-  });
-
-  it("http(s) でない URL は引用にあっても null にする", () => {
-    const items = parsePlan(
-      response({ items: [planItem({ sourceUrl: "javascript:alert(1)" })] }, [
-        "javascript:alert(1)",
-      ]),
-    );
-    expect(items?.[0]?.sourceUrl).toBeNull();
+  it("検索候補の HTML を集め、検索していなければ null", () => {
+    expect(
+      parsePlan(planResponse({ items: [] }, ["<a>1</a>", "<a>2</a>"]))
+        ?.searchSuggestions,
+    ).toBe("<a>1</a><a>2</a>");
+    expect(
+      parsePlan(planResponse({ items: [] }))?.searchSuggestions,
+    ).toBeNull();
   });
 
   it("anchor か offsetDays が欠けるか、|offsetDays| が 3650 を超えると timing: null", () => {
-    const items = parsePlan(
-      response({
+    const plan = parsePlan(
+      planResponse({
         items: [
           planItem({ anchor: null }),
           planItem({ offsetDays: null }),
@@ -199,7 +198,7 @@ describe("parsePlan", () => {
         ],
       }),
     );
-    expect(items?.map((i) => i.timing)).toEqual([
+    expect(plan?.items.map((i) => i.timing)).toEqual([
       null,
       null,
       null,
@@ -211,24 +210,45 @@ describe("parsePlan", () => {
     const many = Array.from({ length: MAX_ITEMS + 3 }, (_, i) =>
       planItem({ title: `項目${i}` }),
     );
-    expect(parsePlan(response({ items: many }))).toHaveLength(MAX_ITEMS);
+    expect(parsePlan(planResponse({ items: many }))?.items).toHaveLength(
+      MAX_ITEMS,
+    );
 
     const items = parsePlan(
-      response({
+      planResponse({
         items: [
           planItem({ title: "  " }),
           planItem({ title: "あ".repeat(150), reason: "い".repeat(300) }),
         ],
       }),
-    );
+    )?.items;
     expect(items).toHaveLength(1);
     expect(items?.[0]?.title).toHaveLength(100);
     expect(items?.[0]?.reason).toHaveLength(200);
   });
 
   it("items が空なら []、想定外の形は null", () => {
-    expect(parsePlan(response({ items: [] }))).toEqual([]);
-    expect(parsePlan(response({ list: [] }))).toBeNull();
+    expect(parsePlan(planResponse({ items: [] }))?.items).toEqual([]);
+    expect(parsePlan(planResponse({ list: [] }))).toBeNull();
     expect(parsePlan(response(null, [], "{"))).toBeNull();
+  });
+});
+
+describe("実際の応答（2026-11-14 に取得）", () => {
+  it("① から質問を取れる", () => {
+    const qs = parseQuestions(questionsFixture);
+    expect(qs).toHaveLength(3);
+    for (const q of qs ?? []) expect(q.options.at(-1)).toBe(UNDECIDED_OPTION);
+  });
+
+  it("② から項目と検索候補を取れる", () => {
+    const plan = parsePlan(planFixture);
+    expect(plan?.items).toHaveLength(8);
+    expect(plan?.items[0]?.timing).toEqual({
+      kind: "around",
+      anchor: "birth",
+      offsetDays: 16,
+    });
+    expect(plan?.searchSuggestions).toContain("https://www.google.com/search");
   });
 });

@@ -4,23 +4,18 @@ import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
-import Chip from "@mui/material/Chip";
-import MuiLink from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import {
-  type ChildDates,
-  describeTiming,
-  isPublicSectorHost,
-} from "@/features/life-events/search";
-import { hostnameOf } from "@/lib/url";
+import { type ChildDates, describeTiming } from "@/features/life-events/search";
 import type { PrepItem } from "../types";
+import { SearchSuggestions } from "./SearchSuggestions";
 
 export type PlannedItem = PrepItem & { id: string };
 
 /** 提案の一覧。要らないものを外して、選んだ分をタスクにする。 */
 export function PrepPlanStep({
   items,
+  searchSuggestions,
   child,
   selected,
   onToggle,
@@ -29,6 +24,7 @@ export function PrepPlanStep({
   error,
 }: {
   items: PlannedItem[];
+  searchSuggestions: string | null;
   child: ChildDates;
   selected: ReadonlySet<string>;
   onToggle: (id: string) => void;
@@ -36,11 +32,18 @@ export function PrepPlanStep({
   adding: boolean;
   error: string | null;
 }) {
+  const suggestions = searchSuggestions && (
+    <SearchSuggestions html={searchSuggestions} />
+  );
+
   if (items.length === 0) {
     return (
-      <Typography variant="body2" sx={{ color: "text.secondary", py: 2 }}>
-        提案が見つかりませんでした
-      </Typography>
+      <Stack spacing={1.5} sx={{ py: 2 }}>
+        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+          提案が見つかりませんでした
+        </Typography>
+        {suggestions}
+      </Stack>
     );
   }
 
@@ -70,6 +73,7 @@ export function PrepPlanStep({
           />
         ))}
       </Box>
+      {suggestions}
       {error && <Alert severity="error">{error}</Alert>}
       <Button
         variant="contained"
@@ -93,7 +97,6 @@ function PlanRow({
   checked: boolean;
   onToggle: () => void;
 }) {
-  const host = item.sourceUrl ? hostnameOf(item.sourceUrl) : null;
   const labelId = `prep-item-${item.id}`;
 
   return (
@@ -125,35 +128,6 @@ function PlanRow({
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
             {item.reason}
           </Typography>
-        )}
-        {item.sourceUrl && host && (
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 0.75,
-              mt: 0.25,
-            }}
-          >
-            <MuiLink
-              href={item.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="caption"
-              sx={{ overflowWrap: "anywhere" }}
-            >
-              {host}
-            </MuiLink>
-            {isPublicSectorHost(host) && (
-              <Chip
-                label="公的"
-                size="small"
-                color="success"
-                variant="outlined"
-              />
-            )}
-          </Box>
         )}
       </Box>
     </Box>

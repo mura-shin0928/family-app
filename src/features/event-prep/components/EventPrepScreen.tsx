@@ -119,6 +119,9 @@ function PrepFlow({
   const queryClient = useQueryClient();
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [items, setItems] = useState<PlannedItem[] | null>(null);
+  const [searchSuggestions, setSearchSuggestions] = useState<string | null>(
+    null,
+  );
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [addError, setAddError] = useState<string | null>(null);
 
@@ -150,6 +153,7 @@ function PrepFlow({
         id: crypto.randomUUID(),
       }));
       setItems(planned);
+      setSearchSuggestions(result.searchSuggestions);
       setSelected(new Set(planned.map((item) => item.id)));
     },
   });
@@ -162,7 +166,6 @@ function PrepFlow({
           title: item.title,
           dueOn: resolveTargetDate(item, child) ?? "",
           note: item.reason,
-          url: item.sourceUrl ?? "",
         })),
       }),
     // 画面を閉じた後に終わっても、タスクの一覧は新しくする
@@ -192,6 +195,7 @@ function PrepFlow({
     return (
       <PrepPlanStep
         items={items}
+        searchSuggestions={searchSuggestions}
         child={child}
         selected={selected}
         onToggle={(id) =>

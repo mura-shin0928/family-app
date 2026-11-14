@@ -1,0 +1,33 @@
+{
+  "status": "completed",
+  "usage": {
+    "total_tokens": 406,
+    "total_input_tokens": 204,
+    "input_tokens_by_modality": [{ "modality": "text", "tokens": 204 }],
+    "total_cached_tokens": 0,
+    "total_output_tokens": 202,
+    "total_tool_use_tokens": 0,
+    "total_thought_tokens": 0,
+    "initial_input_tokens": 204
+  },
+  "created": "2026-11-14T13:29:50Z",
+  "updated": "2026-11-14T13:29:50Z",
+  "service_tier": "standard",
+  "steps": [
+    {
+      "signature": "EmkKZwFpFH0TFDIULOr5yAMRCC9dAPrvrVoZ3qpEEmPrcAq5f3y3dsAxaQ5q95xEdaH4amiK/9VtI//d0gTwqMXKBF0l3MO20MoSrYR3sONXHzfTfLhnTx9ZTXN0LvpcDQrBxTMduDieFao=",
+      "type": "thought"
+    },
+    {
+      "content": [
+        {
+          "text": "{\n  \"questions\": [\n    {\n      \"text\": \"お宮参りの時期はいつ頃を予定していますか？\",\n      \"options\": [\n        \"生後1か月前後（12月上旬）\",\n        \"生後100日前後・暖かくなってから（春頃）\"\n      ]\n    },\n    {\n      \"text\": \"当日はどなたが参加する予定ですか？\",\n      \"options\": [\n        \"赤ちゃんと両親のみ\",\n        \"祖父母も一緒に参加\"\n      ]\n    },\n    {\n      \"text\": \"写真撮影やご祈祷、会食はどのように行いますか？\",\n      \"options\": [\n        \"ご祈祷と参拝のみシンプルに行う\",\n        \"ご祈祷に加えて写真館での撮影や会食も行う\"\n      ]\n    }\n  ]\n}",
+          "type": "text"
+        }
+      ],
+      "type": "model_output"
+    }
+  ],
+  "object": "interaction",
+  "model": "gemini-3.8-flash"
+}

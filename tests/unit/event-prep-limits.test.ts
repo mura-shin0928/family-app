@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
-  parsePlan,
   parseQuestions,
   UNDECIDED_OPTION,
 } from "@/features/event-prep/protocol";
@@ -47,30 +46,6 @@ describe("parseQuestions の長さと数", () => {
   });
 });
 
-describe("parsePlan の URL の長さ", () => {
-  it("2000 文字を超える URL は引用にあっても null にする", () => {
-    const long = `https://example.com/${"a".repeat(2000)}`;
-    const items = parsePlan(
-      response(
-        {
-          items: [
-            {
-              title: "T",
-              reason: "R",
-              kind: "around",
-              anchor: null,
-              offsetDays: null,
-              sourceUrl: long,
-            },
-          ],
-        },
-        [long],
-      ),
-    );
-    expect(items?.[0]?.sourceUrl).toBeNull();
-  });
-});
-
 describe("addPrepTasksSchema のタイトル", () => {
   it("提案で切った 100 文字のタイトルは、絵文字を含んでも通す", () => {
     const result = addPrepTasksSchema.safeParse({
@@ -80,7 +55,6 @@ describe("addPrepTasksSchema のタイトル", () => {
           title: "🎍".repeat(100),
           dueOn: "",
           note: "",
-          url: "",
         },
       ],
     });
