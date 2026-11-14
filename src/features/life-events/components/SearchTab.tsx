@@ -1,7 +1,6 @@
 "use client";
 
 import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
-import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import ClearIcon from "@mui/icons-material/Clear";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
@@ -116,6 +115,14 @@ export function SearchTab({
       .flatMap((i) => (i.catalogKey === null ? [] : [i.catalogKey])),
   );
 
+  const currentTitles = consultCandidates(dates, today, 2, doneKeys).map(
+    (i) => i.title,
+  );
+  const consultLine =
+    currentTitles.length > 0
+      ? `いまの時期: ${currentTitles.join("・")}`
+      : "お宮参りや児童手当など、やることを一緒に洗い出します";
+
   function renderRow(item: CatalogItem) {
     const state = itemStateFor(item.key, child.id, items);
     return (
@@ -135,11 +142,11 @@ export function SearchTab({
 
   return (
     <Stack spacing={2}>
-      {showAiConsult && (
+      {/* 検索中は検索欄の下に同じ見た目の入口を出すので、上のカードは隠す */}
+      {showAiConsult && !searching && (
         <ConsultEntryCard
-          currentTitles={consultCandidates(dates, today, 2, doneKeys).map(
-            (i) => i.title,
-          )}
+          label="AI に相談する"
+          line={consultLine}
           onOpen={() =>
             setConsultTarget({
               kind: "pick",
@@ -200,20 +207,15 @@ export function SearchTab({
         </Box>
       )}
       {searching && showAiConsult && (
-        <Button
-          variant="outlined"
-          fullWidth
-          startIcon={<AutoAwesomeOutlinedIcon />}
-          onClick={() =>
+        <ConsultEntryCard
+          label={`「${trimmedQuery}」について AI に相談する`}
+          onOpen={() =>
             setConsultTarget({
               kind: "subject",
               subject: { title: trimmedQuery, summary: "", note: null },
             })
           }
-          sx={{ justifyContent: "flex-start", textAlign: "left" }}
-        >
-          「{trimmedQuery}」について AI に相談する
-        </Button>
+        />
       )}
 
       {showPrograms && (

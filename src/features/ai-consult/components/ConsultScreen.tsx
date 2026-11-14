@@ -97,6 +97,9 @@ function ConsultContent({
   const [subject, setSubject] = useState<ConsultSubjectInput | null>(
     target.kind === "subject" ? target.subject : null,
   );
+  // カードから開いたときは、← で「何について相談しますか？」に戻る。
+  // 端末の「戻る」は今までどおり画面ごと閉じる。
+  const backToPick = target.kind === "pick" && subject !== null;
 
   return (
     <>
@@ -107,7 +110,7 @@ function ConsultContent({
             size="small"
             sx={{ mr: 1 }}
             aria-label="戻る"
-            onClick={onBack}
+            onClick={backToPick ? () => setSubject(null) : onBack}
           >
             <ArrowBackIcon fontSize="small" />
           </IconButton>
@@ -127,6 +130,7 @@ function ConsultContent({
       >
         {subject ? (
           <ConsultFlow
+            key={subject.catalogKey ?? subject.title}
             childId={childId}
             child={child}
             subject={subject}
@@ -253,6 +257,7 @@ function ConsultFlow({
         }
         onAdd={() => addChosen(items.filter((item) => selected.has(item.id)))}
         adding={add.isPending}
+        onRetry={() => setItems(null)}
         error={addError}
       />
     );
@@ -269,7 +274,7 @@ function ConsultFlow({
         : null;
 
   if (questions.isFetching) {
-    return <ConsultLoading message="質問を考えています…" />;
+    return <ConsultLoading message="質問を考えています…" skeleton={false} />;
   }
   const questionsFailure =
     questions.data && !questions.data.ok
@@ -325,7 +330,14 @@ function Failure({
 }
 
 /** 生成中の表示。提案の行に近い高さの骨組みを並べる。 */
-function ConsultLoading({ message }: { message: string }) {
+function ConsultLoading({
+  message,
+  skeleton = true,
+}: {
+  message: string;
+  /** 一覧の行に近い骨組みを出すか。質問を待つ間は一覧の形と違うので出さない。 */
+  skeleton?: boolean;
+}) {
   return (
     <Box role="status" aria-live="polite" sx={{ pt: 1 }}>
       <Typography
@@ -341,17 +353,18 @@ function ConsultLoading({ message }: { message: string }) {
         <CircularProgress size={16} />
         {message}
       </Typography>
-      {[70, 55, 80].map((width) => (
-        <Box
-          key={width}
-          aria-hidden
-          sx={{ py: 1.5, borderBottom: 1, borderColor: "divider" }}
-        >
-          <Skeleton variant="text" width={`${width}%`} />
-          <Skeleton variant="text" width="40%" sx={{ fontSize: "0.75rem" }} />
-          <Skeleton variant="text" />
-        </Box>
-      ))}
+      {skeleton &&
+        [70, 55, 80].map((width) => (
+          <Box
+            key={width}
+            aria-hidden
+            sx={{ py: 1.5, borderBottom: 1, borderColor: "divider" }}
+          >
+            <Skeleton variant="text" width={`${width}%`} />
+            <Skeleton variant="text" width="40%" sx={{ fontSize: "0.75rem" }} />
+            <Skeleton variant="text" />
+          </Box>
+        ))}
     </Box>
   );
 }

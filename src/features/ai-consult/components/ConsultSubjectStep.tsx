@@ -1,8 +1,9 @@
 "use client";
 
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
+import ButtonBase from "@mui/material/ButtonBase";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
@@ -42,11 +43,10 @@ export function ConsultSubjectStep({
           >
             いまの時期
           </Typography>
-          <Stack spacing={1}>
+          <Box sx={{ borderTop: 1, borderColor: "divider" }}>
             {candidates.map((item) => (
-              <Button
+              <ButtonBase
                 key={item.key}
-                variant="outlined"
                 onClick={() =>
                   onPick({
                     title: item.title,
@@ -55,12 +55,27 @@ export function ConsultSubjectStep({
                     catalogKey: item.key,
                   })
                 }
-                sx={{ justifyContent: "flex-start", textAlign: "left" }}
+                sx={{
+                  display: "flex",
+                  width: "100%",
+                  alignItems: "center",
+                  gap: 1,
+                  py: 1.5,
+                  textAlign: "left",
+                  borderBottom: 1,
+                  borderColor: "divider",
+                }}
               >
-                {item.title}
-              </Button>
+                <Typography variant="body1" component="span" sx={{ flex: 1 }}>
+                  {item.title}
+                </Typography>
+                <ChevronRightIcon
+                  fontSize="small"
+                  sx={{ color: "text.secondary" }}
+                />
+              </ButtonBase>
             ))}
-          </Stack>
+          </Box>
         </Box>
       )}
       <Box>

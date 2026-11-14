@@ -6,21 +6,20 @@ import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
 
-const FALLBACK_LINE = "お宮参りや児童手当など、やることを一緒に洗い出します";
-
-/** 探すタブの一番上に出す、AI への相談の入口。検索欄と同じ形で、色は面だけにする。 */
+/**
+ * AI への相談の入口。探すタブの一番上と、検索中の検索欄の下で同じ見た目にする。
+ * 検索欄と同じ角丸で、色はチップと同じ面だけ。
+ */
 export function ConsultEntryCard({
-  currentTitles,
+  label,
+  line,
   onOpen,
 }: {
-  currentTitles: string[];
+  label: string;
+  /** 2行目。無ければ1行。 */
+  line?: string;
   onOpen: () => void;
 }) {
-  const line =
-    currentTitles.length > 0
-      ? `いまの時期: ${currentTitles.join("・")}`
-      : FALLBACK_LINE;
-
   return (
     <ButtonBase
       onClick={onOpen}
@@ -28,7 +27,7 @@ export function ConsultEntryCard({
         display: "block",
         width: "100%",
         textAlign: "left",
-        borderRadius: 1,
+        borderRadius: "12px",
         // チップと同じ色。CSS 変数なのでライトとダークで切り替わる
         bgcolor: "var(--mui-palette-brand-tagBg)",
         px: 1.5,
@@ -40,22 +39,24 @@ export function ConsultEntryCard({
         sx={{ display: "flex", alignItems: "center", gap: 0.75 }}
       >
         <AutoAwesomeOutlinedIcon fontSize="small" color="primary" />
-        <Typography variant="body1" component="span">
-          AI に相談する
+        <Typography variant="body1" component="span" noWrap>
+          {label}
         </Typography>
         <ChevronRightIcon
           fontSize="small"
           sx={{ ml: "auto", color: "text.secondary" }}
         />
       </Box>
-      <Typography
-        variant="caption"
-        component="span"
-        noWrap
-        sx={{ display: "block", color: "text.secondary" }}
-      >
-        {line}
-      </Typography>
+      {line && (
+        <Typography
+          variant="caption"
+          component="span"
+          noWrap
+          sx={{ display: "block", color: "text.secondary" }}
+        >
+          {line}
+        </Typography>
+      )}
     </ButtonBase>
   );
 }

@@ -22,6 +22,7 @@ export function ConsultPlanStep({
   onAdd,
   adding,
   error,
+  onRetry,
 }: {
   items: PlannedItem[];
   searchSuggestions: string | null;
@@ -31,6 +32,8 @@ export function ConsultPlanStep({
   onAdd: () => void;
   adding: boolean;
   error: string | null;
+  /** 質問の答えを残したまま、質問の画面に戻る。 */
+  onRetry: () => void;
 }) {
   const suggestions = searchSuggestions && (
     <SearchSuggestions html={searchSuggestions} />
@@ -42,6 +45,11 @@ export function ConsultPlanStep({
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
           提案が見つかりませんでした
         </Typography>
+        <Box>
+          <Button size="small" onClick={onRetry}>
+            質問からやり直す
+          </Button>
+        </Box>
         {suggestions}
       </Stack>
     );
@@ -73,14 +81,30 @@ export function ConsultPlanStep({
           />
         ))}
       </Box>
-      {error && <Alert severity="error">{error}</Alert>}
-      <Button
-        variant="contained"
-        disabled={selected.size === 0 || adding}
-        onClick={onAdd}
+      {/* 件数が多くてもボタンが見えるよう、画面の下に留める */}
+      <Box
+        sx={{
+          position: "sticky",
+          bottom: 0,
+          zIndex: 1,
+          bgcolor: "background.default",
+          py: 1,
+        }}
       >
-        選んだ{selected.size}件をタスクに追加
-      </Button>
+        {error && (
+          <Alert severity="error" sx={{ mb: 1 }}>
+            {error}
+          </Alert>
+        )}
+        <Button
+          variant="contained"
+          fullWidth
+          disabled={selected.size === 0 || adding}
+          onClick={onAdd}
+        >
+          選んだ{selected.size}件をタスクに追加
+        </Button>
+      </Box>
       {/* 規約で一緒に表示する。目立たないよう一番下に置く */}
       {suggestions}
     </Stack>
