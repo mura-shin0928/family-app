@@ -4,14 +4,14 @@
 
 ## 画面
 
-| パス | 内容 |
-| --- | --- |
-| `/tasks` | やること・買うものの一覧（`/` はここへリダイレクト） |
-| `/tasks/settings` | 買う場所のマスタ |
-| `/recipes` | レシピ（URL・本文・画像から材料を抽出し、買うものへ追加） |
-| `/life-events` | 子育てにまつわる必要なイベント・手続きの一覧化と記録。家族の自治体の子育て支援制度（seido-data-hub から取得）もここで探す |
-| `/family` | メンバーの招待・削除、子ども・自治体の登録 |
-| `/admin` | アプリ管理者向けの Family 作成・招待管理 |
+| パス              | 内容                                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `/tasks`          | やること・買うものの一覧（`/` はここへリダイレクト）                                                                      |
+| `/tasks/settings` | 買う場所のマスタ                                                                                                          |
+| `/recipes`        | レシピ（URL・本文・画像から材料を抽出し、買うものへ追加）                                                                 |
+| `/life-events`    | 子育てにまつわる必要なイベント・手続きの一覧化と記録。家族の自治体の子育て支援制度（seido-data-hub から取得）もここで探す |
+| `/family`         | メンバーの招待・削除、子ども・自治体の登録                                                                                |
+| `/admin`          | アプリ管理者向けの Family 作成・招待管理                                                                                  |
 
 ## スタック
 
@@ -30,13 +30,13 @@
 [デジタル庁デザインシステム（DADS）](https://design.digital.go.jp/dads/)に合わせている。
 DADS のコンポーネントは MUI 向けに配布されていないので、MUI のテーマで表現している。
 
-| ファイル | 内容 |
-| --- | --- |
-| `src/lib/brand.ts` | 役割ごとの色（ライト・ダーク） |
-| `src/lib/dads.ts` | 引き続き使う DADS の素の値（グレー・状態色・フォーカス黄など） |
-| `src/lib/theme.ts` | brand の色を MUI の部品・文字スタイルへ対応付け |
-| `tests/unit/brand-contrast.test.ts` | 配色のコントラスト検証 |
-| `tests/unit/dads-tokens.test.ts` | `dads.ts` の値が公式の [`@digital-go-jp/design-tokens`](https://www.npmjs.com/package/@digital-go-jp/design-tokens) と一致するかの確認 |
+| ファイル                            | 内容                                                                                                                                   |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/brand.ts`                  | 役割ごとの色（ライト・ダーク）                                                                                                         |
+| `src/lib/dads.ts`                   | 引き続き使う DADS の素の値（グレー・状態色・フォーカス黄など）                                                                         |
+| `src/lib/theme.ts`                  | brand の色を MUI の部品・文字スタイルへ対応付け                                                                                        |
+| `tests/unit/brand-contrast.test.ts` | 配色のコントラスト検証                                                                                                                 |
+| `tests/unit/dads-tokens.test.ts`    | `dads.ts` の値が公式の [`@digital-go-jp/design-tokens`](https://www.npmjs.com/package/@digital-go-jp/design-tokens) と一致するかの確認 |
 
 ## セットアップ
 
@@ -53,11 +53,11 @@ http://localhost:3000 を開く。
 
 ### 環境変数（`.env.local`）
 
-| 変数 | 必須 | 用途 |
-| --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ○ | Supabase 接続 |
-| `GEMINI_API_KEY` | — | レシピ本文・URL・画像からの材料抽出（Google AI Studio で発行） |
-| `SEIDO_DATA_HUB_API_URL` | — | 自治体の子育て支援制度の取得 |
+| 変数                                                         | 必須 | 用途                                                           |
+| ------------------------------------------------------------ | ---- | -------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ○    | Supabase 接続                                                  |
+| `GEMINI_API_KEY`                                             | —    | レシピ本文・URL・画像からの材料抽出（Google AI Studio で発行） |
+| `SEIDO_DATA_HUB_API_URL`                                     | —    | 自治体の子育て支援制度の取得                                   |
 
 任意の変数は未設定でもアプリは動く。`GEMINI_API_KEY` が無いと解析機能だけが使えない
 （レシピは手入力での保存はできる）。`SEIDO_DATA_HUB_API_URL` が無いと、制度一覧への導線と

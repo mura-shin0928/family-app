@@ -7,10 +7,10 @@ Supabase Pro の日次バックアップ（7 日保持）だけを使う。PITR 
 
 ## どちらの場面かを決める
 
-| 場面 | 例 | 方法 |
-|---|---|---|
-| A. 全体が壊れた | 破壊的な migration を当てた、全家族のデータを壊すバグ | プロジェクト全体をバックアップに戻す |
-| B. 一つの家族だけを戻したい | バグで一家族のデータが壊れた | バックアップを一時プロジェクトに戻し、その家族の行だけを本番に書き戻す |
+| 場面                        | 例                                                    | 方法                                                                   |
+| --------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------- |
+| A. 全体が壊れた             | 破壊的な migration を当てた、全家族のデータを壊すバグ | プロジェクト全体をバックアップに戻す                                   |
+| B. 一つの家族だけを戻したい | バグで一家族のデータが壊れた                          | バックアップを一時プロジェクトに戻し、その家族の行だけを本番に書き戻す |
 
 迷ったら B。A は他の家族の変更も巻き戻す。
 
@@ -58,7 +58,7 @@ docker run --rm -it -v "$PWD":/work -w /work postgres:17 psql "<接続文字列>
 \copy (select * from public.recipe_ingredients where family_id = '<FID>') to 'recipe_ingredients.csv' csv header
 \copy (select * from public.invitations where family_id = '<FID>') to 'invitations.csv' csv header
 \copy (select * from public.recipe_analysis_usage where family_id = '<FID>') to 'recipe_analysis_usage.csv' csv header
-\copy (select * from public.web_search_usage where family_id = '<FID>') to 'web_search_usage.csv' csv header
+\copy (select * from public.ai_consult_usage where family_id = '<FID>') to 'ai_consult_usage.csv' csv header
 ```
 
 書き出したファイルには利用者のデータが入っている。作業が終わったらディレクトリごと消す。
@@ -88,7 +88,7 @@ delete from public.families where id = '<FID>';
 \copy public.recipe_ingredients from 'recipe_ingredients.csv' csv header
 \copy public.invitations from 'invitations.csv' csv header
 \copy public.recipe_analysis_usage from 'recipe_analysis_usage.csv' csv header
-\copy public.web_search_usage from 'web_search_usage.csv' csv header
+\copy public.ai_consult_usage from 'ai_consult_usage.csv' csv header
 
 -- バックアップより後に削除されたメンバーは、書き戻しでも戻さない
 -- （family_members の delete トリガーが、その人宛・その人発行の保留中の招待も取り消す）
@@ -131,7 +131,7 @@ union all select 'recipes', count(*) from public.recipes
 union all select 'recipe_ingredients', count(*) from public.recipe_ingredients
 union all select 'invitations', count(*) from public.invitations
 union all select 'recipe_analysis_usage', count(*) from public.recipe_analysis_usage
-union all select 'web_search_usage', count(*) from public.web_search_usage
+union all select 'ai_consult_usage', count(*) from public.ai_consult_usage
 order by t;
 ```
 

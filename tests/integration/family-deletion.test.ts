@@ -12,6 +12,7 @@ const PASSWORD = "Test-Password-123!";
 // family_id を持つテーブル（family_members は除く）
 const FAMILY_TABLES = [
   "children",
+  "ai_consult_usage",
   "invitations",
   "life_event_items",
   "purchase_locations",
@@ -19,7 +20,6 @@ const FAMILY_TABLES = [
   "recipe_ingredients",
   "recipes",
   "tasks",
-  "web_search_usage",
 ] as const;
 
 type Member = { memberId: string; userId: string; email: string };
@@ -133,7 +133,7 @@ describe("delete_my_family", () => {
       day: today,
       count: 1,
     });
-    await insert("web_search_usage", {
+    await insert("ai_consult_usage", {
       family_id: familyA,
       day: today,
       count: 1,

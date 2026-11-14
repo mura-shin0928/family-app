@@ -14,16 +14,17 @@ PostHog Cloud EU の 1 プロジェクトで、利用計測とエラー監視の
 
 端末とブラウザの情報（OS、ブラウザ、画面の大きさ、ライブラリの版など）は posthog-js が自動で付けるので届く。IP アドレスは PostHog のプロジェクト設定で捨てている。
 
-| イベント | いつ送るか | 送る場所 |
-|---|---|---|
-| `app_opened` | 起動時と、30 分以上たって画面に戻ったとき | ブラウザ |
-| `task_created` | タスクを作ったとき | サーバー |
-| `task_completed` | タスクを完了にしたとき（未完了に戻したときは送らない） | サーバー |
-| `recipe_created` | レシピを保存したとき | サーバー |
-| `recipe_analyzed` | レシピの解析（URL・文章・画像）に成功したとき | サーバー |
-| `ingredients_added` | 材料を買うものに足したとき | サーバー |
-| `program_searched` | 自治体の制度の一覧や Web の検索を開いたとき | サーバー |
+| イベント                  | いつ送るか                                                           | 送る場所 |
+| ------------------------- | -------------------------------------------------------------------- | -------- |
+| `app_opened`              | 起動時と、30 分以上たって画面に戻ったとき                            | ブラウザ |
+| `task_created`            | タスクを作ったとき                                                   | サーバー |
+| `task_completed`          | タスクを完了にしたとき（未完了に戻したときは送らない）               | サーバー |
+| `recipe_created`          | レシピを保存したとき                                                 | サーバー |
+| `recipe_analyzed`         | レシピの解析（URL・文章・画像）に成功したとき                        | サーバー |
+| `ingredients_added`       | 材料を買うものに足したとき                                           | サーバー |
+| `program_searched`        | 自治体の制度の一覧を開いたとき                                       | サーバー |
 | `life_event_item_updated` | ライフイベントの項目をタスクにした、記録した、日付やメモを変えたとき | サーバー |
+| `ai_consult_proposed`     | AI への相談で、やることの一覧を作れたとき                            | サーバー |
 
 ブラウザからの送信は `/ingest` を経由して PostHog EU に届く（`src/app/ingest/[...path]/route.ts`）。同じオリジンへの送信には Supabase のセッション Cookie とページの URL（Referer）が付いてくるので、中継では決めたヘッダー（`accept`、`content-encoding`、`content-type`、`user-agent`）だけを渡す。
 

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { PostHogMock, captureImmediate } = vi.hoisted(() => {
   const captureImmediate = vi.fn(() => Promise.resolve());
-  const PostHogMock = vi.fn(function PostHog() {
+  const PostHogMock = vi.fn(function postHog() {
     return { captureImmediate };
   });
   return { PostHogMock, captureImmediate };

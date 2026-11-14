@@ -9,9 +9,9 @@ import {
 } from "./support/supabase";
 
 const PASSWORD = "Test-Password-123!";
-const DAILY_LIMIT = 20;
+const DAILY_LIMIT = 10;
 
-describe("Web 検索の利用枠", () => {
+describe("AI への相談の利用枠", () => {
   const admin = createAdminClient();
   const runId = randomUUID().slice(0, 8);
 
@@ -22,24 +22,24 @@ describe("Web 検索の利用枠", () => {
   let clientC: SupabaseClient;
   let clientOutsider: SupabaseClient;
 
-  const emailA = `wa-${runId}@example.test`;
-  const emailB = `wb-${runId}@example.test`;
-  const emailC = `wc-${runId}@example.test`;
-  const emailOutsider = `wo-${runId}@example.test`;
+  const emailA = `pa-${runId}@example.test`;
+  const emailB = `pb-${runId}@example.test`;
+  const emailC = `pc-${runId}@example.test`;
+  const emailOutsider = `po-${runId}@example.test`;
   const userIds: string[] = [];
 
   beforeAll(async () => {
     const { data: families, error: familiesError } = await admin
       .from("families")
       .insert([
-        { name: `WebQuotaF1-${runId}` },
-        { name: `WebQuotaF2-${runId}` },
+        { name: `ConsultQuotaF1-${runId}` },
+        { name: `ConsultQuotaF2-${runId}` },
       ])
       .select("id, name");
     if (familiesError || !families)
       throw new Error(`failed to create families: ${familiesError?.message}`);
-    familyF1 = families.find((f) => f.name.startsWith("WebQuotaF1"))?.id;
-    familyF2 = families.find((f) => f.name.startsWith("WebQuotaF2"))?.id;
+    familyF1 = families.find((f) => f.name.startsWith("ConsultQuotaF1"))?.id;
+    familyF2 = families.find((f) => f.name.startsWith("ConsultQuotaF2"))?.id;
 
     const [a, b, c, outsider] = await Promise.all([
       createConfirmedUser(admin, emailA, PASSWORD),
@@ -67,7 +67,7 @@ describe("Web 検索の利用枠", () => {
 
   beforeEach(async () => {
     await admin
-      .from("web_search_usage")
+      .from("ai_consult_usage")
       .delete()
       .in("family_id", [familyF1, familyF2]);
   });
@@ -78,14 +78,14 @@ describe("Web 検索の利用枠", () => {
   });
 
   async function consume(client: SupabaseClient): Promise<boolean> {
-    const { data, error } = await client.rpc("consume_web_search_quota");
+    const { data, error } = await client.rpc("consume_ai_consult_quota");
     if (error) throw new Error(error.message);
     return data;
   }
 
   async function usageOf(familyId: string) {
     const { data, error } = await admin
-      .from("web_search_usage")
+      .from("ai_consult_usage")
       .select("day, count")
       .eq("family_id", familyId)
       .maybeSingle();
@@ -97,7 +97,7 @@ describe("Web 検索の利用枠", () => {
   async function seedUsage(familyId: string, count: number, day?: string) {
     if (day) {
       const { error } = await admin
-        .from("web_search_usage")
+        .from("ai_consult_usage")
         .upsert({ family_id: familyId, day, count });
       if (error) throw new Error(error.message);
       return;
@@ -105,7 +105,7 @@ describe("Web 検索の利用枠", () => {
     // 関数と同じ「今日」を得るため、1回使わせてから回数だけ書き換える。
     await consume(familyId === familyF1 ? clientA : clientC);
     const { error } = await admin
-      .from("web_search_usage")
+      .from("ai_consult_usage")
       .update({ count })
       .eq("family_id", familyId);
     if (error) throw new Error(error.message);
@@ -158,7 +158,7 @@ describe("Web 検索の利用枠", () => {
   });
 
   it("家族に所属していないユーザーは使えない", async () => {
-    const { error } = await clientOutsider.rpc("consume_web_search_quota");
+    const { error } = await clientOutsider.rpc("consume_ai_consult_quota");
     expect(error?.code).toBe("42501");
   });
 
@@ -166,17 +166,17 @@ describe("Web 検索の利用枠", () => {
     await seedUsage(familyF1, DAILY_LIMIT);
 
     const { data: rows } = await clientA
-      .from("web_search_usage")
+      .from("ai_consult_usage")
       .select("family_id");
     expect(rows ?? []).toEqual([]);
 
     await clientA
-      .from("web_search_usage")
+      .from("ai_consult_usage")
       .update({ count: 1 })
       .eq("family_id", familyF1);
-    await clientA.from("web_search_usage").delete().eq("family_id", familyF1);
+    await clientA.from("ai_consult_usage").delete().eq("family_id", familyF1);
     const { error: insertError } = await clientA
-      .from("web_search_usage")
+      .from("ai_consult_usage")
       .insert({ family_id: familyF1, day: "2000-01-01", count: 1 });
     expect(insertError).not.toBeNull();
 
