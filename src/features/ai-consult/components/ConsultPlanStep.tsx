@@ -114,7 +114,7 @@ export function ConsultPlanStep({
           disabled={selected.size === 0 || adding}
           onClick={onAdd}
         >
-          選んだ{selected.size}件をタスクに追加
+          {selected.size}件をタスクに追加
         </Button>
       </Box>
     </Stack>
