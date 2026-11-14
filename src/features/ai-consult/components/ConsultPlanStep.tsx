@@ -81,14 +81,26 @@ export function ConsultPlanStep({
           />
         ))}
       </Box>
-      {/* 件数が多くてもボタンが見えるよう、画面の下に留める */}
+      {/* 規約で一緒に表示する。目立たないよう、一覧の最後（固定したボタンのすぐ上）に置く */}
+      {suggestions}
+      {/*
+        件数が多くてもボタンが見えるよう、画面の下に留める。横幅いっぱいにし、
+        スクロールする側の下の余白（16px ＋ 端末の下端）まで背景で覆う。
+        ConsultContent の px: 2 と pb に合わせてある。
+      */}
       <Box
         sx={{
           position: "sticky",
-          bottom: 0,
+          bottom: "calc(-16px - env(safe-area-inset-bottom))",
           zIndex: 1,
+          mx: -2,
+          mb: "calc(-16px - env(safe-area-inset-bottom))",
+          px: 2,
+          pt: 1,
+          pb: "calc(8px + 16px + env(safe-area-inset-bottom))",
           bgcolor: "background.default",
-          py: 1,
+          borderTop: 1,
+          borderColor: "divider",
         }}
       >
         {error && (
@@ -105,8 +117,6 @@ export function ConsultPlanStep({
           選んだ{selected.size}件をタスクに追加
         </Button>
       </Box>
-      {/* 規約で一緒に表示する。目立たないよう一番下に置く */}
-      {suggestions}
     </Stack>
   );
 }
