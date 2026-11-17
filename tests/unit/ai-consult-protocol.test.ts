@@ -21,6 +21,7 @@ const ctx: ConsultContext = {
   child: { birthDate: "2026-11-01", expectedBirthDate: null },
   municipalityName: "小金井市",
   today: "2026-11-12",
+  recordedTitles: [],
 };
 
 /** Interactions API の応答の形（steps の model_output に JSON の本文と引用）。 */
@@ -74,6 +75,40 @@ describe("buildPlanRequestBody", () => {
     });
     expect(JSON.stringify(body)).toContain("両家を呼びますか");
     expect(JSON.stringify(body)).toContain("2026-11-01");
+  });
+});
+
+describe("相談の文脈と指示", () => {
+  const withRecorded: ConsultContext = {
+    ...ctx,
+    recordedTitles: ["出生届を出す", "お宮参りの日を決める"],
+  };
+
+  it("質問では、済んだ項目を渡し、分かっていることは聞かないよう指示する", () => {
+    const body = buildQuestionsRequestBody(withRecorded);
+    expect(body.input).toContain("出生届を出す");
+    expect(body.input).toContain("お宮参りの日を決める");
+    expect(body.system_instruction).toContain(
+      "上の情報（今日・子の時期・出生日・出産予定日・自治体・済んだ項目）で分かることは質問しない",
+    );
+  });
+
+  it("提案では、今日以降に絞り、済んだ項目は挙げず、長さの目安を伝える", () => {
+    const body = buildPlanRequestBody(withRecorded, []);
+    expect(body.input).toContain("出生届を出す");
+    expect(body.input).toContain("お宮参りの日を決める");
+    const instruction = body.system_instruction;
+    expect(instruction).not.toContain("事前に");
+    expect(instruction).toContain("今日以降");
+    expect(instruction).toContain("時期が過ぎていても");
+    expect(instruction).toContain("挙げないでください");
+    expect(instruction).toContain("25字");
+    expect(instruction).toContain("40字");
+  });
+
+  it("済んだ項目が無ければ、その見出しを出さない", () => {
+    const body = buildQuestionsRequestBody(ctx);
+    expect(body.input).not.toContain("済んだ項目");
   });
 });
 
