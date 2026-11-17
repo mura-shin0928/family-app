@@ -17,6 +17,8 @@ export type ConsultContext = {
   child: ChildDates;
   municipalityName: string | null;
   today: DateString;
+  /** その子の記録（タスクにある・済んだ）のタイトル。新しい順で、MAX_RECORDED_TITLES 件まで。 */
+  recordedTitles: string[];
 };
 
 /** 質問1問。options の末尾は必ず UNDECIDED_OPTION。 */
