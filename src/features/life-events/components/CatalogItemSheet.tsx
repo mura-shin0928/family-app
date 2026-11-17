@@ -139,6 +139,7 @@ export function CatalogItemSheet({
               {onConsult && (
                 <ConsultEntryCard
                   label={consultEntryLabel(item.title)}
+                  wrapLabel
                   onOpen={onConsult}
                 />
               )}
