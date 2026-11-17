@@ -11,7 +11,6 @@ import MuiLink from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { ConsultEntryCard } from "@/features/ai-consult/components/ConsultEntryCard";
-import { consultEntryLabel } from "@/features/ai-consult/entry-label";
 import { isHttpUrl } from "@/lib/url";
 import { LIFE_EVENT_KINDS } from "../catalog";
 import type { ItemState } from "../search";
@@ -138,8 +137,8 @@ export function CatalogItemSheet({
               </Button>
               {onConsult && (
                 <ConsultEntryCard
-                  label={consultEntryLabel(item.title)}
-                  wrapLabel
+                  // イベント名はシートの一番上にあるので、入口には入れない
+                  label="AI に周辺タスクを相談"
                   onOpen={onConsult}
                 />
               )}

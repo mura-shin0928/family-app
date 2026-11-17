@@ -13,14 +13,11 @@ import Typography from "@mui/material/Typography";
 export function ConsultEntryCard({
   label,
   line,
-  wrapLabel = false,
   onOpen,
 }: {
   label: string;
   /** 2行目。無ければ1行。 */
   line?: string;
-  /** label を2行まで折り返す。項目名入りの長い文言で、末尾の大事な言葉が切れないようにする。 */
-  wrapLabel?: boolean;
   onOpen: () => void;
 }) {
   return (
@@ -50,16 +47,8 @@ export function ConsultEntryCard({
         <Typography
           variant="body1"
           component="span"
-          noWrap={!wrapLabel}
-          sx={{
-            minWidth: 0,
-            ...(wrapLabel && {
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }),
-          }}
+          noWrap
+          sx={{ minWidth: 0 }}
         >
           {label}
         </Typography>
