@@ -1,14 +1,17 @@
 "use client";
 
 import AddIcon from "@mui/icons-material/Add";
-import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
 import MuiLink from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import { ConsultEntryCard } from "@/features/ai-consult/components/ConsultEntryCard";
+import { consultEntryLabel } from "@/features/ai-consult/entry-label";
 import { isHttpUrl } from "@/lib/url";
 import { LIFE_EVENT_KINDS } from "../catalog";
 import type { ItemState } from "../search";
@@ -31,7 +34,7 @@ export function CatalogItemSheet({
   onClose: () => void;
   onAdd: () => void;
   onRecord: () => void;
-  /** 渡されたときだけ「AI に相談する」を出す。 */
+  /** 渡されたときだけ、AI への相談の入口を出す。 */
   onConsult?: () => void;
 }) {
   const kindLabel = LIFE_EVENT_KINDS.find((k) => k.kind === item?.kind)?.label;
@@ -49,53 +52,103 @@ export function CatalogItemSheet({
     >
       {item && (
         <Stack
-          spacing={1.5}
+          spacing={2}
           sx={{ p: 2, pb: "calc(16px + env(safe-area-inset-bottom))" }}
         >
-          <Typography variant="h6">{item.title}</Typography>
-          {item.summary !== "" && (
-            <Typography variant="body2">{item.summary}</Typography>
-          )}
-          {meta !== "" && (
-            <Typography variant="caption" sx={{ color: "text.secondary" }}>
-              {meta}
-            </Typography>
-          )}
-          {item.note && (
-            <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-              {item.note}
-            </Typography>
-          )}
-          {item.url && isHttpUrl(item.url) && (
-            <MuiLink
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="body2"
-            >
-              公式ページを開く
-            </MuiLink>
-          )}
-          {link?.notice && (
-            <Typography variant="caption" sx={{ color: "text.secondary" }}>
-              {link.notice}
-            </Typography>
-          )}
-          {link && link.relatedUrls.length > 0 && (
-            <Stack spacing={0.5}>
-              <Typography variant="body2">関連していそうなページ</Typography>
-              {link.relatedUrls.map((url) => (
-                <MuiLink
-                  key={url}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  variant="body2"
-                  sx={{ overflowWrap: "anywhere" }}
-                >
-                  {linkLabel(url)}
-                </MuiLink>
-              ))}
+          {/* 上半分: どういうものか分かる */}
+          <Stack spacing={1}>
+            <Box>
+              <Typography variant="h6">{item.title}</Typography>
+              {meta !== "" && (
+                <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                  {meta}
+                </Typography>
+              )}
+            </Box>
+            {item.summary !== "" && (
+              <Typography variant="body2">{item.summary}</Typography>
+            )}
+            {item.note && (
+              <Typography
+                variant="body2"
+                sx={{ whiteSpace: "pre-wrap", color: "text.secondary" }}
+              >
+                {item.note}
+              </Typography>
+            )}
+            {((item.url && isHttpUrl(item.url)) || link?.notice) && (
+              <Box>
+                {item.url && isHttpUrl(item.url) && (
+                  <MuiLink
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="body2"
+                    sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 0.5,
+                    }}
+                  >
+                    公式ページ
+                    <OpenInNewIcon fontSize="inherit" />
+                  </MuiLink>
+                )}
+                {link?.notice && (
+                  <Typography
+                    variant="caption"
+                    component="p"
+                    sx={{ color: "text.secondary" }}
+                  >
+                    {link.notice}
+                  </Typography>
+                )}
+              </Box>
+            )}
+            {link && link.relatedUrls.length > 0 && (
+              <Stack spacing={0.25}>
+                {link.relatedUrls.map((url) => (
+                  <MuiLink
+                    key={url}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="caption"
+                    sx={{ overflowWrap: "anywhere" }}
+                  >
+                    {linkLabel(url)}
+                  </MuiLink>
+                ))}
+              </Stack>
+            )}
+          </Stack>
+
+          <Divider />
+
+          {/* 下半分: タスクに追加するか、もうやったと記録する */}
+          {state.status === "none" && (
+            <Stack spacing={1}>
+              <Button
+                variant="contained"
+                fullWidth
+                startIcon={<AddIcon />}
+                onClick={onAdd}
+              >
+                タスクに追加
+              </Button>
+              {onConsult && (
+                <ConsultEntryCard
+                  label={consultEntryLabel(item.title)}
+                  onOpen={onConsult}
+                />
+              )}
+              <Button
+                variant="text"
+                onClick={onRecord}
+                sx={{ alignSelf: "center", color: "text.secondary" }}
+              >
+                もうやった
+              </Button>
             </Stack>
           )}
           {state.status === "in_task" && (
@@ -107,31 +160,6 @@ export function CatalogItemSheet({
             <Typography variant="body2" sx={{ color: "text.secondary" }}>
               {formatSlashDate(state.doneOn).slice(5)} 記録済み
             </Typography>
-          )}
-          {state.status === "none" && (
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={onAdd}
-              >
-                タスクに追加
-              </Button>
-              <Button variant="outlined" onClick={onRecord}>
-                もうやった
-              </Button>
-            </Stack>
-          )}
-          {onConsult && (
-            <Box>
-              <Button
-                variant="text"
-                startIcon={<AutoAwesomeOutlinedIcon />}
-                onClick={onConsult}
-              >
-                AI に相談する
-              </Button>
-            </Box>
           )}
         </Stack>
       )}
