@@ -38,13 +38,23 @@ export function ConsultEntryCard({
         component="span"
         sx={{ display: "flex", alignItems: "center", gap: 0.75 }}
       >
-        <AutoAwesomeOutlinedIcon fontSize="small" color="primary" />
-        <Typography variant="body1" component="span" noWrap>
+        <AutoAwesomeOutlinedIcon
+          fontSize="small"
+          color="primary"
+          sx={{ flexShrink: 0 }}
+        />
+        {/* flex の子は既定で縮まないので、minWidth: 0 にして長い文言を末尾の「…」で切る */}
+        <Typography
+          variant="body1"
+          component="span"
+          noWrap
+          sx={{ minWidth: 0 }}
+        >
           {label}
         </Typography>
         <ChevronRightIcon
           fontSize="small"
-          sx={{ ml: "auto", color: "text.secondary" }}
+          sx={{ ml: "auto", flexShrink: 0, color: "text.secondary" }}
         />
       </Box>
       {line && (

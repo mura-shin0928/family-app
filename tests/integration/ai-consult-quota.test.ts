@@ -9,7 +9,7 @@ import {
 } from "./support/supabase";
 
 const PASSWORD = "Test-Password-123!";
-const DAILY_LIMIT = 10;
+const DAILY_LIMIT = 20;
 
 describe("AI への相談の利用枠", () => {
   const admin = createAdminClient();

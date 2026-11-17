@@ -17,6 +17,9 @@ export const AI_CONSULT_ENDPOINT =
 export const UNDECIDED_OPTION = "まだ決めていない";
 export const MAX_QUESTIONS = 3;
 export const MAX_ITEMS = 12;
+// 済んだ項目・タスクにある項目のタイトルを渡す上限。タイトルは100字までなので
+// 50件で5,000字ほど。1人の子の記録はふつう数十件に収まり、超えた分は古いものから落とす。
+export const MAX_RECORDED_TITLES = 50;
 
 const MAX_TITLE_LENGTH = 100;
 const MAX_REASON_LENGTH = 200;
@@ -34,12 +37,17 @@ const QUESTIONS_INSTRUCTION =
   COMMON_INSTRUCTION +
   "これから、このイベントのためにやること・決めることを提案します。その前に、" +
   "家庭によって答えが分かれ、答えによって提案の中身が変わる問いを1〜3問だけ作ってください。" +
-  "各問には短い選択肢を2〜5個付けてください。「まだ決めていない」は選択肢に入れないでください。";
+  "各問には短い選択肢を2〜5個付けてください。「まだ決めていない」は選択肢に入れないでください。" +
+  "上の情報（今日・子の時期・出生日・出産予定日・自治体・済んだ項目）で分かることは質問しないでください。";
 
 const PLAN_INSTRUCTION =
   COMMON_INSTRUCTION +
-  "このイベントのために、事前にやること・決めることを、時期の早い順に最大12件挙げてください。" +
+  "このイベントのために、今日以降にやること・決めることを、時期の早い順に最大12件挙げてください。" +
   "「〇〇を決める」のような判断も含めてください。各項目には、なぜ要るかを一言で添えてください。" +
+  "タイトルは25字程度、理由は40字程度にしてください。" +
+  "済んだ項目に挙がっているもの（済んだこと・すでにタスクにあること）は挙げないでください。" +
+  "時期が過ぎてもう意味のないことは挙げないでください。" +
+  "時期が過ぎていてもまだ間に合うことは、anchor と offsetDays を null にしてください。" +
   "時期は基準日（birth=出生日、expected_birth=出産予定日）からの日数で、前なら負の数にしてください。" +
   "基準日が与えられていないか、時期が決められない項目は anchor と offsetDays を null にしてください。" +
   "kind は期限があるなら deadline、目安なら around にしてください。" +
@@ -98,6 +106,13 @@ function describeContext(ctx: ConsultContext): string {
     `出産予定日: ${ctx.child.expectedBirthDate ?? "未入力"}`,
     `住んでいる自治体: ${ctx.municipalityName ?? "未設定"}`,
   ];
+  const recorded = ctx.recordedTitles.slice(0, MAX_RECORDED_TITLES);
+  if (recorded.length > 0) {
+    lines.push(
+      "済んだ項目（済んだこと・すでにタスクにあること）:",
+      ...recorded.map((title) => `- ${title}`),
+    );
+  }
   return lines.filter(Boolean).join("\n");
 }
 

@@ -11,6 +11,7 @@ import { callAiConsult, isAiConsultConfigured } from "./gemini";
 import {
   buildPlanRequestBody,
   buildQuestionsRequestBody,
+  MAX_RECORDED_TITLES,
   parsePlan,
   parseQuestions,
 } from "./protocol";
@@ -46,7 +47,7 @@ type Prepared =
     }
   | { ok: false; reason: ConsultFailure };
 
-/** 子と自治体を引き、枠を1回使ってから文脈を組み立てる。 */
+/** 子・自治体・記録を引き、枠を1回使ってから文脈を組み立てる。 */
 async function prepare(
   childId: string,
   subjectInput: ConsultSubjectInput,
@@ -65,7 +66,8 @@ async function prepare(
     .maybeSingle();
   if (!child) return { ok: false, reason: "invalid" };
 
-  // 外部 API を呼ぶ前に枠を使う（失敗しても1回と数える）
+  // 外部 API を呼ぶ前に枠を使う（失敗しても1回と数える）。質問と提案で1回ずつ使うので、
+  // 1相談で2回になる（上限はそれを見込んで決めている）
   const { data: allowed, error } = await supabase.rpc(
     "consume_ai_consult_quota",
   );
@@ -84,6 +86,18 @@ async function prepare(
     municipalityName = null;
   }
 
+  // 済んだこと・タスクにあることを提案しないよう渡す。引けなくても提案は続ける
+  const { data: items, error: itemsError } = await supabase
+    .from("life_event_items")
+    .select("title")
+    .eq("child_id", childId)
+    .eq("family_id", member.familyId)
+    .in("status", ["in_task", "done"])
+    .is("deleted_at", null)
+    .order("updated_at", { ascending: false })
+    .limit(MAX_RECORDED_TITLES);
+  if (itemsError) logActionError("aiConsult.items", itemsError);
+
   const dates = {
     birthDate: child.birth_date,
     expectedBirthDate: child.expected_birth_date,
@@ -98,6 +112,7 @@ async function prepare(
       child: dates,
       municipalityName,
       today,
+      recordedTitles: (items ?? []).map((item) => item.title),
     },
   };
 }

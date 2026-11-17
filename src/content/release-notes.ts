@@ -3,6 +3,13 @@ export type ReleaseNote = { date: string; items: string[] };
 /** 新しい順に書く。書き方は同じディレクトリの CLAUDE.md。 */
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    date: "2026-11-17",
+    items: [
+      "ライフイベントの項目の詳細と、AIへの相談の入口が見やすくなりました。",
+      "AIに相談できる回数が増えました。",
+    ],
+  },
+  {
     date: "2026-11-15",
     items: ["ライフイベントにおけるやることをAIに相談できるようになりました。"],
   },
