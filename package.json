@@ -31,12 +31,12 @@
     "@mui/material": "^9.4.0",
     "@mui/material-nextjs": "^9.5.0",
     "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.119.0",
-    "@tanstack/react-query": "^5.107.1",
+    "@supabase/supabase-js": "^2.119.2",
+    "@tanstack/react-query": "^5.108.3",
     "date-fns": "^4.4.0",
     "date-fns-tz": "^3.2.0",
     "next": "16.4.6",
-    "posthog-js": "^1.447.12",
+    "posthog-js": "^1.453.2",
     "posthog-node": "^5.69.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
@@ -44,16 +44,16 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.7",
+    "@biomejs/biome": "2.6.8",
     "@digital-go-jp/design-tokens": "^2.1.0",
-    "@tanstack/react-query-devtools": "^5.107.1",
+    "@tanstack/react-query-devtools": "^5.108.3",
     "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^18.0.10",
     "typescript": "^7.0.2",
     "vite-node": "^6.0.0",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.1"
   },
   "allowScripts": {
     "fsevents@2.3.3": true
